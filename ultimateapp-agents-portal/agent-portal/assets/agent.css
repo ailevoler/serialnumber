@@ -1,0 +1,18 @@
+/* Agents Portal extras on top of the Merchant Portal base.css + portal.css */
+.rate-strip{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.rate-strip span{display:flex;flex-direction:column;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:12.5px;color:var(--muted);min-width:90px}
+.rate-strip b{color:var(--ink);font-size:13.5px}
+.copy-row{display:flex;gap:8px;margin:12px 0}
+.copy-row input{flex:1;min-width:0;font-size:13px}
+.code-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:#fafbfc}
+.code-row span{color:var(--muted);font-size:12.5px}
+.code-row strong{font-size:20px;letter-spacing:.12em;font-family:ui-monospace,Menlo,Consolas,monospace}
+.code-row .btn{margin-left:auto}
+.code-big{font-size:30px;font-weight:700;letter-spacing:.14em;font-family:ui-monospace,Menlo,Consolas,monospace;margin:6px 0}
+.small{font-size:12.5px}
+.qr-share{text-align:center}
+.qr-box.light{width:220px;max-width:100%;margin:10px auto;background:#fff;padding:10px;border-radius:14px;border:1px solid var(--line)}
+.qr-box.light svg{display:block;width:100%;height:auto}
+.lock{text-align:center}
+@media (max-width:640px){.hide-sm{display:none}.copy-row{flex-direction:column}.code-row{flex-wrap:wrap}.code-row .btn{margin-left:0}}
+@media print{.p-top,.p-foot,.share-card,.kpis,.card:not(.qr-share),.status-banner,.p-title,.form-actions{display:none!important}.qr-share{border:0;box-shadow:none}}

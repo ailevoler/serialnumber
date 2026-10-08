@@ -162,11 +162,13 @@ function service_catalog(): array
     return $services;
 }
 
-/** Home screen tiles: URide, UPass, UGo, ULocal, UEat, (UBarangay), (UBills, ULoad, UCash In), News/Updates, More. */
+/** Home screen tiles: URide, UPass, UGo, ULocal, UEat, (UBarangay), (UBills, ULoad, UCash In), UMap, UHelp, UNews, UMore. */
 function dashboard_tiles(): array
 {
     $tiles = service_catalog();
-    $tiles[] = ['code' => 'News', 'label' => 'News/Updates', 'short' => 'News', 'image' => 'news.png', 'href' => 'news.php'];
-    $tiles[] = ['code' => 'More', 'label' => 'More', 'image' => 'more.png', 'href' => null];
+    $tiles[] = ['code' => 'UMap', 'label' => 'UMap', 'image' => 'umap.png', 'href' => 'merchant-map.php'];
+    $tiles[] = ['code' => 'UHelp', 'label' => 'UHelp', 'image' => 'uhelp.png', 'href' => 'support.php'];
+    $tiles[] = ['code' => 'News', 'label' => 'UNews', 'image' => 'news.png', 'href' => 'news.php'];
+    $tiles[] = ['code' => 'More', 'label' => 'UMore', 'image' => 'more.png', 'href' => null];
     return $tiles;
 }

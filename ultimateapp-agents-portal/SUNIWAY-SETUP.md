@@ -22,7 +22,9 @@ The integration follows the SUNIWAY flow used in the SUKLI Partner Store: `GET p
    - Paste the **Partner API key**. It is stored encrypted and is never shown to customers.
    - Click **Test connection**. You should see how many billers, load products and e-wallets were found.
    - Optionally set a **convenience fee** per service. It is added on top and kept as Ultimate App revenue.
-   - Tick **Show UBills, ULoad and UCash In to customers** and save. The three tiles appear on the home screen.
+   - Tick **Accept UBills, ULoad and UCash In payments** and save.
+
+The three tiles are always on the home screen. Until payments are turned on, or if the migration has not been imported yet, their pages show **Coming soon**.
 
 The server needs PHP cURL, which Hostinger has.
 

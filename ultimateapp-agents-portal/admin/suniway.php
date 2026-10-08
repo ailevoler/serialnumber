@@ -61,6 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 admin_header('Bills & Load (SUNIWAY)', 'suniway');
+if (!suniway_table_ready()) {
+    echo '<div class="flash error" role="status">Import <b>database/suniway_migration.sql</b> once in phpMyAdmin, then reload this page.</div>';
+    admin_footer();
+    exit;
+}
 ?>
 <div class="tabs"><a class="<?= $view === 'transactions' ? 'active' : '' ?>" href="suniway.php">Transactions</a><a class="<?= $view === 'settings' ? 'active' : '' ?>" href="suniway.php?view=settings">Settings</a></div>
 <?php if ($view === 'settings'):
@@ -69,7 +74,7 @@ admin_header('Bills & Load (SUNIWAY)', 'suniway');
     <div class="grid two">
         <form class="card" method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="settings">
             <h2>SUNIWAY Partner API <?= status_badge(suniway_enabled() ? 'active' : 'disabled') ?></h2>
-            <label><input type="checkbox" name="enabled" value="1"<?= $c['enabled'] ? ' checked' : '' ?><?= $ro ?>> Show UBills, ULoad and UCash In to customers</label>
+            <label><input type="checkbox" name="enabled" value="1"<?= $c['enabled'] ? ' checked' : '' ?><?= $ro ?>> Accept UBills, ULoad and UCash In payments (tiles are always shown; when off they say “Coming soon”)</label>
             <div class="form-grid mt">
                 <div class="field"><label for="base_url">API base URL</label><input id="base_url" name="base_url" type="url" required value="<?= e($c['base_url']) ?>"<?= $ro ?>><small>From your SUNIWAY dashboard. Must be https.</small></div>
                 <div class="field"><label for="api_key">Partner API key</label><input id="api_key" name="api_key" type="password" autocomplete="off" placeholder="<?= $c['api_key'] !== '' ? 'Saved ••••' . e(substr($c['api_key'], -4)) . ' (leave blank to keep)' : 'Paste the key' ?>"<?= $ro ?>><small>Stored encrypted. Never shown to customers.</small></div>
@@ -114,7 +119,7 @@ admin_header('Bills & Load (SUNIWAY)', 'suniway');
     $cnt = $pdo->prepare('SELECT COUNT(*)' . $sql); $cnt->execute($params); $total = (int) $cnt->fetchColumn();
     $s = $pdo->prepare('SELECT t.*, u.full_name, u.mobile' . $sql . " ORDER BY t.id DESC LIMIT $per OFFSET $offset"); $s->execute($params); $rows = $s->fetchAll();
     ?>
-    <?php if (!suniway_enabled()): ?><div class="flash error" role="status">UBills, ULoad and UCash In are hidden from customers. Add the API key and turn them on in <a href="suniway.php?view=settings">Settings</a>.</div><?php endif; ?>
+    <?php if (!suniway_enabled()): ?><div class="flash error" role="status">UBills, ULoad and UCash In show <b>Coming soon</b> to customers. Add the API key and turn on payments in <a href="suniway.php?view=settings">Settings</a>.</div><?php endif; ?>
     <div class="grid kpis">
         <div class="card kpi hero"><small>Successful today</small><strong>₱<?= peso((int) $k['today_v']) ?></strong><span><?= (int) $k['today_n'] ?> transaction(s)</span></div>
         <div class="card kpi"><small>Needs checking</small><strong><?= (int) $k['attention'] ?></strong><span><a href="?status=attention">No reply from SUNIWAY</a></span></div>

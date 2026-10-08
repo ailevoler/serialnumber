@@ -154,11 +154,9 @@ function service_catalog(): array
         ['code' => 'UBarangay', 'label' => 'UBarangay', 'image' => 'ubarangay.png', 'href' => 'ubarangay.php'],
     ];
     if (!ubarangay_enabled()) $services = array_values(array_filter($services, static fn($s) => $s['code'] !== 'UBarangay'));
-    // UBills, ULoad and UCash In (SUNIWAY) appear once Admin enables them and saves the Partner API key.
+    // UBills, ULoad and UCash In (SUNIWAY) are always listed; their pages say "coming soon" until Admin turns payments on.
     require_once __DIR__ . '/suniway.php';
-    if (suniway_enabled()) {
-        foreach (suniway_services() as $svc) $services[] = ['code' => $svc['code'], 'label' => $svc['label'], 'image' => $svc['image'], 'href' => $svc['page']];
-    }
+    foreach (suniway_services() as $svc) $services[] = ['code' => $svc['code'], 'label' => $svc['label'], 'image' => $svc['image'], 'href' => $svc['page']];
     return $services;
 }
 

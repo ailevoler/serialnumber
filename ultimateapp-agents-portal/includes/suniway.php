@@ -60,11 +60,19 @@ function suniway_config(): array
     ];
 }
 
-/** Customers see UBills / ULoad / UCash In only when enabled and a key is saved. */
+/** Payments are live when Admin turned them on, a key is saved and database/suniway_migration.sql was imported. */
 function suniway_enabled(): bool
 {
     $c = suniway_config();
-    return $c['enabled'] && $c['api_key'] !== '';
+    return $c['enabled'] && $c['api_key'] !== '' && suniway_table_ready();
+}
+
+function suniway_table_ready(): bool
+{
+    static $ready = null;
+    if ($ready !== null) return $ready;
+    global $pdo;
+    try { $pdo->query('SELECT 1 FROM suniway_transactions LIMIT 1'); return $ready = true; } catch (Throwable $e) { return $ready = false; }
 }
 
 function suniway_app_fee(string $service): int

@@ -54,8 +54,9 @@ if (suniway_enabled() && !$quote) {
     }
 }
 $picks = $providers ? suniway_match_quick_picks($suniwayService, $providers) : [];
-$recent = $pdo->prepare('SELECT reference, provider_name, account_number, total_centavos, status, created_at FROM suniway_transactions WHERE user_id = ? AND service = ? ORDER BY id DESC LIMIT 10');
-try { $recent->execute([$user['id'], $suniwayService]); $recent = $recent->fetchAll(); } catch (PDOException $e) { $recent = []; }
+$recent = [];
+if (suniway_table_ready()) $recent = $pdo->prepare('SELECT reference, provider_name, account_number, total_centavos, status, created_at FROM suniway_transactions WHERE user_id = ? AND service = ? ORDER BY id DESC LIMIT 10');
+if ($recent) { try { $recent->execute([$user['id'], $suniwayService]); $recent = $recent->fetchAll(); } catch (PDOException $e) { $recent = []; } }
 $val = static fn(string $k): string => e(is_string($_POST[$k] ?? null) ? $_POST[$k] : '');
 $pageTitle = $svc['label'];
 require __DIR__ . '/header.php';
@@ -65,7 +66,7 @@ require __DIR__ . '/header.php';
     <div class="seed-heading"><small>ULTIMATE APP · BORACAY</small><h2><?= e($svc['title']) ?></h2><p><?= e($svc['intro']) ?></p></div>
     <?php if ($error): ?><p class="alert" role="alert"><?= e($error) ?></p><?php endif; ?>
     <?php if (!suniway_enabled()): ?>
-        <p class="seed-notice"><?= e($svc['label']) ?> is not available yet. Please check again soon.</p>
+        <div class="upay-soon"><img src="assets/images/services/<?= e($svc['image']) ?>" alt="" width="72" height="72"><h3>Coming soon</h3><p><?= e($svc['label']) ?> will be available here shortly. You will pay with your Credits.</p><a class="btn dark" href="dashboard.php">Back to Home</a></div>
     <?php elseif ($quote): ?>
         <div class="upay-review">
             <h3>Review payment</h3>

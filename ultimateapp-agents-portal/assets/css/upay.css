@@ -1,0 +1,23 @@
+/* UBills, ULoad, UCash In */
+.upay-picks,.upay-amounts{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.upay-picks button,.upay-amounts button{padding:8px 13px;border:1px solid #d3d8dd;border-radius:999px;background:#fff;color:#151719;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.upay-picks button.on,.upay-amounts button.on{background:#111;border-color:#111;color:#fff}
+.upay-form select{width:100%;min-width:0;padding:12px;border:1px solid #d3d8dd;border-radius:6px;background:#fff;color:#151719;font:inherit;font-size:15px;font-weight:400}
+.upay-form input[type=search]{margin-bottom:6px}
+.upay-amounts{margin-top:-8px}
+.upay-balance{margin:0;color:#5b636a;font-size:13px}
+.upay-short{color:#b42318}.upay-short a{color:inherit}
+.upay-review{margin:18px 0;padding:16px;border:1px solid #e1e4e8;border-radius:12px;background:#fff}
+.upay-review h3{margin:0 0 10px;font-size:16px}
+.upay-review dl{margin:0;display:grid;gap:10px}
+.upay-review dl div{display:flex;justify-content:space-between;gap:16px;font-size:14px}
+.upay-review dt{color:#737a80}.upay-review dd{margin:0;font-weight:600;text-align:right;overflow-wrap:anywhere}
+.upay-review .total{padding-top:10px;border-top:1px solid #e1e4e8;font-size:16px}
+.upay-review .total dd{font-size:18px}
+.upay-confirm{margin-top:14px}.upay-confirm .btn,.upay-edit{width:100%}
+.upay-edit{margin-top:10px}
+.upay-status{text-align:center;margin:18px 0 6px}
+.upay-status h2{margin:6px 0 2px;font-size:22px}.upay-status p{margin:0;color:#737a80;font-size:13px}
+.upay-status.good h2{color:#0f8a4f}.upay-status.bad h2{color:#b42318}.upay-status.warn h2{color:#9a5b00}
+.upay-h{margin:26px 0 8px;font-size:15px}
+.btn.light{display:flex;align-items:center;justify-content:center;background:#fff;color:#111;border:1px solid #111;text-decoration:none;margin-top:10px}

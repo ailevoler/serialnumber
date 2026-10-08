@@ -153,10 +153,16 @@ function service_catalog(): array
         ['code' => 'UEat', 'label' => 'UEat', 'image' => 'ueat.png', 'href' => 'ueat.php'],
         ['code' => 'UBarangay', 'label' => 'UBarangay', 'image' => 'ubarangay.png', 'href' => 'ubarangay.php'],
     ];
-    return ubarangay_enabled() ? $services : array_values(array_filter($services, static fn($s) => $s['code'] !== 'UBarangay'));
+    if (!ubarangay_enabled()) $services = array_values(array_filter($services, static fn($s) => $s['code'] !== 'UBarangay'));
+    // UBills, ULoad and UCash In (SUNIWAY) appear once Admin enables them and saves the Partner API key.
+    require_once __DIR__ . '/suniway.php';
+    if (suniway_enabled()) {
+        foreach (suniway_services() as $svc) $services[] = ['code' => $svc['code'], 'label' => $svc['label'], 'image' => $svc['image'], 'href' => $svc['page']];
+    }
+    return $services;
 }
 
-/** Home screen tiles: row 1 URide, UPass, UGo, ULocal; row 2 UEat, UBarangay, News/Updates, More. */
+/** Home screen tiles: URide, UPass, UGo, ULocal, UEat, (UBarangay), (UBills, ULoad, UCash In), News/Updates, More. */
 function dashboard_tiles(): array
 {
     $tiles = service_catalog();

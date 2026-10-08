@@ -205,6 +205,7 @@ function admin_nav(): array
         ],
         'ERP' => [
             ['payments.php', 'card', 'Payments', 'payments.view'],
+            ['suniway.php', 'card', 'Bills & Load (SUNIWAY)', 'payments.view'],
             ['finance.php', 'finance', 'Finance', 'finance.view'],
             ['ledger.php', 'book', 'General ledger', 'finance.view'],
             ['settlements.php', 'bank', 'Settlements', 'settlements.manage'],
@@ -255,6 +256,7 @@ function admin_header(string $title, string $active): void
         try {
             $counts['agents'] = (int) $pdo->query("SELECT COUNT(*) FROM agents WHERE status = 'pending'")->fetchColumn();
             $counts['agent-payouts'] = (int) $pdo->query("SELECT COUNT(*) FROM agent_payouts WHERE status = 'requested'")->fetchColumn();
+            $counts['suniway'] = (int) $pdo->query("SELECT COUNT(*) FROM suniway_transactions WHERE status IN ('unknown','submitting')")->fetchColumn();
             $counts['service-requests'] = (int) $pdo->query("SELECT COUNT(*) FROM service_requests WHERE status = 'pending' AND service_code IN ('UPass','UGo','ULocal')")->fetchColumn();
         } catch (Throwable $e) {}
     }

@@ -71,6 +71,14 @@ function settings_schema(): array
         'uride.topup_fee_centavos' => ['type' => 'int', 'min' => 0, 'max' => 100000, 'label' => 'Driver top-up service fee'],
         'uride.topup_qrph_enabled' => ['type' => 'bool', 'label' => 'Driver top-up with QR Ph'],
         'ubarangay.enabled' => ['type' => 'bool', 'label' => 'UBarangay enabled'],
+        // UBills / ULoad / UCash In via the SUNIWAY Partner API (Admin > Bills & Load).
+        'suniway.enabled' => ['type' => 'bool', 'label' => 'UBills, ULoad and UCash In enabled'],
+        'suniway.base_url' => ['type' => 'regex', 'pattern' => '#^https://[A-Za-z0-9.-]+(?::\d{2,5})?(?:/[A-Za-z0-9._~/-]*)?$#D', 'label' => 'SUNIWAY API base URL (https)'],
+        'suniway.api_key' => ['type' => 'token', 'secret' => true, 'label' => 'SUNIWAY Partner API key'],
+        'suniway.payment_method' => ['type' => 'enum', 'values' => ['CASH', 'GCASH', 'PAYMAYA', 'CARD'], 'label' => 'Payment method reported to SUNIWAY'],
+        'suniway.fee_bills_pay_centavos' => ['type' => 'int', 'min' => 0, 'max' => 100000, 'label' => 'UBills convenience fee'],
+        'suniway.fee_eload_centavos' => ['type' => 'int', 'min' => 0, 'max' => 100000, 'label' => 'ULoad convenience fee'],
+        'suniway.fee_ecash_centavos' => ['type' => 'int', 'min' => 0, 'max' => 100000, 'label' => 'UCash In convenience fee'],
         'mctc.all_approved' => ['type' => 'bool', 'label' => 'Every approved merchant is an MCTC top-up center'],
         'uride.topup_mctc_enabled' => ['type' => 'bool', 'label' => 'Driver top-up at MCTC'],
         'uride.topup_bcash_enabled' => ['type' => 'bool', 'label' => 'Driver top-up with Boracay Cash'],
@@ -154,6 +162,9 @@ function setting_save(PDO $pdo, string $key, string $value, ?int $adminId): bool
             if ($value !== '' && (!str_starts_with($value, $spec['prefix']) || !preg_match('/^[A-Za-z0-9_]{12,200}$/D', $value))) {
                 throw new InvalidArgumentException($spec['label'] . ' must start with ' . $spec['prefix'] . '.');
             }
+            break;
+        case 'token':
+            if ($value !== '' && !preg_match('/^[\x21-\x7E]{8,500}$/D', $value)) throw new InvalidArgumentException($spec['label'] . ' looks invalid (no spaces, 8-500 characters).');
             break;
         case 'text':
             $value = preg_replace('/\s+/u', ' ', $value) ?? '';

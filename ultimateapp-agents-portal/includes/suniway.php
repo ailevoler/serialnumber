@@ -67,6 +67,12 @@ function suniway_enabled(): bool
     return $c['enabled'] && $c['api_key'] !== '' && suniway_table_ready();
 }
 
+/** Tiles on the home screen and menu (Admin checkbox). Shown unless Admin unticks it. */
+function suniway_tiles_visible(): bool
+{
+    return setting('suniway.show_tiles', '1') === '1';
+}
+
 function suniway_table_ready(): bool
 {
     static $ready = null;

@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!admin_can('settings')) throw new InvalidArgumentException('Only a Super Admin can change SUNIWAY settings.');
             $pdo->beginTransaction();
             setting_save($pdo, 'suniway.enabled', p('enabled') === '1' ? '1' : '0', (int) $admin['id']);
+            setting_save($pdo, 'suniway.show_tiles', p('show_tiles') === '1' ? '1' : '0', (int) $admin['id']);
             setting_save($pdo, 'suniway.base_url', rtrim(trim(p('base_url')), '/'), (int) $admin['id']);
             if (trim(p('api_key')) !== '') setting_save($pdo, 'suniway.api_key', trim(p('api_key')), (int) $admin['id']);
             setting_save($pdo, 'suniway.payment_method', p('payment_method'), (int) $admin['id']);
@@ -22,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if (p('enabled') === '1' && !(string) setting('suniway.api_key', '')) throw new InvalidArgumentException('Enter the Partner API key before turning the services on.');
             $pdo->commit();
-            admin_audit('suniway_settings', 'settings', 'suniway', ['enabled' => p('enabled') === '1', 'base_url' => p('base_url'), 'key_changed' => trim(p('api_key')) !== '']);
+            admin_audit('suniway_settings', 'settings', 'suniway', ['enabled' => p('enabled') === '1', 'show_tiles' => p('show_tiles') === '1', 'base_url' => p('base_url'), 'key_changed' => trim(p('api_key')) !== '']);
             flash('success', 'SUNIWAY settings saved.');
             redirect('suniway.php?view=settings');
         } elseif ($action === 'test') {
@@ -74,7 +75,8 @@ if (!suniway_table_ready()) {
     <div class="grid two">
         <form class="card" method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="settings">
             <h2>SUNIWAY Partner API <?= status_badge(suniway_enabled() ? 'active' : 'disabled') ?></h2>
-            <label><input type="checkbox" name="enabled" value="1"<?= $c['enabled'] ? ' checked' : '' ?><?= $ro ?>> Accept UBills, ULoad and UCash In payments (tiles are always shown; when off they say “Coming soon”)</label>
+            <label><input type="checkbox" name="show_tiles" value="1"<?= suniway_tiles_visible() ? ' checked' : '' ?><?= $ro ?>> Show UBills, ULoad and UCash In tiles to customers</label><br>
+            <label><input type="checkbox" name="enabled" value="1"<?= $c['enabled'] ? ' checked' : '' ?><?= $ro ?>> Accept payments (when off, the tiles open a “Coming soon” page)</label>
             <div class="form-grid mt">
                 <div class="field"><label for="base_url">API base URL</label><input id="base_url" name="base_url" type="url" required value="<?= e($c['base_url']) ?>"<?= $ro ?>><small>From your SUNIWAY dashboard. Must be https.</small></div>
                 <div class="field"><label for="api_key">Partner API key</label><input id="api_key" name="api_key" type="password" autocomplete="off" placeholder="<?= $c['api_key'] !== '' ? 'Saved ••••' . e(substr($c['api_key'], -4)) . ' (leave blank to keep)' : 'Paste the key' ?>"<?= $ro ?>><small>Stored encrypted. Never shown to customers.</small></div>
@@ -119,7 +121,8 @@ if (!suniway_table_ready()) {
     $cnt = $pdo->prepare('SELECT COUNT(*)' . $sql); $cnt->execute($params); $total = (int) $cnt->fetchColumn();
     $s = $pdo->prepare('SELECT t.*, u.full_name, u.mobile' . $sql . " ORDER BY t.id DESC LIMIT $per OFFSET $offset"); $s->execute($params); $rows = $s->fetchAll();
     ?>
-    <?php if (!suniway_enabled()): ?><div class="flash error" role="status">UBills, ULoad and UCash In show <b>Coming soon</b> to customers. Add the API key and turn on payments in <a href="suniway.php?view=settings">Settings</a>.</div><?php endif; ?>
+    <?php if (!suniway_tiles_visible()): ?><div class="flash error" role="status">UBills, ULoad and UCash In are <b>hidden</b> from customers. Show them again in <a href="suniway.php?view=settings">Settings</a>.</div>
+    <?php elseif (!suniway_enabled()): ?><div class="flash error" role="status">UBills, ULoad and UCash In show <b>Coming soon</b> to customers. Add the API key and turn on payments in <a href="suniway.php?view=settings">Settings</a>.</div><?php endif; ?>
     <div class="grid kpis">
         <div class="card kpi hero"><small>Successful today</small><strong>₱<?= peso((int) $k['today_v']) ?></strong><span><?= (int) $k['today_n'] ?> transaction(s)</span></div>
         <div class="card kpi"><small>Needs checking</small><strong><?= (int) $k['attention'] ?></strong><span><a href="?status=attention">No reply from SUNIWAY</a></span></div>

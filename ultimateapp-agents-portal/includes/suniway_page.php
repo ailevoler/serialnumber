@@ -3,6 +3,7 @@ declare(strict_types=1);
 // Shared page for ubills.php, uload.php and ucashin.php. Set $suniwayService before including.
 if (!isset($suniwayService) || !isset(suniway_services()[$suniwayService])) { http_response_code(404); exit; }
 $user = require_auth();
+if (!suniway_tiles_visible()) redirect('dashboard.php');
 header('Cache-Control: no-store');
 $svc = suniway_services()[$suniwayService];
 $self = $svc['page'];

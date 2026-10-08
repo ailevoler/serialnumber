@@ -24,7 +24,10 @@ The integration follows the SUNIWAY flow used in the SUKLI Partner Store: `GET p
    - Optionally set a **convenience fee** per service. It is added on top and kept as Ultimate App revenue.
    - Tick **Accept UBills, ULoad and UCash In payments** and save.
 
-The three tiles are always on the home screen. Until payments are turned on, or if the migration has not been imported yet, their pages show **Coming soon**.
+Two checkboxes in Settings:
+
+- **Show UBills, ULoad and UCash In tiles to customers** (on by default). Untick it to hide the three tiles from the home screen and menu. Receipts of earlier payments stay viewable.
+- **Accept payments**. While it is off, or if the migration has not been imported yet, the tiles open a **Coming soon** page.
 
 The server needs PHP cURL, which Hostinger has.
 

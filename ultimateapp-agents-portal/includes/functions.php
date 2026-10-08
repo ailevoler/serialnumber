@@ -154,9 +154,11 @@ function service_catalog(): array
         ['code' => 'UBarangay', 'label' => 'UBarangay', 'image' => 'ubarangay.png', 'href' => 'ubarangay.php'],
     ];
     if (!ubarangay_enabled()) $services = array_values(array_filter($services, static fn($s) => $s['code'] !== 'UBarangay'));
-    // UBills, ULoad and UCash In (SUNIWAY) are always listed; their pages say "coming soon" until Admin turns payments on.
+    // UBills, ULoad and UCash In (SUNIWAY): listed unless Admin hides the tiles; pages say "coming soon" until payments are on.
     require_once __DIR__ . '/suniway.php';
-    foreach (suniway_services() as $svc) $services[] = ['code' => $svc['code'], 'label' => $svc['label'], 'image' => $svc['image'], 'href' => $svc['page']];
+    if (suniway_tiles_visible()) {
+        foreach (suniway_services() as $svc) $services[] = ['code' => $svc['code'], 'label' => $svc['label'], 'image' => $svc['image'], 'href' => $svc['page']];
+    }
     return $services;
 }
 

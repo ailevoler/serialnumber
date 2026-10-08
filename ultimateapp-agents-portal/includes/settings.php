@@ -73,6 +73,7 @@ function settings_schema(): array
         'ubarangay.enabled' => ['type' => 'bool', 'label' => 'UBarangay enabled'],
         // UBills / ULoad / UCash In via the SUNIWAY Partner API (Admin > Bills & Load).
         'suniway.enabled' => ['type' => 'bool', 'label' => 'UBills, ULoad and UCash In enabled'],
+        'suniway.show_tiles' => ['type' => 'bool', 'label' => 'Show UBills, ULoad and UCash In tiles'],
         'suniway.base_url' => ['type' => 'regex', 'pattern' => '#^https://[A-Za-z0-9.-]+(?::\d{2,5})?(?:/[A-Za-z0-9._~/-]*)?$#D', 'label' => 'SUNIWAY API base URL (https)'],
         'suniway.api_key' => ['type' => 'token', 'secret' => true, 'label' => 'SUNIWAY Partner API key'],
         'suniway.payment_method' => ['type' => 'enum', 'values' => ['CASH', 'GCASH', 'PAYMAYA', 'CARD'], 'label' => 'Payment method reported to SUNIWAY'],

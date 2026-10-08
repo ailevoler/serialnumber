@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS `suniway_transactions` (
 
 INSERT IGNORE INTO `app_settings` (`setting_key`, `setting_value`, `is_secret`) VALUES
 ('suniway.enabled', '0', 0),
+('suniway.show_tiles', '1', 0),
 ('suniway.base_url', 'https://api-sunikiosk.suniway.ph/api/partner-api', 0),
 ('suniway.payment_method', 'CASH', 0),
 ('suniway.fee_bills_pay_centavos', '0', 0),

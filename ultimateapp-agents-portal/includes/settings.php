@@ -70,6 +70,7 @@ function settings_schema(): array
         'uride.topup_max_centavos' => ['type' => 'int', 'min' => 100, 'max' => 10000000, 'label' => 'Maximum driver top-up'],
         'uride.topup_fee_centavos' => ['type' => 'int', 'min' => 0, 'max' => 100000, 'label' => 'Driver top-up service fee'],
         'uride.topup_qrph_enabled' => ['type' => 'bool', 'label' => 'Driver top-up with QR Ph'],
+        'ubarangay.enabled' => ['type' => 'bool', 'label' => 'UBarangay enabled'],
         'mctc.all_approved' => ['type' => 'bool', 'label' => 'Every approved merchant is an MCTC top-up center'],
         'uride.topup_mctc_enabled' => ['type' => 'bool', 'label' => 'Driver top-up at MCTC'],
         'uride.topup_bcash_enabled' => ['type' => 'bool', 'label' => 'Driver top-up with Boracay Cash'],

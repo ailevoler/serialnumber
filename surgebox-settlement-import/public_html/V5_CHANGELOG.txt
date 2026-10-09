@@ -309,11 +309,27 @@ V5.24 - Nationlink Settlement Report import (PDF / Excel / CSV)
   report's own SUB-TOTAL and TOTAL lines are re-added and checked. Import records only the New lines.
 - Recorded exactly like the Nationlink webhook ("Cash In", provider nationlink, reference NL-<TRACE NO.>,
   label = QR name), so a later webhook / re-import of the same payment is never counted twice.
-  The fee recorded = TRAN AMOUNT - NET SETTLEMENT from the report (Nationlink is the source of truth).
+  (V5.25: the fee recorded is the client's Admin fee setting; see below.)
 - Re-uploading a file that was already imported shows a warning; matched lines are skipped.
 - Pure PHP, no Composer: PDF text (FlateDecode + ToUnicode fonts) read by includes/settlement-import.php;
   .xlsx via ZipArchive. Old .xls (97-2003) must be saved as .xlsx/CSV first.
 New: includes/settlement-import.php, api/settlement_import.php, settlement-import.php,
      database/migration_v5_24_settlement_import.sql
-Changed: includes/gateways.php (sb_record_gateway_payment accepts an optional 'fee'),
-         includes/header.php (Admin menu: Settlement Import)
+Changed: includes/header.php (Admin menu: Settlement Import)
+
+V5.25 - Client fees: MDR %, Fixed and amount Brackets (Admin)
+- RUN database/migration_v5_25_fee_brackets.sql once (adds fee type "Bracket" + sb_client_gateways.fee_brackets).
+- Admin > client page > Payment Credentials > Edit (any provider, e.g. Nationlink) > Fees / MDR:
+  Fixed, Percentage (MDR %, default 1.5), Fixed + Percentage (e.g. P10.00 + 1.5%), or NEW
+  "Bracket by amount": rows of From / To / Fixed Fee / MDR % (To empty = and above). Fee = Fixed + amount x MDR %
+  of the bracket the payment falls in; brackets may not overlap; min / max caps still apply.
+  "Use sample brackets" fills an example; live examples show the fee for P100 / P1,000 / P10,000.
+- Only Admin can set fees (api/client_gateways.php is Admin only); clients only see their Net amounts.
+- Used everywhere the client fee is computed: Nationlink / PayMongo webhooks, Settlement Import, and
+  "Recalculate Fees" / "Apply this fee to existing transactions".
+- Settlement Import now charges the client's Admin fee setting (same as the webhook). Nationlink's own
+  DISCOUNT / NET SETTLEMENT from the report are kept in provider_fee / provider_net for reconciliation; the
+  preview shows both (NL Discount / NL Net and SurgeBox Fee / Client Net).
+Changed: includes/gateways.php, api/client_gateways.php, includes/org-credentials-card.php,
+         includes/settlement-import.php, settlement-import.php
+New: database/migration_v5_25_fee_brackets.sql

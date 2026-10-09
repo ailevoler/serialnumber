@@ -64,9 +64,11 @@ function renderResult(res, committed) {
   let html = `<div class="stat-cards-grid">
     <div class="stat-card-v2"><p class="lbl">Report</p><p class="val" style="font-size:18px">${sbEscape(m.report_type || 'Nationlink')} · ${sbEscape(m.report_date || '-')}</p><p class="form-hint" style="margin:4px 0 0">${sbEscape(res.file.name)} (${sbEscape(res.file.format.toUpperCase())})</p></div>
     <div class="stat-card-v2"><p class="lbl">Tran Amount (${s.rows} lines)</p><p class="val">${sbMoney(s.amount)}</p></div>
-    <div class="stat-card-v2"><p class="lbl">Discount</p><p class="val">${sbMoney(s.discount)}</p></div>
-    <div class="stat-card-v2"><p class="lbl">Net Settlement</p><p class="val">${sbMoney(s.net)}</p></div>
+    <div class="stat-card-v2"><p class="lbl">Nationlink Discount / Net</p><p class="val" style="font-size:18px">${sbMoney(s.discount)} / ${sbMoney(s.net)}</p></div>
+    <div class="stat-card-v2"><p class="lbl">SurgeBox Fee / Client Net</p><p class="val" style="font-size:18px">${sbMoney(s.sb_fee)} / ${sbMoney(s.client_net)}</p></div>
   </div>`;
+  const labels = [...new Set(d.lines.map(l => l.fee_label).filter(Boolean))];
+  if (labels.length) html += `<p class="form-hint">SurgeBox fee (Admin setting): <b>${labels.map(sbEscape).join('</b>; <b>')}</b></p>`;
   if (m.main_org || Object.keys(m.branches || {}).length) {
     html += `<p class="form-hint">Main Org ${sbEscape(m.main_org || '-')} ${sbEscape(m.main_org_name || '')} · Branch ${Object.entries(m.branches || {}).map(([k, v]) => sbEscape(k + ' ' + v)).join(', ') || '-'}${Object.keys(s.organizations || {}).length ? ' · Client: <b>' + Object.values(s.organizations).map(sbEscape).join(', ') + '</b>' : ''}</p>`;
   }
@@ -76,7 +78,7 @@ function renderResult(res, committed) {
   (d.warnings || []).forEach(w => { html += `<div class="alert" style="background:#fff7ed;color:#9a3412;border:1px solid #fdba74;margin:6px 0">${sbEscape(w)}</div>`; });
 
   html += `<p style="margin:12px 0">${Object.entries(by).map(([k, v]) => pill(k) + ' ' + v).join(' &nbsp; ')}</p>`;
-  html += '<div class="table-wrap"><div style="overflow-x:auto"><table class="data-table" style="min-width:1200px"><thead><tr><th>Status</th><th>MemberID</th><th>Time Stamp</th><th>Trace No.</th><th>Seq</th><th>Source Account</th><th>Tran Amount</th><th>Discount</th><th>Net Settlement</th><th>Client / QR</th><th>Note</th></tr></thead><tbody>';
+  html += '<div class="table-wrap"><div style="overflow-x:auto"><table class="data-table" style="min-width:1350px"><thead><tr><th>Status</th><th>MemberID</th><th>Time Stamp</th><th>Trace No.</th><th>Seq</th><th>Source Account</th><th>Tran Amount</th><th>NL Discount</th><th>NL Net</th><th>SurgeBox Fee</th><th>Client Net</th><th>Client / QR</th><th>Note</th></tr></thead><tbody>';
   d.lines.forEach(l => {
     html += `<tr>
       <td>${pill(l.status)}</td>
@@ -88,6 +90,8 @@ function renderResult(res, committed) {
       <td>${sbMoney(l.amount)}</td>
       <td>${l.discount == null ? '-' : sbMoney(l.discount)}</td>
       <td>${l.net == null ? '-' : sbMoney(l.net)}</td>
+      <td>${l.sb_fee == null ? '-' : sbMoney(l.sb_fee)}</td>
+      <td><b>${l.client_net == null ? '-' : sbMoney(l.client_net)}</b></td>
       <td>${sbEscape(l.organization_name || '-')}${l.qr_label ? '<br><small class="form-hint">' + sbEscape(l.qr_label) + '</small>' : ''}</td>
       <td><small>${sbEscape(l.message || '')}</small></td>
     </tr>`;

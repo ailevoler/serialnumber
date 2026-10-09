@@ -1264,6 +1264,9 @@ function sb_stl_preview(array $parsed, ?int $orgId): array
         $l['organization_id'] = null;
         $l['organization_name'] = null;
         $l['qr_label'] = null;
+        $l['sb_fee'] = null;       // V5.25: SurgeBox fee from the client's Admin fee setting
+        $l['client_net'] = null;
+        $l['fee_label'] = null;
         if (isset($seen[$l['trace']])) {
             $l['status'] = 'Duplicate';
             $l['message'] = 'Repeated in this file';
@@ -1281,18 +1284,22 @@ function sb_stl_preview(array $parsed, ?int $orgId): array
             }
             $l['organization_name'] = $orgNames[$oid];
             $l['qr_label'] = $res['qr']['label'] ?? null;
+            $gw = $res['gateway'];
+            $l['sb_fee'] = sb_compute_client_fee($gw, (float) $l['amount']);
+            $l['client_net'] = ($gw['fee_mode'] ?? 'deduct') === 'separate' ? (float) $l['amount'] : round((float) $l['amount'] - $l['sb_fee'], 2);
+            $l['fee_label'] = sb_fee_label($gw);
             if ($res['gateway']['status'] === 'Disabled') {
                 $res = null;
             }
         }
         if ($ex) {
             $l['transaction_id'] = (int) $ex['id'];
+            // show what the ledger actually holds
+            $l['sb_fee'] = (float) $ex['fee'];
+            $l['client_net'] = (float) $ex['net_amount'];
             if (abs((float) $ex['amount'] - (float) $l['amount']) >= 0.005) {
                 $l['status'] = 'Mismatch';
                 $l['message'] = 'Already recorded (tx #' . $ex['id'] . ') with amount ' . number_format((float) $ex['amount'], 2) . ' - check manually';
-            } elseif ($l['net'] !== null && abs((float) $ex['net_amount'] - (float) $l['net']) >= 0.005) {
-                $l['status'] = 'Matched';
-                $l['message'] = 'Already recorded (tx #' . $ex['id'] . '); ledger net ' . number_format((float) $ex['net_amount'], 2) . ' vs report net ' . number_format((float) $l['net'], 2);
             } else {
                 $l['status'] = 'Matched';
                 $l['message'] = 'Already recorded (tx #' . $ex['id'] . ')';
@@ -1324,6 +1331,8 @@ function sb_stl_preview(array $parsed, ?int $orgId): array
         'amount' => $sum($parsed['lines'], 'amount'),
         'discount' => $sum($parsed['lines'], 'discount'),
         'net' => $sum($parsed['lines'], 'net'),
+        'sb_fee' => $sum($parsed['lines'], 'sb_fee'),
+        'client_net' => $sum($parsed['lines'], 'client_net'),
         'by_status' => $byStatus,
         'organizations' => $orgNames,
     ];
@@ -1368,8 +1377,10 @@ function sb_stl_commit(array $parsed, ?int $orgId, array $file, int $userId): ar
             $r = sb_record_gateway_payment($res['gateway'], [
                 'id' => $l['reference_no'],
                 'amount' => $amount,
-                // Nationlink's settlement is the source of truth for the deducted fee.
-                'fee' => $net !== null ? max(0.0, round($amount - $net, 2)) : null,
+                // SurgeBox fee = the client's Admin fee setting (Fixed / MDR % / Bracket), same as the webhook.
+                // Nationlink's own DISCOUNT / NET SETTLEMENT are kept for reconciliation.
+                'provider_fee' => $l['discount'],
+                'provider_net' => $net,
                 'paid_at' => $l['paid_at'] ?? date('Y-m-d H:i:s'),
                 'trace_no' => $l['seq'] !== '' ? $l['seq'] : $l['trace'],
                 'payer_name' => $l['payer'] !== '' ? $l['payer'] : null,

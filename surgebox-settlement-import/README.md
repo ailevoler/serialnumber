@@ -1,4 +1,4 @@
-# SurgeBox V5.24 — Nationlink Settlement Report Import
+# SurgeBox V5.24–V5.25 — Nationlink Settlement Report Import + Client Fees (MDR / Fixed / Bracket)
 
 Patch para sa SurgeBox (`public_html`) na nag-i-import ng daily **QR TRANSACTIONS REPORT (DTQR)** ng
 Nationlink (PDF, Excel `.xlsx` o CSV) papunta sa transactions ng client, para lumabas sa client dashboard,
@@ -8,8 +8,9 @@ ledger at settlement.
 
 1. I-upload ang laman ng `public_html/` sa server, papalitan ang mga file na may parehong pangalan
    (kasama ang kopya sa `public_html/portal/`).
-2. phpMyAdmin → SQL: patakbuhin nang isang beses ang `database/migration_v5_24_settlement_import.sql`
-   (para sa import history; ligtas kahit patakbuhin ulit).
+2. phpMyAdmin → SQL: patakbuhin nang isang beses (ligtas kahit ulitin):
+   - `database/migration_v5_24_settlement_import.sql` — import history
+   - `database/migration_v5_25_fee_brackets.sql` — Bracket fee type
 3. Admin → **Settlement Import** (bagong menu sa ilalim ng Settlement Report).
 
 > **Admin lang ang puwedeng mag-import.** Ang client (Organization Portal, kahit Owner) ay walang menu,
@@ -37,7 +38,8 @@ ledger at settlement.
 | `TRACE NO.` | `sb_transactions.reference_no = 'NL-' + TRACE NO.` (pareho sa webhook, kaya walang doble) |
 | `SEQ NO.` | `qr_ph_trace_no` |
 | `SOURCE ACCOUNT NO.` | payer name sa payload |
-| `TRAN AMOUNT` / `NET SETTLEMENT` | `amount` / `net_amount`; `fee = TRAN AMOUNT − NET SETTLEMENT` |
+| `TRAN AMOUNT` | `amount`; `fee` / `net_amount` = fee setting ng client sa Admin (Fixed / MDR % / Bracket) |
+| `DISCOUNT` / `NET SETTLEMENT` | `provider_fee` / `provider_net` (Nationlink, para sa reconciliation) |
 | `TIME STAMP` | `transaction_date` |
 
 Naka-record bilang `Cash In`, provider `nationlink`, gamit ang Nationlink gateway ng client
@@ -53,6 +55,23 @@ Naka-record bilang `Cash In`, provider `nationlink`, gamit ang Nationlink gatewa
 ## Mga binago / bagong file
 
 - Bago: `includes/settlement-import.php`, `api/settlement_import.php`, `settlement-import.php`,
-  `database/migration_v5_24_settlement_import.sql`
-- Binago: `includes/gateways.php` (optional na `fee` sa `sb_record_gateway_payment`),
-  `includes/header.php` (Admin menu), `V5_CHANGELOG.txt` (V5.24)
+  `database/migration_v5_24_settlement_import.sql`, `database/migration_v5_25_fee_brackets.sql`
+- Binago: `includes/gateways.php` (Bracket fee), `api/client_gateways.php`, `includes/org-credentials-card.php`
+  (Admin fee form), `includes/header.php` (Admin menu), `V5_CHANGELOG.txt`
+
+## Client Fees — MDR (1.5%), Fixed at Bracket (V5.25, Admin lang)
+
+Admin → client page → **Payment Credentials** → Edit (hal. Nationlink) → **Fees / MDR**:
+
+| Fee Type | Halimbawa |
+| --- | --- |
+| Fixed | ₱10.00 bawat transaction |
+| Percentage (MDR) | 1.5% |
+| Fixed + Percentage | ₱10.00 + 1.5% |
+| **Bracket by amount** | ₱0.01–₱100: ₱5.00 · ₱100.01–₱1,000: ₱10.00 + 1.5% · ₱1,000.01 pataas: 1.5% |
+
+- Sa Bracket, bawat hanay ay may **From / To / Fixed Fee / MDR %**. Iwang blangko ang *To* sa huli para "and above".
+  Bawal mag-overlap ang brackets. Puwede pa ring lagyan ng Minimum / Maximum fee.
+- May live na halimbawa (₱100 / ₱1,000 / ₱10,000) habang nag-e-edit.
+- Ginagamit ito ng webhook, ng Settlement Import, at ng "Recalculate Fees" / "Apply this fee to existing transactions".
+- Admin lang ang makakapag-set; net amount lang ang nakikita ng client.

@@ -297,12 +297,95 @@ function sb_gateway_for_browser(array $g): array
 // ---------------------------------------------------------------------
 // Fees / MDR
 // ---------------------------------------------------------------------
+/**
+ * V5.25: amount brackets for fee_type "Bracket" - each bracket has its own Fixed fee and MDR %.
+ * Stored as JSON: [{"from":0.01,"to":100,"fixed":10,"percent":0}, {"from":100.01,"to":null,"fixed":0,"percent":1.5}]
+ * ("to" null = and above). Sorted by "from".
+ */
+function sb_fee_brackets(array $g): array
+{
+    $list = json_decode((string) ($g['fee_brackets'] ?? ''), true);
+    if (!is_array($list)) {
+        return [];
+    }
+    $out = [];
+    foreach ($list as $b) {
+        if (!is_array($b) || !isset($b['from'])) {
+            continue;
+        }
+        $out[] = [
+            'from' => round((float) $b['from'], 2),
+            'to' => isset($b['to']) && $b['to'] !== '' && $b['to'] !== null ? round((float) $b['to'], 2) : null,
+            'fixed' => round(max(0.0, (float) ($b['fixed'] ?? 0)), 2),
+            'percent' => round(max(0.0, (float) ($b['percent'] ?? 0)), 3),
+        ];
+    }
+    usort($out, fn($a, $b) => $a['from'] <=> $b['from']);
+    return $out;
+}
+
+/** The bracket an amount falls in (null when no bracket covers it). */
+function sb_fee_bracket_for(array $g, float $amount): ?array
+{
+    $amount = round($amount, 2);
+    foreach (sb_fee_brackets($g) as $b) {
+        if ($amount >= $b['from'] && ($b['to'] === null || $amount <= $b['to'])) {
+            return $b;
+        }
+    }
+    return null;
+}
+
+/**
+ * Validate brackets posted by Admin. Returns [brackets, error|null].
+ * Rules: at least one row; from >= 0; to empty (and above) or >= from; no overlaps; MDR % <= 100.
+ */
+function sb_fee_brackets_validate($rows): array
+{
+    if (!is_array($rows) || !$rows) {
+        return [[], 'Add at least one amount bracket.'];
+    }
+    $out = [];
+    foreach (array_values($rows) as $i => $r) {
+        $n = $i + 1;
+        $from = trim((string) ($r['from'] ?? ''));
+        $to = trim((string) ($r['to'] ?? ''));
+        if ($from === '' || !is_numeric($from) || (float) $from < 0) {
+            return [[], "Bracket {$n}: enter a valid From amount."];
+        }
+        if ($to !== '' && (!is_numeric($to) || (float) $to < (float) $from)) {
+            return [[], "Bracket {$n}: To amount must be empty (and above) or not lower than From."];
+        }
+        $pct = (float) ($r['percent'] ?? 0);
+        if ($pct < 0 || $pct > 100) {
+            return [[], "Bracket {$n}: MDR % must be between 0 and 100."];
+        }
+        $out[] = [
+            'from' => round((float) $from, 2),
+            'to' => $to === '' ? null : round((float) $to, 2),
+            'fixed' => round(max(0.0, (float) ($r['fixed'] ?? 0)), 2),
+            'percent' => round($pct, 3),
+        ];
+    }
+    usort($out, fn($a, $b) => $a['from'] <=> $b['from']);
+    for ($i = 1, $c = count($out); $i < $c; $i++) {
+        $prevTo = $out[$i - 1]['to'];
+        if ($prevTo === null || $out[$i]['from'] <= $prevTo) {
+            return [[], 'Amount brackets overlap (' . number_format($out[$i - 1]['from'], 2) . ' and ' . number_format($out[$i]['from'], 2) . '). Each amount must fall in only one bracket.'];
+        }
+    }
+    return [$out, null];
+}
+
 function sb_compute_client_fee(array $g, float $amount): float
 {
+    $bracket = ($g['fee_type'] ?? '') === 'Bracket' ? sb_fee_bracket_for($g, $amount) : null;
     $fee = match ($g['fee_type'] ?? 'None') {
         'Fixed' => (float) $g['fee_fixed'],
         'Percentage' => $amount * (float) $g['fee_percent'] / 100,
         'Fixed + Percentage' => (float) $g['fee_fixed'] + $amount * (float) $g['fee_percent'] / 100,
+        // V5.25: Fixed + MDR % of the bracket the amount falls in (no bracket = no fee)
+        'Bracket' => $bracket ? $bracket['fixed'] + $amount * $bracket['percent'] / 100 : 0.0,
         default => 0.0,
     };
     if ($g['fee_min'] !== null && $g['fee_min'] !== '' && $fee < (float) $g['fee_min'] && ($g['fee_type'] ?? 'None') !== 'None') {
@@ -322,7 +405,17 @@ function sb_compute_client_fee(array $g, float $amount): float
 function sb_fee_label(array $g): string
 {
     $pct = rtrim(rtrim(number_format((float) $g['fee_percent'], 3), '0'), '.');
+    if (($g['fee_type'] ?? '') === 'Bracket') {
+        $parts = [];
+        foreach (sb_fee_brackets($g) as $b) {
+            $bp = rtrim(rtrim(number_format($b['percent'], 3), '0'), '.');
+            $rate = array_filter([$b['fixed'] > 0 ? '₱' . number_format($b['fixed'], 2) : null, $b['percent'] > 0 ? $bp . '%' : null]);
+            $parts[] = '₱' . number_format($b['from'], 2) . ($b['to'] === null ? '+' : '–₱' . number_format($b['to'], 2)) . ': ' . ($rate ? implode(' + ', $rate) : 'no fee');
+        }
+        $pct = '';
+    }
     $base = match ($g['fee_type'] ?? 'None') {
+        'Bracket' => 'Bracket (' . ($parts ? implode('; ', $parts) : 'no brackets set') . ')',
         'Fixed' => '₱' . number_format((float) $g['fee_fixed'], 2) . ' fixed',
         'Percentage' => $pct . '%',
         'Fixed + Percentage' => '₱' . number_format((float) $g['fee_fixed'], 2) . ' + ' . $pct . '%',
@@ -539,7 +632,7 @@ function sb_pm_register_webhook(array $g): array
 // the test-mode simulator). Idempotent on the provider payment id.
 // ---------------------------------------------------------------------
 /**
- * @param array $p normalized payment: id, amount (pesos), fee? (overrides the computed fee), provider_fee?, provider_net?,
+ * @param array $p normalized payment: id, amount (pesos), provider_fee?, provider_net?,
  *                 payer_name?, payment_intent_id?, code_id?, source_type?, paid_at?
  * @return array{created:bool, transaction_id:int}
  */
@@ -555,8 +648,7 @@ function sb_record_gateway_payment(array $g, array $p, ?array $qr, array $rawPay
 
     $orgId = (int) $g['organization_id'];
     $amount = round((float) $p['amount'], 2);
-    // V5.24: a provider settlement report may supply the fee it actually deducted.
-    $fee = isset($p['fee']) && is_numeric($p['fee']) ? round(min(max(0.0, (float) $p['fee']), $amount), 2) : sb_compute_client_fee($g, $amount);
+    $fee = sb_compute_client_fee($g, $amount);
     $mode = $g['fee_mode'] === 'separate' ? 'separate' : 'deduct';
     $net = $mode === 'separate' ? $amount : round($amount - $fee, 2);
     $feeStatus = $fee <= 0 ? null : ($mode === 'separate' ? 'Unbilled' : 'Deducted');

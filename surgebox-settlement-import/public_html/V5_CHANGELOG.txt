@@ -340,3 +340,13 @@ V5.26 - Fee setup per client (each client is different)
 - "Edit Fee" opens that client's fee editor directly (org-view.php?id=..&editFee=nationlink); saving changes
   only that client. Fees are stored per client per provider (sb_client_gateways), so no client affects another.
 Changed: client-fees.php, api/client_fees.php, includes/org-credentials-card.php
+
+V5.27 - Nationlink and PayMongo fees set separately per client
+- Admin > Client Fees > Fee Setup per Client: one row per client with a Nationlink column and a PayMongo
+  column (other providers appear when a client uses them). Each cell shows that provider's own fee
+  (Fixed / MDR % / Fixed + MDR / Bracket), deducted or billed separately, and the fee on P100 / P1,000 / P10,000.
+- "Edit Nationlink fee" / "Edit PayMongo fee" opens only that provider's setup for that client;
+  "+ Set up PayMongo" (or Nationlink) adds the provider for that client when it is not set up yet.
+- Each payment uses the fee of the provider it came through (Nationlink webhook / Settlement Import ->
+  the client's Nationlink fee; PayMongo webhook -> the client's PayMongo fee).
+Changed: client-fees.php, api/client_fees.php, includes/org-credentials-card.php

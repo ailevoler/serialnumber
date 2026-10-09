@@ -18,26 +18,42 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) || !preg_match('/^\d{4}-\d{2}-\d
 }
 
 if ($method === 'GET' && isset($_GET['setup'])) {
-    // V5.26: every client's own fee setup (one row per client x provider) - each client can differ.
-    $rows = db()->query("SELECT g.*, o.organization_name, o.client_code, p.display_name provider_name
-        FROM sb_client_gateways g JOIN sb_organization o ON o.id = g.organization_id
-        JOIN sb_payment_providers p ON p.code = g.provider_code
-        ORDER BY o.organization_name, p.is_priority DESC, p.sort_order")->fetchAll();
-    $out = array_map(fn($g) => [
-        'gateway_id' => (int) $g['id'],
-        'organization_id' => (int) $g['organization_id'],
-        'organization_name' => $g['organization_name'],
-        'client_code' => $g['client_code'],
-        'provider_code' => $g['provider_code'],
-        'provider_name' => $g['provider_name'],
-        'status' => $g['status'],
-        'environment' => $g['environment'],
-        'fee_type' => $g['fee_type'],
-        'fee_mode' => $g['fee_mode'],
-        'fee_label' => sb_fee_label($g),
-        'examples' => array_map(fn($a) => ['amount' => $a, 'fee' => sb_compute_client_fee($g, (float) $a)], [100, 1000, 10000]),
-    ], $rows);
-    json_response(['status' => 'success', 'data' => $out]);
+    // V5.26/V5.27: each client has its OWN fee per provider - Nationlink and PayMongo are set up separately.
+    // One row per client; one column per provider (Nationlink + PayMongo always, others when used).
+    $gws = db()->query('SELECT g.*, p.display_name provider_name FROM sb_client_gateways g JOIN sb_payment_providers p ON p.code = g.provider_code')->fetchAll();
+    $byOrg = [];
+    $used = [];
+    foreach ($gws as $g) {
+        $used[$g['provider_code']] = true;
+        $byOrg[(int) $g['organization_id']][$g['provider_code']] = [
+            'gateway_id' => (int) $g['id'],
+            'status' => $g['status'],
+            'environment' => $g['environment'],
+            'fee_type' => $g['fee_type'],
+            'fee_mode' => $g['fee_mode'],
+            'fee_label' => sb_fee_label($g),
+            'examples' => array_map(fn($a) => ['amount' => $a, 'fee' => sb_compute_client_fee($g, (float) $a)], [100, 1000, 10000]),
+        ];
+    }
+    $providers = [];
+    foreach (sb_providers() as $p) {
+        if (in_array($p['code'], ['nationlink', 'paymongo'], true) || isset($used[$p['code']])) {
+            $providers[] = ['code' => $p['code'], 'name' => $p['display_name']];
+        }
+    }
+    $rank = fn(string $c): int => ['nationlink' => 0, 'paymongo' => 1][$c] ?? 2;
+    usort($providers, fn($a, $b) => $rank($a['code']) <=> $rank($b['code']));
+    $clients = [];
+    foreach (db()->query('SELECT id, organization_name, client_code, status FROM sb_organization ORDER BY organization_name')->fetchAll() as $o) {
+        $clients[] = [
+            'organization_id' => (int) $o['id'],
+            'organization_name' => $o['organization_name'],
+            'client_code' => $o['client_code'],
+            'is_approved' => sb_org_is_approved(sb_org_row((int) $o['id'])),
+            'gateways' => (object) ($byOrg[(int) $o['id']] ?? []),
+        ];
+    }
+    json_response(['status' => 'success', 'data' => ['providers' => $providers, 'clients' => $clients]]);
 }
 
 if ($method === 'GET') {

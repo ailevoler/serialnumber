@@ -1,4 +1,4 @@
-# SurgeBox V5.24–V5.26 — Nationlink Settlement Report Import + Client Fees (MDR / Fixed / Bracket)
+# SurgeBox V5.24–V5.27 — Nationlink Settlement Report Import + Client Fees (MDR / Fixed / Bracket)
 
 Patch para sa SurgeBox (`public_html`) na nag-i-import ng daily **QR TRANSACTIONS REPORT (DTQR)** ng
 Nationlink (PDF, Excel `.xlsx` o CSV) papunta sa transactions ng client, para lumabas sa client dashboard,
@@ -84,3 +84,13 @@ sa isang client ay hindi nakakaapekto sa iba.
 - Admin → **Client Fees** → *Fee Setup per Client*: listahan ng lahat ng client at provider, ang fee setup nila,
   at ang fee sa ₱100 / ₱1,000 / ₱10,000. May search.
 - **Edit Fee** → bubukas agad ang fee editor ng client na iyon (Fixed / MDR % / Fixed + MDR / Bracket).
+
+## Magkaiba ang Nationlink at PayMongo sa bawat client (V5.27)
+
+Sa Admin → **Client Fees** → *Fee Setup per Client*, isang row kada client na may **Nationlink** column at
+**PayMongo** column. Hiwalay ang setup ng dalawa (hal. Nationlink = Bracket, PayMongo = ₱10 fixed billed separately).
+
+- **Edit Nationlink fee** / **Edit PayMongo fee** — binabago lang ang provider na iyon ng client na iyon.
+- **+ Set up PayMongo** (o Nationlink) — kung wala pang setup ang client para sa provider na iyon.
+- Bawat bayad ay gumagamit ng fee ng provider na pinanggalingan nito (Nationlink webhook at Settlement Import →
+  Nationlink fee ng client; PayMongo webhook → PayMongo fee ng client).

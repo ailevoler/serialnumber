@@ -94,3 +94,12 @@ Sa Admin → **Client Fees** → *Fee Setup per Client*, isang row kada client n
 - **+ Set up PayMongo** (o Nationlink) — kung wala pang setup ang client para sa provider na iyon.
 - Bawat bayad ay gumagamit ng fee ng provider na pinanggalingan nito (Nationlink webhook at Settlement Import →
   Nationlink fee ng client; PayMongo webhook → PayMongo fee ng client).
+
+## Nationlink MDR = 1.5% (SQL, Nationlink lang)
+
+`database/update_nationlink_mdr_1_5.sql` — patakbuhin sa phpMyAdmin (mag-backup muna):
+
+- Lahat ng client: Nationlink fee → **Percentage 1.5%**, deducted (walang fixed, walang min/max). Hindi ginagalaw ang PayMongo.
+- Nire-recalculate ang mga dating Nationlink collection: `fee = ROUND(amount × 1.5%, 2)`, `net = amount − fee`.
+- Gumagawa ng backup tables (`bk_nl_mdr_gateways`, `bk_nl_mdr_transactions`); nasa dulo ng file ang Undo.
+- Kung may Nationlink gateway na `credit_wallet = 1`, gamitin ang **Recalculate Fees** button para maitama rin ang balances.

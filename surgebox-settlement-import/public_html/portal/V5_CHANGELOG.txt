@@ -299,6 +299,7 @@ V5.23 - Cash Out: PayMongo HTTP 301 fix + diagnostics
 
 V5.24 - Nationlink Settlement Report import (PDF / Excel / CSV)
 - RUN database/migration_v5_24_settlement_import.sql once (import history; the import works without it).
+- Admin only: client portal logins (any role) and the portal host get 403 on the page and the API.
 - Admin > Settlement Import: upload Nationlink's daily "QR TRANSACTIONS REPORT" (REPORT TYPE: DTQR) as
   PDF, Excel (.xlsx) or CSV. Optional: pick the client, or leave "Auto-detect from MemberID".
 - Every line (TIME STAMP, TRACE NO., SEQ NO., SOURCE ACCOUNT NO., TRAN AMOUNT, TAG, RATE, DISCOUNT,

@@ -13,7 +13,24 @@ declare(strict_types=1);
  * Pure PHP (no Composer): zlib for PDF streams, ZipArchive + SimpleXML for .xlsx.
  */
 
-const SB_STL_CODE_RE = '/^[A-Z][0-9]{5}$/';
+/**
+ * Settlement import is SurgeBox Admin only. Client (Organization Portal) logins - any role,
+ * Owner included - and the client portal host can never preview or import.
+ */
+function sb_stl_require_admin(bool $isApi): array
+{
+    $user = require_role(['Admin'], $isApi);
+    if (is_org_portal() || (function_exists('sb_is_portal_host') && sb_is_portal_host())) {
+        if ($isApi) {
+            json_response(['status' => 'error', 'message' => 'Access denied. Only SurgeBox Admin can import settlement reports.'], 403);
+        }
+        http_response_code(403);
+        echo '<h1>403 - Access denied</h1><p>Only SurgeBox Admin can import settlement reports.</p>';
+        exit;
+    }
+    return $user;
+}
+
 // Amounts: "1,100.00" in the PDF, but Excel cells may come back as plain 20 / 1100.5.
 const SB_STL_MONEY_RE = '\(?-?[0-9][0-9,]*(?:\.[0-9]+)?\)?';
 

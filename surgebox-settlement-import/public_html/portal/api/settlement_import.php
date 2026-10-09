@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includes/settlement-import.php';
  *   POST multipart action=preview, file, organizationId? -> parsed + matched lines (nothing saved)
  *   POST JSON {action:"commit", token}                   -> records the "New" lines
  */
-$user = require_role(['Admin'], true);
+$user = sb_stl_require_admin(true); // Admin only - never the client portal
 header('Cache-Control: no-store');
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {

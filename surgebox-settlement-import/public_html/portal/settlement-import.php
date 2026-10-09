@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
-$user = require_role(['Admin']);
+require_once __DIR__ . '/includes/settlement-import.php';
+$user = sb_stl_require_admin(false); // Admin only - never the client portal
 $pageTitle = 'Settlement Import - SurgeBox';
 
 // Clients that have a Nationlink gateway (the report is booked on that gateway).

@@ -12,6 +12,10 @@ ledger at settlement.
    (para sa import history; ligtas kahit patakbuhin ulit).
 3. Admin → **Settlement Import** (bagong menu sa ilalim ng Settlement Report).
 
+> **Admin lang ang puwedeng mag-import.** Ang client (Organization Portal, kahit Owner) ay walang menu,
+> at 403 *Access denied* ang page at API sa kanila — pati sa `portal.surge-box.org` host. Nakikita lang ng
+> client ang resulta: ang mga na-import na transaction sa kanilang Dashboard / Transactions / Settlement.
+
 ## Paano gamitin
 
 1. Piliin ang report file (hal. `DTQR_20261008.pdf`). Sa **Client**, iwan sa *Auto-detect from MemberID*

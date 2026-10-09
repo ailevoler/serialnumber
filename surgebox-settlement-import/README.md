@@ -1,4 +1,4 @@
-# SurgeBox V5.24–V5.27 — Nationlink Settlement Report Import + Client Fees (MDR / Fixed / Bracket)
+# SurgeBox V5.24–V5.28 — Nationlink Settlement Report Import + Client Fees (MDR / Fixed / Bracket)
 
 Patch para sa SurgeBox (`public_html`) na nag-i-import ng daily **QR TRANSACTIONS REPORT (DTQR)** ng
 Nationlink (PDF, Excel `.xlsx` o CSV) papunta sa transactions ng client, para lumabas sa client dashboard,
@@ -103,3 +103,10 @@ Sa Admin → **Client Fees** → *Fee Setup per Client*, isang row kada client n
 - Nire-recalculate ang mga dating Nationlink collection: `fee = ROUND(amount × 1.5%, 2)`, `net = amount − fee`.
 - Gumagawa ng backup tables (`bk_nl_mdr_gateways`, `bk_nl_mdr_transactions`); nasa dulo ng file ang Undo.
 - Kung may Nationlink gateway na `credit_wallet = 1`, gamitin ang **Recalculate Fees** button para maitama rin ang balances.
+
+## Balance Before / After ng Nationlink sa Transactions (V5.28)
+
+Diretso sa client ang settlement ng Nationlink, kaya hindi ito dumadaan sa SurgeBox wallet balance.
+Sa Transactions ledger, ang Balance Before/After ng Nationlink ay **running total ng Nationlink collections**
+ng client (net, ayon sa oras ng bayad), may tatak na *Nationlink running total*. Ang PayMongo ay wallet balance
+pa rin. Walang binabagong balance sa database. Naka-sort na ang ledger ayon sa transaction date.

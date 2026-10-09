@@ -350,3 +350,11 @@ V5.27 - Nationlink and PayMongo fees set separately per client
 - Each payment uses the fee of the provider it came through (Nationlink webhook / Settlement Import ->
   the client's Nationlink fee; PayMongo webhook -> the client's PayMongo fee).
 Changed: client-fees.php, api/client_fees.php, includes/org-credentials-card.php
+
+V5.28 - Transaction Ledger: running Balance Before / After for Nationlink
+- Nationlink settles directly to the client (gateway does not credit the SurgeBox wallet), so those rows
+  used to show the same wallet balance before and after (e.g. P30.00 / P30.00). The ledger now shows a
+  running total of the client's Nationlink collections (net, by payment time): e.g. 0.00 -> 4.92 -> 5.90 ...
+  marked "Nationlink running total". PayMongo rows keep the wallet balance. No balance in the DB is changed.
+- Ledger is sorted by transaction (payment) date, newest first, so imported settlement lines sit in order.
+Changed: api/transactions.php, transaction-ledger.php

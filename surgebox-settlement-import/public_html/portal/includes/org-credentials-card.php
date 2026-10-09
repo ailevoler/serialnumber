@@ -201,6 +201,13 @@ declare(strict_types=1);
     try {
       const r = await sbFetch(`${CG_BASE}/api/client_gateways.php?organizationId=${CG_ORG}`);
       CG = r.data; renderApproval(); renderGateways();
+      // V5.26: Admin > Client Fees > "Edit Fee" opens this client's fee editor directly.
+      const editFee = new URLSearchParams(location.search).get('editFee');
+      if (editFee && !cgLoad.opened && CG.gateways.some(g => g.provider_code === editFee)) {
+        cgLoad.opened = true;
+        document.getElementById('cgTbody').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        cgOpenEditor(editFee);
+      }
     } catch (e) {
       document.getElementById('cgApproval').innerHTML = `<div class="alert alert-error">${sbEscape(e.message)}</div>`;
     }

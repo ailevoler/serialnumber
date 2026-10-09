@@ -1,4 +1,4 @@
-# SurgeBox V5.24–V5.25 — Nationlink Settlement Report Import + Client Fees (MDR / Fixed / Bracket)
+# SurgeBox V5.24–V5.26 — Nationlink Settlement Report Import + Client Fees (MDR / Fixed / Bracket)
 
 Patch para sa SurgeBox (`public_html`) na nag-i-import ng daily **QR TRANSACTIONS REPORT (DTQR)** ng
 Nationlink (PDF, Excel `.xlsx` o CSV) papunta sa transactions ng client, para lumabas sa client dashboard,
@@ -57,7 +57,7 @@ Naka-record bilang `Cash In`, provider `nationlink`, gamit ang Nationlink gatewa
 - Bago: `includes/settlement-import.php`, `api/settlement_import.php`, `settlement-import.php`,
   `database/migration_v5_24_settlement_import.sql`, `database/migration_v5_25_fee_brackets.sql`
 - Binago: `includes/gateways.php` (Bracket fee), `api/client_gateways.php`, `includes/org-credentials-card.php`
-  (Admin fee form), `includes/header.php` (Admin menu), `V5_CHANGELOG.txt`
+  (Admin fee form), `client-fees.php`, `api/client_fees.php`, `includes/header.php` (Admin menu), `V5_CHANGELOG.txt`
 
 ## Client Fees — MDR (1.5%), Fixed at Bracket (V5.25, Admin lang)
 
@@ -75,3 +75,12 @@ Admin → client page → **Payment Credentials** → Edit (hal. Nationlink) →
 - May live na halimbawa (₱100 / ₱1,000 / ₱10,000) habang nag-e-edit.
 - Ginagamit ito ng webhook, ng Settlement Import, at ng "Recalculate Fees" / "Apply this fee to existing transactions".
 - Admin lang ang makakapag-set; net amount lang ang nakikita ng client.
+
+## Fee Setup per Client (V5.26)
+
+Iba-iba ang setup ng bawat client — naka-save ang fee **kada client at kada provider**, kaya ang pagbago
+sa isang client ay hindi nakakaapekto sa iba.
+
+- Admin → **Client Fees** → *Fee Setup per Client*: listahan ng lahat ng client at provider, ang fee setup nila,
+  at ang fee sa ₱100 / ₱1,000 / ₱10,000. May search.
+- **Edit Fee** → bubukas agad ang fee editor ng client na iyon (Fixed / MDR % / Fixed + MDR / Bracket).

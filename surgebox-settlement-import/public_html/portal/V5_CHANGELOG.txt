@@ -333,3 +333,10 @@ V5.25 - Client fees: MDR %, Fixed and amount Brackets (Admin)
 Changed: includes/gateways.php, api/client_gateways.php, includes/org-credentials-card.php,
          includes/settlement-import.php, settlement-import.php
 New: database/migration_v5_25_fee_brackets.sql
+
+V5.26 - Fee setup per client (each client is different)
+- Admin > Client Fees > "Fee Setup per Client": every client x payment provider with its own fee
+  (Fixed / MDR % / Fixed + MDR / Bracket), status, and the fee on P100 / P1,000 / P10,000, with search.
+- "Edit Fee" opens that client's fee editor directly (org-view.php?id=..&editFee=nationlink); saving changes
+  only that client. Fees are stored per client per provider (sb_client_gateways), so no client affects another.
+Changed: client-fees.php, api/client_fees.php, includes/org-credentials-card.php

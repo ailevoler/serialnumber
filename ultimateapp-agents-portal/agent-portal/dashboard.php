@@ -14,18 +14,23 @@ $s = $pdo->prepare("SELECT COUNT(*) FROM users WHERE referred_by_agent_id = ?");
 $s = $pdo->prepare("SELECT COUNT(DISTINCT user_id) FROM agent_commissions WHERE agent_id = ? AND status <> 'reversed'"); $s->execute([$id]); $activeReferrals = (int) $s->fetchColumn();
 $s = $pdo->prepare("SELECT COALESCE(SUM(amount_centavos),0) FROM agent_commissions WHERE agent_id = ? AND status = 'approved' AND approved_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"); $s->execute([$id]); $month = (int) $s->fetchColumn();
 $pending = array_sum(array_column($totals, 'pending'));
+$tier = agent_own_tier($a);
+$master = agent_master_of($a);
+$s = $pdo->prepare("SELECT COALESCE(SUM(amount_centavos),0) FROM agent_commissions WHERE agent_id = ? AND kind = 'override' AND status = 'approved' AND approved_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"); $s->execute([$id]); $teamMonth = (int) $s->fetchColumn();
+$s = $pdo->prepare("SELECT COUNT(*) FROM agents WHERE parent_agent_id = ?"); $s->execute([$id]); $teamSize = (int) $s->fetchColumn();
 $recent = $pdo->prepare('SELECT c.*, u.full_name FROM agent_commissions c JOIN users u ON u.id = c.user_id WHERE c.agent_id = ? ORDER BY c.id DESC LIMIT 8');
 $recent->execute([$id]); $recent = $recent->fetchAll();
 $link = agent_referral_link($a);
 $st = agent_settings();
 agent_header('Hello, ' . explode(' ', $a['full_name'])[0], 'dashboard');
 ?>
-<div class="status-banner <?= e($banner[0]) ?>"><div><h2><?= e($banner[1]) ?> <?= agent_badge($a['status'], 'account') ?></h2><p><?= e($banner[2]) ?></p></div></div>
+<div class="status-banner <?= e($banner[0]) ?>"><div><h2><?= e($banner[1]) ?> <?= agent_badge($a['status'], 'account') ?> <span class="badge info"><?= e(agent_role($a)) ?></span></h2><p><?= e($banner[2]) ?></p>
+    <?php if ($master): ?><p class="mt">Your Master Agent: <b><?= e($master['full_name']) ?></b> (<?= e($master['code']) ?>)</p><?php elseif ($a['status'] === 'approved'): ?><p class="mt">Master Agent · <?= $teamSize ?> Sub-Agent<?= $teamSize === 1 ? '' : 's' ?> · <a href="team.php">Invite or view your team</a></p><?php endif; ?></div></div>
 <?php if ($a['status'] === 'approved'): ?>
 <div class="grid kpis">
     <div class="card kpi hero"><small>Available balance</small><strong>₱<?= peso((int) $a['balance_centavos']) ?></strong><span><a href="payouts.php">Cash out</a> · min ₱<?= peso($st['payout_min']) ?></span></div>
     <div class="card kpi"><small>Pending earnings</small><strong>₱<?= peso($pending) ?></strong><span>Becomes available when completed</span></div>
-    <div class="card kpi"><small>Earned this month</small><strong>₱<?= peso($month) ?></strong><span><?= e(date('F Y')) ?></span></div>
+    <div class="card kpi"><small>Earned this month</small><strong>₱<?= peso($month) ?></strong><span><?= $master === null && $teamMonth ? 'Incl. ₱' . peso($teamMonth) . ' team override' : e(date('F Y')) ?></span></div>
     <div class="card kpi"><small>Referred customers</small><strong><?= number_format($referrals) ?></strong><span><?= number_format($activeReferrals) ?> active · <?= number_format((int) $a['link_clicks']) ?> link clicks</span></div>
 </div>
 <div class="grid two mt">
@@ -48,7 +53,7 @@ agent_header('Hello, ' . explode(' ', $a['full_name'])[0], 'dashboard');
 <section class="card mt"><h2>Earnings by service <a href="earnings.php">See all</a></h2>
     <div class="table-wrap"><table><thead><tr><th>Service</th><th>You earn</th><th class="hide-sm">When</th><th class="num">Activities</th><th class="num">Pending</th><th class="num">Earned</th></tr></thead><tbody>
     <?php foreach (agent_services() as $code => $svc): $t = $totals[$code]; ?>
-        <tr><td><b><?= e($svc['label']) ?></b></td><td><?= e(agent_rate_label($code)) ?><small>of the <?= e($svc['base']) ?></small></td><td class="hide-sm"><?= e($svc['when']) ?></td><td class="num"><?= number_format($t['n']) ?></td><td class="num">₱<?= peso($t['pending']) ?></td><td class="num">₱<?= peso($t['earned']) ?></td></tr>
+        <tr><td><b><?= e($svc['label']) ?></b></td><td><?= e(agent_rate_label($code, $tier)) ?><small>of the <?= e($svc['base']) ?></small></td><td class="hide-sm"><?= e($svc['when']) ?></td><td class="num"><?= number_format($t['n']) ?></td><td class="num">₱<?= peso($t['pending']) ?></td><td class="num">₱<?= peso($t['earned']) ?></td></tr>
     <?php endforeach; ?>
     </tbody></table></div>
 </section>
@@ -62,9 +67,9 @@ agent_header('Hello, ' . explode(' ', $a['full_name'])[0], 'dashboard');
 <section class="card"><h2>Your referral code</h2><p class="code-big"><?= e($a['code']) ?></p><p class="muted">This code is reserved for you. It starts tagging new customers once your account is approved.</p>
     <h2 class="mt">What you will earn</h2>
     <div class="table-wrap"><table><thead><tr><th>Service</th><th>You earn</th><th>When</th></tr></thead><tbody>
-    <?php foreach (agent_services() as $code => $svc): ?><tr><td><b><?= e($svc['label']) ?></b></td><td><?= e(agent_rate_label($code)) ?><small>of the <?= e($svc['base']) ?></small></td><td><?= e($svc['when']) ?></td></tr><?php endforeach; ?>
+    <?php foreach (agent_services() as $code => $svc): ?><tr><td><b><?= e($svc['label']) ?></b></td><td><?= e(agent_rate_label($code, $tier)) ?><small>of the <?= e($svc['base']) ?></small></td><td><?= e($svc['when']) ?></td></tr><?php endforeach; ?>
     </tbody></table></div>
     <div class="form-actions"><a class="btn primary" href="profile.php">Add payout account</a></div>
 </section>
 <?php endif; ?>
-<?php agent_footer($a['status'] === 'approved' ? ['../assets/js/qrcode.min.js', 'assets/agent.js?v=1'] : []);
+<?php agent_footer($a['status'] === 'approved' ? ['../assets/js/qrcode.min.js', 'assets/agent.js?v=2'] : []);

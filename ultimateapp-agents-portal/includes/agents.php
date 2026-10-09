@@ -53,26 +53,38 @@ function agent_settings(): array
     ];
 }
 
-/** [percent in basis points, fixed centavos] for one service. */
-function agent_rate(string $service): array
+/**
+ * Rate tiers (Admin > Agents > Commission rates):
+ *   direct   - a Master Agent (or independent agent) on their own customers
+ *   sub      - a Sub-Agent on their own customers
+ *   override - what the Master Agent earns on top, on the customers of their Sub-Agents (% of the activity amount)
+ */
+const AGENT_RATE_TIERS = ['direct', 'sub', 'override'];
+
+/** [percent in basis points, fixed centavos] for one service and tier. */
+function agent_rate(string $service, string $tier = 'direct'): array
 {
     $defaults = ['URide' => 200, 'UPass' => 500, 'UGo' => 500, 'ULocal' => 500, 'UEat' => 300];
+    $overrideDefaults = ['URide' => 50, 'UPass' => 100, 'UGo' => 100, 'ULocal' => 100, 'UEat' => 50];
     $key = agent_services()[$service]['key'] ?? null;
-    if ($key === null) throw new InvalidArgumentException('Unknown service.');
-    return [max(0, setting_int("agents.$key.percent_bp", $defaults[$service])), max(0, setting_int("agents.$key.fixed_centavos", 0))];
+    if ($key === null || !in_array($tier, AGENT_RATE_TIERS, true)) throw new InvalidArgumentException('Unknown service.');
+    $direct = [max(0, setting_int("agents.$key.percent_bp", $defaults[$service])), max(0, setting_int("agents.$key.fixed_centavos", 0))];
+    if ($tier === 'direct') return $direct;
+    if ($tier === 'sub') return [max(0, setting_int("agents.sub.$key.percent_bp", $direct[0])), max(0, setting_int("agents.sub.$key.fixed_centavos", $direct[1]))];
+    return [max(0, setting_int("agents.master.$key.percent_bp", $overrideDefaults[$service])), max(0, setting_int("agents.master.$key.fixed_centavos", 0))];
 }
 
 /** Commission on an amount: percent (rounded half up) plus fixed, never more than the amount itself. */
-function agent_commission_for(string $service, int $baseCentavos): int
+function agent_commission_for(string $service, int $baseCentavos, string $tier = 'direct'): int
 {
     if ($baseCentavos <= 0) return 0;
-    [$bp, $fixed] = agent_rate($service);
+    [$bp, $fixed] = agent_rate($service, $tier);
     return min($baseCentavos, intdiv($baseCentavos * $bp + 5000, 10000) + $fixed);
 }
 
-function agent_rate_label(string $service): string
+function agent_rate_label(string $service, string $tier = 'direct'): string
 {
-    [$bp, $fixed] = agent_rate($service);
+    [$bp, $fixed] = agent_rate($service, $tier);
     $parts = [];
     if ($bp > 0) $parts[] = rtrim(rtrim(number_format($bp / 100, 2, '.', ''), '0'), '.') . '%';
     if ($fixed > 0) $parts[] = 'PHP ' . peso($fixed);
@@ -108,6 +120,42 @@ function agent_find_active_by_code(PDO $pdo, string $code): ?array
     $stmt = $pdo->prepare("SELECT * FROM agents WHERE code = ? AND status = 'approved'");
     $stmt->execute([$code]);
     return $stmt->fetch() ?: null;
+}
+
+/** "Master Agent" (top level, can have Sub-Agents) or "Sub-Agent" (belongs to a Master Agent). */
+function agent_role(array $agent): string
+{
+    return !empty($agent['parent_agent_id']) ? 'Sub-Agent' : 'Master Agent';
+}
+
+/** An approved top-level agent whose team a new Sub-Agent can join, by code. */
+function agent_find_master_by_code(PDO $pdo, string $code): ?array
+{
+    $code = agent_normalize_code($code);
+    if ($code === null) return null;
+    $stmt = $pdo->prepare("SELECT * FROM agents WHERE code = ? AND status = 'approved' AND parent_agent_id IS NULL");
+    $stmt->execute([$code]);
+    return $stmt->fetch() ?: null;
+}
+
+/**
+ * Admin: put an agent under a Master Agent, or make them a Master Agent again ($masterId null).
+ * One level only: a Master cannot be a Sub-Agent while they have their own Sub-Agents.
+ */
+function agent_set_master(PDO $pdo, int $agentId, ?int $masterId): void
+{
+    if ($masterId !== null) {
+        if ($masterId === $agentId) throw new InvalidArgumentException('An agent cannot be their own Master Agent.');
+        $s = $pdo->prepare('SELECT id, parent_agent_id FROM agents WHERE id = ?');
+        $s->execute([$masterId]);
+        $m = $s->fetch();
+        if (!$m) throw new InvalidArgumentException('Master Agent not found.');
+        if ($m['parent_agent_id']) throw new InvalidArgumentException('That agent is a Sub-Agent and cannot have a team.');
+        $s = $pdo->prepare('SELECT COUNT(*) FROM agents WHERE parent_agent_id = ?');
+        $s->execute([$agentId]);
+        if ((int) $s->fetchColumn() > 0) throw new InvalidArgumentException('This agent has their own Sub-Agents. Move them first.');
+    }
+    $pdo->prepare('UPDATE agents SET parent_agent_id = ? WHERE id = ?')->execute([$masterId, $agentId]);
 }
 
 function agent_validate_profile(array $in, bool $withPassword): array
@@ -289,30 +337,53 @@ function agent_record_commission(PDO $pdo, int $userId, string $service, string 
         if (!isset(agent_services()[$service]) || !in_array($sourceType, AGENT_SOURCE_TYPES, true)) throw new InvalidArgumentException('Unknown commission source.');
         $agent = agent_for_user($pdo, $userId);
         if (!$agent) return;
-        $amount = agent_commission_for($service, $baseCentavos);
-        if ($amount <= 0) return;
-        [$bp, $fixed] = agent_rate($service);
-        $stmt = $pdo->prepare('INSERT IGNORE INTO agent_commissions (agent_id, user_id, service_code, source_type, source_id, source_reference, base_centavos, rate_bp, fixed_centavos, amount_centavos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$agent['id'], $userId, $service, $sourceType, $sourceId, mb_substr($reference, 0, 40), $baseCentavos, $bp, $fixed, $amount]);
-        if ($approveNow && $stmt->rowCount() === 1) agent_set_commission_status($pdo, $sourceType, $sourceId, 'approved', 'Earned on ' . $reference);
+        // A Sub-Agent earns the Sub-Agent rate; their approved Master Agent earns the override on top.
+        $master = null;
+        if (!empty($agent['parent_agent_id'])) {
+            $s = $pdo->prepare("SELECT id FROM agents WHERE id = ? AND status = 'approved' AND parent_agent_id IS NULL");
+            $s->execute([$agent['parent_agent_id']]);
+            $master = $s->fetch() ?: null;
+        }
+        $rows = [['direct', (int) $agent['id'], null, empty($agent['parent_agent_id']) ? 'direct' : 'sub']];
+        if ($master) $rows[] = ['override', (int) $master['id'], (int) $agent['id'], 'override'];
+        $stmt = $pdo->prepare('INSERT IGNORE INTO agent_commissions (agent_id, kind, from_agent_id, user_id, service_code, source_type, source_id, source_reference, base_centavos, rate_bp, fixed_centavos, amount_centavos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $added = 0;
+        foreach ($rows as [$kind, $agentId, $fromId, $tier]) {
+            $amount = agent_commission_for($service, $baseCentavos, $tier);
+            if ($amount <= 0) continue;
+            [$bp, $fixed] = agent_rate($service, $tier);
+            $stmt->execute([$agentId, $kind, $fromId, $userId, $service, $sourceType, $sourceId, mb_substr($reference, 0, 40), $baseCentavos, $bp, $fixed, $amount]);
+            $added += $stmt->rowCount();
+        }
+        if ($approveNow && $added > 0) agent_set_commission_status($pdo, $sourceType, $sourceId, 'approved', 'Earned on ' . $reference);
     });
 }
 
-function agent_lock_commission(PDO $pdo, string $sourceType, int $sourceId): ?array
+/** All commission rows of one activity (the agent's, plus the Master Agent's override if any), locked. */
+function agent_lock_commissions(PDO $pdo, string $sourceType, int $sourceId): array
 {
-    $stmt = $pdo->prepare('SELECT * FROM agent_commissions WHERE source_type = ? AND source_id = ? FOR UPDATE');
+    $stmt = $pdo->prepare('SELECT * FROM agent_commissions WHERE source_type = ? AND source_id = ? ORDER BY id FOR UPDATE');
     $stmt->execute([$sourceType, $sourceId]);
-    return $stmt->fetch() ?: null;
+    return $stmt->fetchAll();
 }
 
 /**
- * Moves a commission to approved (adds to the agent balance) or reversed (takes it back if it was approved).
+ * Moves an activity's commissions to approved (adds to each agent's balance) or reversed (takes them back if
+ * approved). The Sub-Agent's commission and the Master Agent's override always move together.
  * Caller provides the transaction. Returns false when there is nothing to change.
  */
 function agent_set_commission_status(PDO $pdo, string $sourceType, int $sourceId, string $to, string $note = ''): bool
 {
-    $c = agent_lock_commission($pdo, $sourceType, $sourceId);
-    if (!$c || $c['status'] === $to || $c['status'] === 'reversed') return false;
+    $changed = false;
+    foreach (agent_lock_commissions($pdo, $sourceType, $sourceId) as $c) {
+        if (agent_set_commission_row_status($pdo, $c, $to, $note)) $changed = true;
+    }
+    return $changed;
+}
+
+function agent_set_commission_row_status(PDO $pdo, array $c, string $to, string $note): bool
+{
+    if ($c['status'] === $to || $c['status'] === 'reversed') return false;
     $amount = (int) $c['amount_centavos'];
     $agentId = (int) $c['agent_id'];
     $pdo->prepare('SELECT id FROM agents WHERE id = ? FOR UPDATE')->execute([$agentId]);
@@ -322,7 +393,7 @@ function agent_set_commission_status(PDO $pdo, string $sourceType, int $sourceId
         $pdo->prepare('UPDATE agents SET balance_centavos = balance_centavos + ? WHERE id = ?')->execute([$amount, $agentId]);
         ledger_post($pdo, 'AC-' . $c['id'], 'agent_commission', [
             ['agent_commission_expense', $amount, 0, $c['service_code'] . ' ' . $c['source_reference']],
-            ['agent_payable:' . $agentId, 0, $amount, 'Commission earned'],
+            ['agent_payable:' . $agentId, 0, $amount, ($c['kind'] ?? 'direct') === 'override' ? 'Team override earned' : 'Commission earned'],
         ]);
         return true;
     }
@@ -358,9 +429,9 @@ function agent_mature_pending(PDO $pdo, ?int $agentId = null): int
     $n = 0;
     try {
         $hold = agent_settings()['hold_days'];
-        $sql = "SELECT c.source_id FROM agent_commissions c JOIN ueat_orders o ON o.id = c.source_id
+        $sql = "SELECT DISTINCT c.source_id FROM agent_commissions c JOIN ueat_orders o ON o.id = c.source_id
             WHERE c.source_type = 'ueat' AND c.status = 'pending' AND o.payment_status = 'paid' AND o.status <> 'cancelled' AND c.created_at <= NOW() - INTERVAL $hold DAY"
-            . ($agentId ? ' AND c.agent_id = ' . (int) $agentId : '') . ' ORDER BY c.id LIMIT 200';
+            . ($agentId ? ' AND c.agent_id = ' . (int) $agentId : '') . ' ORDER BY c.source_id LIMIT 200';
         foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN) as $orderId) {
             if (agent_guarded($pdo, fn() => agent_set_commission_status($pdo, 'ueat', (int) $orderId, 'approved', 'Order not cancelled after ' . $hold . ' day(s)'))) $n++;
         }

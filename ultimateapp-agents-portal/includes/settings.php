@@ -89,9 +89,14 @@ function settings_schema(): array
     foreach (['uride' => 'URide', 'upass' => 'UPass', 'ugo' => 'UGo', 'ulocal' => 'ULocal', 'ueat' => 'UEat'] as $svc => $label) {
         $schema["agents.$svc.percent_bp"] = ['type' => 'int', 'min' => 0, 'max' => 5000, 'label' => "$label agent commission (%)"];
         $schema["agents.$svc.fixed_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 10000000, 'label' => "$label agent commission per activity"];
+        $schema["agents.sub.$svc.percent_bp"] = ['type' => 'int', 'min' => 0, 'max' => 5000, 'label' => "$label Sub-Agent commission (%)"];
+        $schema["agents.sub.$svc.fixed_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 10000000, 'label' => "$label Sub-Agent commission per activity"];
+        $schema["agents.master.$svc.percent_bp"] = ['type' => 'int', 'min' => 0, 'max' => 5000, 'label' => "$label Master Agent override (%)"];
+        $schema["agents.master.$svc.fixed_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 10000000, 'label' => "$label Master Agent override per activity"];
     }
     $schema += [
         'agents.enabled' => ['type' => 'bool', 'label' => 'Agent commissions enabled'],
+        'agents.sub_auto_approve' => ['type' => 'bool', 'label' => 'Approve Sub-Agents automatically'],
         'agents.earn_days' => ['type' => 'int', 'min' => 0, 'max' => 3650, 'label' => 'Agent earns for (days after sign-up, 0 = always)'],
         'agents.cookie_days' => ['type' => 'int', 'min' => 1, 'max' => 365, 'label' => 'Referral link remembered for (days)'],
         'agents.hold_days' => ['type' => 'int', 'min' => 0, 'max' => 60, 'label' => 'UEat commission holding period (days)'],

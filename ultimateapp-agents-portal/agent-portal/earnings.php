@@ -25,7 +25,7 @@ if (aq('export') === 'csv') {
 $t = $pdo->prepare("SELECT COUNT(*) n, COALESCE(SUM(CASE WHEN c.status = 'approved' THEN c.amount_centavos END),0) earned, COALESCE(SUM(CASE WHEN c.status = 'pending' THEN c.amount_centavos END),0) pending, COALESCE(SUM(CASE WHEN c.status = 'reversed' THEN c.amount_centavos END),0) reversed" . $base);
 $t->execute($params); $t = $t->fetch();
 $page = max(1, (int) aq('page') ?: 1); $per = 30; $off = ($page - 1) * $per;
-$s = $pdo->prepare('SELECT c.*, u.full_name' . $base . " ORDER BY c.id DESC LIMIT $per OFFSET $off");
+$s = $pdo->prepare('SELECT c.*, u.full_name, fa.code from_code' . str_replace(' WHERE ', ' LEFT JOIN agents fa ON fa.id = c.from_agent_id WHERE ', $base) . " ORDER BY c.id DESC LIMIT $per OFFSET $off");
 $s->execute($params); $rows = $s->fetchAll();
 $qs = static fn(array $extra): string => e(http_build_query(array_filter(['service' => $service, 'status' => $status, 'from' => $from, 'to' => $to] + $extra, static fn($v) => $v !== '' && $v !== null)));
 agent_header('Earnings', 'earnings');
@@ -39,7 +39,7 @@ agent_header('Earnings', 'earnings');
 <div class="grid kpis"><div class="card kpi hero"><small>Earned</small><strong>₱<?= peso((int) $t['earned']) ?></strong><span>Added to your balance</span></div><div class="card kpi"><small>Pending</small><strong>₱<?= peso((int) $t['pending']) ?></strong><span>Waiting for completion</span></div><div class="card kpi"><small>Reversed</small><strong>₱<?= peso((int) $t['reversed']) ?></strong><span>Cancelled / refunded</span></div><div class="card kpi"><small>Activities</small><strong><?= number_format((int) $t['n']) ?></strong><span>In period</span></div></div>
 <div class="table-wrap mt"><table><thead><tr><th>Date</th><th>Service</th><th>Customer</th><th class="num">Activity amount</th><th class="num">Rate</th><th class="num">Commission</th><th>Status</th></tr></thead><tbody>
 <?php if (!$rows): ?><tr><td colspan="7" class="muted">No commissions in this period.</td></tr><?php endif; ?>
-<?php foreach ($rows as $r): ?><tr><td><?= e(date('M j, Y g:i A', strtotime($r['created_at']))) ?><small><?= e($r['source_reference']) ?></small></td><td><?= e($r['service_code']) ?></td><td><?= e(agent_mask_name($r['full_name'])) ?></td><td class="num">₱<?= peso((int) $r['base_centavos']) ?></td>
+<?php foreach ($rows as $r): ?><tr><td><?= e(date('M j, Y g:i A', strtotime($r['created_at']))) ?><small><?= e($r['source_reference']) ?></small></td><td><?= e($r['service_code']) ?><?php if (($r['kind'] ?? 'direct') === 'override'): ?><small>Team override · <?= e((string) $r['from_code']) ?></small><?php endif; ?></td><td><?= e(agent_mask_name($r['full_name'])) ?></td><td class="num">₱<?= peso((int) $r['base_centavos']) ?></td>
     <td class="num"><?= e(trim(((int) $r['rate_bp'] ? rtrim(rtrim(number_format((int) $r['rate_bp'] / 100, 2, '.', ''), '0'), '.') . '%' : '') . ((int) $r['fixed_centavos'] ? ' + ₱' . peso((int) $r['fixed_centavos']) : ''), ' +')) ?></td>
     <td class="num">₱<?= peso((int) $r['amount_centavos']) ?></td><td><?= agent_badge($r['status']) ?><?php if ($r['note'] && $r['status'] === 'reversed'): ?><small><?= e($r['note']) ?></small><?php endif; ?></td></tr><?php endforeach; ?>
 </tbody></table></div>

@@ -16,3 +16,4 @@
 .lock{text-align:center}
 @media (max-width:640px){.hide-sm{display:none}.copy-row{flex-direction:column}.code-row{flex-wrap:wrap}.code-row .btn{margin-left:0}}
 @media print{.p-top,.p-foot,.share-card,.kpis,.card:not(.qr-share),.status-banner,.p-title,.form-actions{display:none!important}.qr-share{border:0;box-shadow:none}}
+.code-row strong{white-space:nowrap}

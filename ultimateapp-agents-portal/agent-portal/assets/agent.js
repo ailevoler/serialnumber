@@ -10,11 +10,11 @@
     catch (e) { const input = card.querySelector('[data-share-link]'); input.select(); say('Press Ctrl+C / long-press to copy.'); }
   };
   card.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', () => {
-    if (btn.dataset.copy === 'code') copy(code, 'Referral code'); else copy(link, 'Referral link');
+    if (btn.dataset.copy === 'code') copy(code, card.dataset.codeLabel || 'Referral code'); else copy(link, card.dataset.label || 'Referral link');
   }));
   const share = card.querySelector('[data-share]');
   if (share) share.addEventListener('click', async () => {
-    const data = {title: 'Ultimate App Boracay', text: 'Rides, food, tours and passes in Boracay in one app. Sign up with my code ' + code + ':', url: link};
+    const data = {title: 'Ultimate App Boracay', text: card.dataset.text || ('Rides, food, tours and passes in Boracay in one app. Sign up with my code ' + code + ':'), url: link};
     if (navigator.share) { try { await navigator.share(data); } catch (e) {} } else { copy(link, 'Referral link'); }
   });
 

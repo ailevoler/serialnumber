@@ -11,6 +11,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (ap('payout_method') !== '' || ap('payout_account_no') !== '') {
             [$data['payout_method'], $data['payout_account_name'], $data['payout_account_no']] = agent_validate_payout_account(ap('payout_method'), ap('payout_account_name'), ap('payout_account_no'));
         }
+        $master = null;
+        if (trim(ap('master_code')) !== '') {
+            $master = agent_find_master_by_code($pdo, ap('master_code'));
+            if (!$master) throw new InvalidArgumentException('That Master Agent code was not found. Check it with your Master Agent, or leave it blank.');
+            $data['parent_agent_id'] = (int) $master['id'];
+            if (setting('agents.sub_auto_approve', '0') === '1') $data['status'] = 'approved';
+        }
         $pdo->beginTransaction();
         $exists = $pdo->prepare('SELECT 1 FROM agents WHERE email = ?');
         $exists->execute([$data['email']]);
@@ -21,7 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int) $pdo->lastInsertId();
         $pdo->commit();
         session_fresh(['agent_id' => $id]);
-        aflash('success', 'Application submitted! Your referral code is ' . $data['code'] . '. It starts earning once Ultimate App approves your account.');
+        aflash('success', ($master ? 'You joined the team of Master Agent ' . $master['full_name'] . '. ' : '') . 'Your referral code is ' . $data['code'] . '. '
+            . (($data['status'] ?? 'pending') === 'approved' ? 'You can start sharing it now.' : 'It starts earning once Ultimate App approves your account.'));
         redirect('dashboard.php');
     } catch (InvalidArgumentException $ex) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -32,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'We could not submit your application. Please try again.';
     }
 }
+$masterCode = $_SERVER['REQUEST_METHOD'] === 'POST' ? ap('master_code') : aq('master');
+$inviter = $masterCode !== '' ? agent_find_master_by_code($pdo, $masterCode) : null;
 $v = static fn(string $k): string => e(ap($k));
 $sel = static fn(string $k, string $val): string => ap($k) === $val ? ' selected' : '';
 agent_header('Become an agent');
@@ -40,7 +50,7 @@ agent_header('Become an agent');
     <div class="brand"><span class="brand-mark"></span><span><b>ULTIMATE APP</b><small>Boracay · Agents Portal</small></span></div>
     <h1>Earn by sharing Ultimate App</h1>
     <p>Share your referral link or code. When people sign up with it, you earn a commission every time they use URide, UPass, UGo, ULocal and UEat.</p>
-    <div class="rate-strip"><?php foreach (agent_services() as $code => $svc): ?><span><b><?= e($svc['label']) ?></b><?= e(agent_rate_label($code)) ?></span><?php endforeach; ?></div>
+    <div class="rate-strip"><?php foreach (agent_services() as $code => $svc): ?><span><b><?= e($svc['label']) ?></b><?= e(agent_rate_label($code, ($inviter ?? null) ? 'sub' : 'direct')) ?></span><?php endforeach; ?></div>
     <?php if ($error): ?><div class="alert" role="alert"><?= e($error) ?></div><?php endif; ?>
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
     <div class="reg-section"><h2>1 · About you</h2>
@@ -49,6 +59,9 @@ agent_header('Become an agent');
             <div class="field"><label for="mobile">Mobile number</label><input id="mobile" name="mobile" type="tel" required placeholder="09XXXXXXXXX" autocomplete="tel-national" value="<?= $v('mobile') ?>"></div>
             <div class="field"><label for="barangay">Barangay</label><select id="barangay" name="barangay"><option value="">Choose…</option><?php foreach (agent_barangays() as $b): ?><option<?= $sel('barangay', $b) ?>><?= e($b) ?></option><?php endforeach; ?></select></div>
         </div>
+    </div>
+    <div class="reg-section"><h2>Master Agent <small class="muted">(optional)</small></h2><p><?= $inviter ? 'You are joining the team of <b>' . e($inviter['full_name']) . '</b>. You become their Sub-Agent.' : 'Invited by a Master Agent? Enter their code to join their team as a Sub-Agent. Leave blank to apply on your own.' ?></p>
+        <div class="form-grid"><div class="field"><label for="master_code">Master Agent code</label><input id="master_code" name="master_code" type="text" maxlength="12" autocomplete="off" placeholder="AGXXXXXX" value="<?= e($masterCode) ?>"></div></div>
     </div>
     <div class="reg-section"><h2>2 · Login</h2><p>You will use this email and password to sign in.</p>
         <div class="form-grid">

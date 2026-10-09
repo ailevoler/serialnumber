@@ -27,6 +27,29 @@ Agents sign up at `/agent-portal/`. Once approved, each agent gets a referral li
 - If an agent is suspended, their link stops tagging new customers and no new commissions are recorded. They keep their balance and can still cash out.
 - Admin can manually approve or reverse any commission on the agent's page.
 
+## Master Agents and Sub-Agents
+
+Import `database/agents_team_migration.sql` **once**, after `agents_migration.sql`.
+
+- Every approved agent who is not in someone's team is a **Master Agent**. The **My team** page shows a team invite link (`/agent-portal/register.php?master=CODE`) and the Master Agent code.
+- A **Sub-Agent** signs up with that link, or enters the Master Agent code on the sign-up form. They choose their own email and password. They wait for Admin approval, unless Admin ticks *Approve Sub-Agents automatically*.
+- **One level only.** A Sub-Agent cannot add their own Sub-Agents.
+- Admin sets three rates per service in **Admin › Agents › Commission rates**:
+
+| Column | Who earns | On which customers |
+|---|---|---|
+| Master Agent | Master (or independent) agent | Their own customers |
+| Sub-Agent | Sub-Agent | Their own customers |
+| Master override | Master Agent, **on top** | Their Sub-Agents' customers (% of the activity amount) |
+
+- The override is paid by Ultimate App. It never reduces what the Sub-Agent earns.
+- The Sub-Agent's commission and the Master's override move together: earned together, and reversed together when an order is cancelled.
+- If the Master Agent is suspended, the Sub-Agent still earns, but no override is recorded.
+- Admin can move an agent into a team, or out of one, on the agent's page (**Set Master Agent**).
+- Default overrides: 0.5% for URide and UEat; 1% for UPass, UGo and ULocal. Default Sub-Agent rates are the same as the agent rates.
+
+Test: `php tests/agents_team_test.php` (on a copy of the database).
+
 ## Payouts
 
 Agents add a GCash/Maya/bank account in Profile and request a payout from their available balance (minimum ₱500 by default). Finance processes it in Admin > Agents > Agent payouts: **Mark paid** with the transfer reference, or **Return** with a reason, which puts the money back in the agent's balance.

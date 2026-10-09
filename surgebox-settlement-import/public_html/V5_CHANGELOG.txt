@@ -1,0 +1,318 @@
+SurgeBox V5 - Client Accounts + Payment Third-Party Integrations (surge-box.org)
+================================================================================
+
+DEPLOY (Hostinger)
+1. hPanel: add domain surge-box.org and subdomain portal.surge-box.org, BOTH
+   pointing to the SAME folder (this build).
+2. Database:
+   - NEW / EMPTY database (surge-box.org): import
+     database/surgebox_v5_full_install.sql (all tables + starter data only,
+     Admin login admin@surgebox.com with your current SurgeBox password).
+   - EXISTING SurgeBox database with data: import
+     database/migration_v5_client_gateways.sql (safe to re-run; also adds the
+     missing portal_reset_* columns used by Portal "Forgot Password").
+3. .env (see .env.example):
+     APP_URL=https://surge-box.org
+     ADMIN_URL=https://surge-box.org
+     PORTAL_URL=https://portal.surge-box.org
+     APP_SANDBOX_MODE=0            (1 = only PayMongo sk_test_ keys allowed)
+     APP_KEY=<already generated in the shipped .env - NEVER change it after
+              credentials are saved>
+     DB_* for the surge-box.org database
+
+HOST ROUTING
+- portal.surge-box.org  -> client login, pre-registration, pre-onboarding,
+  client dashboard, My QR Ph, Settlement. Staff pages redirect to portal login.
+- surge-box.org         -> Admin. Portal pages redirect to portal.surge-box.org.
+- /api/* and webhooks work on both hosts. Emails (verify, reset, activation)
+  now link to PORTAL_URL.
+
+ADMIN
+- Manage: create Client Accounts as before (+ optional Client Code, e.g. PCEC,
+  PHILRADS) and approval badge.
+- Payment Providers (new menu): PayMongo (Priority, Live), Nationlink,
+  OptekPay (Pay8), SwiftPay (credentials only for now). Enable/disable,
+  set priority, overview of every client's credentials.
+- Client page > "Client Approval & Payment Credentials":
+    * Approve (all 7 merchant documents submitted) or
+      "Approve - Documents to Follow". Credentials are locked until approved.
+      Also available on Pre-Registrations. Uploading the remaining documents
+      later flips the client to "Approved" automatically.
+    * Per client + provider: Environment (test/live), Status, API keys
+      (encrypted AES-256-GCM), unique Webhook URL, "Test" and
+      "Register Webhook" (auto-creates the PayMongo webhook for payment.paid,
+      payment.failed, qrph.expired and stores the signing secret).
+    * Fees/MDR: Fixed (e.g. PHP10), Percentage, Fixed + Percentage, optional
+      min / max cap; "Deduct from settlement" OR "Do not deduct - bill
+      separately" (client keeps the full processed amount).
+    * "Also credit SurgeBox wallet" - only when funds settle to a
+      SurgeBox-controlled account (default OFF: funds go to the client's own
+      PayMongo account).
+- Client Fees (new menu): per-client Deducted / Unbilled / Billed / Paid /
+  Waived fees; mark Billed / Paid / Waived; open the client's Settlement.
+
+CLIENT PORTAL
+- Dashboard onboarding: Pre-Registered > Email Verified > Requirements >
+  Admin Approval > Payment Integration.
+- My QR Ph (once approved + an Active PayMongo gateway):
+    * Store Front QR Ph (static, reusable) - multiple, each with its own
+      Label/Name; per-QR totals; download poster; enable/disable; edit label.
+    * Dynamic QR Ph - exact amount, description, reference, 15m-2h validity;
+      live "Waiting for payment" screen that turns to "Payment received".
+    * TEST-mode gateways get "Simulate Payment" for demos.
+- Settlement Dashboard: Gross, Fees Deducted, Fees Billed Separately,
+  Net Settlement (daily + per transaction), CSV export.
+
+PAYMONGO NOTES
+- Static QR: POST /v1/qrph/generate (kind=instore). Dynamic: Payment Intent
+  (qrph) + Payment Method (qrph) + attach -> next_action.code.image_url.
+- QR Ph must be activated on each client's PayMongo account.
+- Payment matching: dynamic by payment_intent_id, static by
+  source.provider.code_id. Idempotent on the PayMongo payment id.
+- Webhook URL per client: /api/paymongo_webhook.php?t=<token>
+
+FIXES FOUND DURING TESTING
+- Missing sb_organization.portal_reset_token_hash / portal_reset_expires_at
+  (Portal Forgot Password would crash) - added by the migration.
+- api/static_qr.php crashed when "provider" was omitted (null insert).
+- Server error log now includes the exception message.
+
+V5.1 - Fees visible to Admin only
+- Clients (portal) and staff Managers/Viewers never see the SurgeBox fee/MDR.
+  Collections are shown at their NET amount only: payer sends PHP1,010.00,
+  fee PHP10.00 (Deduct from settlement) -> client sees PHP1,000.00 everywhere
+  (Dashboard, Transactions, Settlement, QR totals, CSV exports).
+- API responses for non-Admin sessions no longer include fee, fee mode,
+  provider fee or the admin running-fee balance (was previously exposed).
+- Admin still sees Gross / Fee / Net on the client page, Client Fees and
+  Admin > client Settlement.
+
+V5.2 - Client Portal login from Admin
+- Manage > + Add new Organization now has "Client Portal Login": Portal
+  Username (blank = the Email Address) + Portal Password (with Generate).
+  After Create, the login details (link, username, password) are shown once
+  with a "Copy Login Details" button to send to the client.
+- Manage list shows "Portal" (login set) or "Set Portal Login" per client.
+- Client page: "Client Portal Login" card moved to the top (link, username,
+  status, last login) with "Set Up Portal Login" / "Manage / Reset Password".
+- Setting a username without a password is now rejected (previously it
+  created a login the client could never use).
+
+V5.3 - Login fix
+- Client (Portal) accounts that sign in on the staff login page are now sent
+  to the Client Portal automatically instead of "Invalid credentials".
+- REQUIRED .env for surge-box.org (blank values disable host routing, which
+  made portal.surge-box.org open the STAFF login):
+    ADMIN_URL=https://surge-box.org
+    PORTAL_URL=https://portal.surge-box.org
+
+V5.4 - QR poster layout
+- Removed the bottom wave footer design.
+- Company name, QR Ph, label/code and "Powered by SurgeBox" are measured and
+  centred as one block: balanced top/bottom/left/right margins.
+- Long company names wrap into evenly balanced lines; larger QR (340px).
+
+V5.5 - Provider names hidden from the Client Portal
+- Clients never see "PayMongo" (or any provider name/code): banner shows
+  "QR Ph is active", settlement shows "QR Ph: Active", provider codes in API
+  responses are neutral ("qrph"), gateway error messages are generic (full
+  detail goes to the server error log).
+- Staff "Generate QR" modal (pay8/PayMongo options) is no longer rendered on
+  the portal dashboard.
+- Admin screens still show the provider names.
+
+V5.6 - Fee display + Recalculate Fees
+- Admin tables (Dashboard, Transactions, Client page): "Amount" = net after
+  the SurgeBox fee (e.g. PHP30.00) with "Paid PHP40.00" underneath, and a
+  separate "Fee" column (PHP10.00).
+- Client page > Payment Credentials: new "Recalculate Fees" button re-applies
+  the CURRENT fee setting to the provider's existing transactions (fixes
+  payments received while the fee was None / billed separately), updating
+  net amounts, running balances, the client wallet and the Admin fee wallet.
+  Safe to click more than once.
+
+V5.7 - Client Portal: integration banner removed
+- The "Integrated with ... / LIVE" banner is no longer shown on the client's
+  My QR Ph page (only a small TEST MODE note when the gateway is in test).
+
+V5.8 - Fee applies to existing transactions on Save
+- Payment Credentials editor: new checkbox "Apply this fee to existing
+  transactions too" (checked by default). Saving the fee setting now also
+  recalculates past payments' Amount, Fee and Balance before/after.
+
+V5.9 - One-click "Deduct Fee from Client & Fix Past Transactions"
+- Client page shows a yellow warning whenever a provider's fee is NOT being
+  deducted, with a single button that switches the fee to "Deduct from
+  settlement" and corrects every past transaction (Amount/Net, Fee status,
+  Balance before/after, client wallet) in one step.
+
+V5.10 - Short merchant name for GCash/Maya
+- New PayMongo credential field "Name shown in GCash/Maya (max 22)". Blank =
+  the Client Code (e.g. PCEC). Sent as the static QR "name" and as the
+  dynamic QR payment intent "statement_descriptor" (auto-retries without it
+  if the PayMongo account rejects the field).
+- Only NEW QR codes use the short name - regenerate existing Store Front QRs.
+- The name actually displayed by GCash/Maya is ultimately controlled by the
+  merchant name registered on the client's PayMongo account (Dashboard >
+  Settings > Business details / DBA); update it there if the app still shows
+  the long registered name.
+
+V5.11 - Nationlink Static QR Ph attachments
+- Admin > client page > "Nationlink QR Ph (Static)": attach one or many
+  Nationlink-issued QR Ph images (PNG/JPG/WebP) - or a raw QR string - to the
+  client, with optional default label, MemberID and admin notes. Hide/Show
+  to client, Edit Label, Remove.
+- Client Portal > My QR Ph > new "Nationlink QR Ph" tab (shown whenever the
+  client has attached QRs, even without PayMongo): view, Edit Label, and
+  Download Poster.
+- DB: run database/migration_v5_client_gateways.sql again (adds
+  sb_nl_qr_attachments; safe to re-run). New installs: full install SQL
+  already includes it.
+
+V5.12 - Admin login fix
+- portal-login.php: if Admin/staff credentials are entered on the Client Portal login,
+  you are sent to the Admin login (ADMIN_URL/login.php) instead of "Invalid credentials".
+- login.php: shows a notice when forwarded from the portal.
+- database/reset_admin_password.sql: resets admin@surgebox.com to a temporary password.
+
+V5.13 - Client Portal Reset Password
+- Forgot Password (portal login): client enters portal USERNAME or registered EMAIL;
+  a one-time reset link (60 min) is emailed to the client's registered email.
+- Reset page: shows org + username, min 8 chars with letter+number, link works once.
+- Admin > Client (org-view) > Client Portal Login: "Email Reset Link" and
+  "Copy Reset Link" (24-hour link to send via Viber/Messenger/SMS), plus "Set Password Manually".
+- Portal Settings: shows the masked reset email + "Send me a reset link".
+- Requires SENDER_MAIL / SENDER_PASSWORD in .env for emailed links (Copy Reset Link works without email).
+- No database changes (uses existing portal_reset_token_hash / portal_reset_expires_at).
+New: includes/portal-reset.php, api/org_portal_reset.php
+
+V5.14 - Manage: Delete button fix
+- manage.php: Delete (and Edit) buttons did nothing when the name contained spaces/quotes
+  rendered into the inline onclick (JSON quotes broke the HTML attribute). Items are now looked up by id.
+- Deleting a client asks you to type DELETE.
+- api/organizations.php: a client with transactions or a wallet balance cannot be deleted
+  (message tells you to Disable it instead); its QR Ph rows are removed and its staff users disabled.
+- api/branches.php: a branch with a balance cannot be deleted; clear error messages.
+
+V5.15 - Nationlink Static QR Ph -> recorded in Client Portal (for settlement)
+- Payment Credentials > Nationlink: ALL fields optional (Institution ID, MemberID, Endpoint, keys).
+  New Nationlink entries default to Status Active. Optional Default MemberID (6 digits, unique).
+- Nationlink QR Ph card (Admin, client page) - Nationlink-issued QR only:
+  * requires the client's Nationlink entry first ("+ Add Nationlink" button opens it preselected)
+  * shows the Webhook URL to give Nationlink, the fee, and per-QR "Collected" totals
+  * Edit (label, MemberID, notes), Record Payment (manual entry), Hide/Show, Remove
+  * MemberID must be unique across clients
+- Payments are recorded on the client as Cash In (provider nationlink, label = QR label) with the
+  client's Nationlink fee (deduct/separate) and appear in the portal Dashboard / Ledger / Settlement:
+  * per-client webhook  /api/gateway_webhook.php?t=TOKEN  (token authenticates; optional Secret-Key)
+  * global callback    /api/nationlink_cashin_callback.php (matched by MemberID; needs APP_SANDBOX_MODE=0)
+  * Admin "Record Payment" (when no webhook yet); duplicates by reference are refused
+- Portal "Nationlink QR Ph" tab shows Collected amount per QR (net, no fee shown).
+- Fix: Nationlink global callback never wrote to the Webhook Monitor (SQL placeholder count bug).
+- No database changes.
+New: includes/nl-payments.php
+
+V5.16 - Provider shown to Admin and Client
+- New "Provider" column (PayMongo / Nationlink pill) in: Dashboard transactions (Admin + Client Portal),
+  Transaction Ledger (Admin + Client), Client page transactions (Admin), Settlement detail (Admin + Client).
+- Settlement: per-provider totals cards (PayMongo / Nationlink) and Provider column in CSV export;
+  client sees "Payment providers: PayMongo (Active) · Nationlink (Active)".
+- Older transactions without a provider are detected from their payload (Nationlink / Pay8).
+- Fees remain Admin-only (client still sees net amounts).
+
+V5.17 - Sender visible to the Client (PayMongo + Nationlink)
+- Sender name (and masked account/mobile when provided) shown to Admin AND client in:
+  Dashboard transactions, Transaction Ledger, Settlement (Payer), Client page (Admin, new Sender column),
+  and "Paid by" on paid Dynamic QR Ph.
+- New sb_find_sender_name()/sb_find_sender_account(): reads PayMongo billing.name /
+  source.provider names, Nationlink SourceAcctName/SourceAcctNo, Pay8 DbtrNm - also for past
+  transactions (read from the stored webhook payload). New PayMongo payments store payer_name.
+
+V5.18 - Nationlink QR Ph bulk attach (PCEC / PHILRADS transmittal)
+- Nationlink MemberID is now 6 letters/digits (e.g. A10103) - was digits only.
+- Attach modal: select all QR images at once; each QR is read in the browser (bundled jsQR,
+  assets/js/vendor/jsQR.js) -> MemberID (tag 62.04), merchant name, account last 4 and Static/Dynamic.
+  One row per QR with its own MemberID + Label. Fallback: MemberID from file name (A10103.JPG).
+- Server validates each QR Ph payload (CRC), rejects duplicate MemberIDs (same upload, same client,
+  other client), stores the raw QR string. QR images are no longer recompressed (keeps them scannable).
+- Admin cards show "acct ••••0055"; webhook MemberID matching is case-insensitive.
+New: assets/js/vendor/jsQR.js (jsQR 1.4.0, Apache-2.0)
+
+V5.19 - Nationlink QR Ph Poster (same style as PayMongo)
+- Admin (client page > Nationlink QR Ph card): "Poster" per QR + "Download All Posters".
+- Client Portal (My QR Ph > Nationlink QR Ph): "Download Poster" + "Download All Posters".
+- Poster = SurgeBox frame, client name, QR Ph, label (e.g. "03 - Donations"), MemberID, Powered by SurgeBox.
+  The QR is re-drawn from the exact Nationlink QR Ph payload (verified identical when scanned);
+  QRs without a stored payload use the Nationlink image without stretching.
+- File names: QRPh-<MemberID>-<Label>.png
+
+V5.20 - Client Portal Users & Roles
+- RUN database/migration_v5_20_portal_users.sql once (new table sb_portal_users + sb_staticQR.created_by_portal_user).
+- Each client can have many portal users, each with a Role and an optional Branch:
+  Owner   - everything + Users & Roles
+  Finance - dashboard, transactions/ledger, settlement, export, check requests; view QR/branches/org
+  Cashier - dashboard, transactions, QR Ph view, create Dynamic QR, cancel only own Dynamic QR
+  Viewer  - view only (no export, no changes)
+  The existing client login (portal_username) stays as the Primary Owner.
+- Branch-assigned users see only that branch's transactions / settlement; QR they create is tagged to their branch.
+- Managed by the client Owner (Portal > Users & Roles) and by SurgeBox Admin (client page > Client Portal Users & Roles):
+  add, edit role/branch/status, set password or email a reset link, remove.
+- Central role gate (includes/portal-roles.php) protects pages AND API endpoints; menus/buttons hidden per role;
+  view-only banner; disabled users / role changes take effect on their next click.
+- Login works with username or email; Forgot Password / reset / change password work for every portal user;
+  sidebar shows the user's role.
+New: includes/portal-roles.php, includes/portal-users-panel.php, api/portal_users.php, portal-users.php,
+     database/migration_v5_20_portal_users.sql
+
+V5.21 - PayMongo Cash Out (Send Money) from the Client Portal
+- RUN database/migration_v5_21_paymongo_cashout.sql once.
+- Admin: client page > Payment Credentials > PayMongo row > "Cash Out: OFF/ON" (enable + optional
+  max per transfer and daily limit).
+- Client Portal > Cash Out (Owner & Finance send; Viewer view only; Cashier no access):
+  live PayMongo Wallet balance (available / pending), send to any bank or e-wallet via InstaPay
+  (real time, up to PHP 50,000) or PESONet (up to PHP 10M), bank list from PayMongo, saved recipients,
+  review + password confirmation, duplicate guard, history with status (Processing / Sent / Failed).
+- Uses the client's own PayMongo key: GET /v2/wallets, POST /v2/batch_transfers (Idempotency-Key =
+  our reference, so Retry can never double-send), GET /v2/transfers/{id}; status callback
+  /api/paymongo_transfer_webhook.php?t=... re-verifies the transfer with PayMongo before updating.
+- When the gateway credits the SurgeBox wallet, a "Cash Out" ledger row (amount + PayMongo fee) is
+  written on success and the balance is reduced. Admin client page shows the client's Cash Out history.
+- Requires the client's PayMongo Wallet to be activated (Statement of Acceptance) and Money Movement
+  available on their PayMongo account.
+New: includes/pm-cashout.php, includes/cashout-panel.php, api/pm_cashout.php,
+     api/paymongo_transfer_webhook.php, portal-cashout.php, database/migration_v5_21_paymongo_cashout.sql
+
+V5.22 - Cash Out: clear PayMongo Wallet error + no browser autofill
+- Instead of "Could not load your PayMongo Wallet right now", the exact reason is shown
+  (e.g. HTTP 403/404 = PayMongo Wallet / Send Money not enabled on the account, Sandbox mode blocking
+  LIVE keys, missing keys). Error is also written to the PHP error log.
+- "Review & Send" is disabled while the Wallet cannot be read.
+- Browser no longer autofills the login email into "Account name" (autocomplete off + hidden username
+  field for the confirmation password).
+
+V5.23 - Cash Out: PayMongo HTTP 301 fix + diagnostics
+- PayMongo money-movement calls now follow redirects (301/302/307/308) within the same PayMongo host,
+  keeping method, body and authorization (cURL dropped them -> "unexpected response (HTTP 301)").
+  http:// PayMongo base URLs are upgraded to https://. Wallet read falls back /v2/wallets -> /v1/wallets.
+- Admin client page > PayMongo Cash Out card > "Test PayMongo Wallet connection": shows the raw
+  HTTP status / redirect location / response of each PayMongo endpoint (account numbers masked).
+
+V5.24 - Nationlink Settlement Report import (PDF / Excel / CSV)
+- RUN database/migration_v5_24_settlement_import.sql once (import history; the import works without it).
+- Admin > Settlement Import: upload Nationlink's daily "QR TRANSACTIONS REPORT" (REPORT TYPE: DTQR) as
+  PDF, Excel (.xlsx) or CSV. Optional: pick the client, or leave "Auto-detect from MemberID".
+- Every line (TIME STAMP, TRACE NO., SEQ NO., SOURCE ACCOUNT NO., TRAN AMOUNT, TAG, RATE, DISCOUNT,
+  NET SETTLEMENT) is matched by its group MemberID (e.g. A10103 Donations) to the client's attached
+  Nationlink QR Ph (sb_nl_qr_attachments), then branch / main-org code, then the picked client.
+- Preview first (nothing saved): New / Already recorded / Amount mismatch / Unmatched per line, and the
+  report's own SUB-TOTAL and TOTAL lines are re-added and checked. Import records only the New lines.
+- Recorded exactly like the Nationlink webhook ("Cash In", provider nationlink, reference NL-<TRACE NO.>,
+  label = QR name), so a later webhook / re-import of the same payment is never counted twice.
+  The fee recorded = TRAN AMOUNT - NET SETTLEMENT from the report (Nationlink is the source of truth).
+- Re-uploading a file that was already imported shows a warning; matched lines are skipped.
+- Pure PHP, no Composer: PDF text (FlateDecode + ToUnicode fonts) read by includes/settlement-import.php;
+  .xlsx via ZipArchive. Old .xls (97-2003) must be saved as .xlsx/CSV first.
+New: includes/settlement-import.php, api/settlement_import.php, settlement-import.php,
+     database/migration_v5_24_settlement_import.sql
+Changed: includes/gateways.php (sb_record_gateway_payment accepts an optional 'fee'),
+         includes/header.php (Admin menu: Settlement Import)

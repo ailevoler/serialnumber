@@ -464,6 +464,8 @@ function agent_payout_request(PDO $pdo, int $agentId, int $amount): string
         $agent = $stmt->fetch();
         if (!$agent || !in_array($agent['status'], ['approved', 'suspended'], true)) throw new InvalidArgumentException('Payouts are available to approved agents.');
         if (!$agent['payout_method'] || !$agent['payout_account_no']) throw new InvalidArgumentException('Add your payout account in Profile first.');
+        require_once __DIR__ . '/kyc.php';
+        kyc_require_verified($pdo, 'agent', $agentId, 'cashing out');
         $min = agent_settings()['payout_min'];
         if ($amount < $min) throw new InvalidArgumentException('Minimum payout is PHP ' . peso($min) . '.');
         if ($amount > (int) $agent['balance_centavos']) throw new InvalidArgumentException('Amount is more than your available balance.');

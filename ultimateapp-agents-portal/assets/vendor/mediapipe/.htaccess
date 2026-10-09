@@ -1,0 +1,7 @@
+# MediaPipe face landmarker (Apache-2.0), used by the KYC liveness check.
+AddType application/wasm .wasm
+AddType text/javascript .mjs
+AddType application/octet-stream .task
+<IfModule mod_headers.c>
+  Header set Cache-Control "public, max-age=2592000"
+</IfModule>

@@ -238,6 +238,7 @@ function suniway_pay(PDO $pdo, int $userId, array $q, string $requestKey): strin
     if (!preg_match('/^[a-f0-9]{64}$/D', $requestKey)) throw new InvalidArgumentException('Invalid request. Please start again.');
     if (($q['expires'] ?? 0) < time()) throw new InvalidArgumentException('This quote expired. Please review the payment again.');
     $svc = suniway_services()[$q['service']];
+    if ($q['service'] === 'ecash') { require_once __DIR__ . '/kyc.php'; kyc_require_verified($pdo, 'user', $userId, 'cashing in to an e-wallet'); }
     $pdo->beginTransaction();
     try {
         $s = $pdo->prepare('SELECT id, credits, status FROM users WHERE id = ? FOR UPDATE');

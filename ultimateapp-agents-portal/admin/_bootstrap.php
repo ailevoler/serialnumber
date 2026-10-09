@@ -25,10 +25,10 @@ function admin_permissions(): array
     return [
         'finance' => ['dashboard', 'customers.view', 'customers.adjust', 'merchants.view', 'payments.view', 'payments.refund',
             'finance.view', 'settlements.manage', 'reports.view', 'crm.notes', 'drivers.view', 'drivers.wallet', 'rides.view', 'driver_payouts.manage',
-            'agents.view', 'agents.commissions', 'agent_payouts.manage', 'service_requests.view'],
+            'agents.view', 'agents.commissions', 'agent_payouts.manage', 'service_requests.view', 'kyc.view'],
         'support' => ['dashboard', 'customers.view', 'customers.suspend', 'merchants.view', 'merchants.review', 'payments.view',
             'tickets.manage', 'crm.notes', 'drivers.view', 'drivers.review', 'rides.view', 'rides.cancel',
-            'agents.view', 'agents.review', 'service_requests.view', 'service_requests.manage'],
+            'agents.view', 'agents.review', 'service_requests.view', 'service_requests.manage', 'kyc.view', 'kyc.review'],
         'barangay_officer' => ['barangay.manage'],
     ];
 }
@@ -202,6 +202,7 @@ function admin_nav(): array
             ['customers.php', 'users', 'Customers', 'customers.view'],
             ['merchants.php', 'store', 'Merchants', 'merchants.view'],
             ['tickets.php', 'ticket', 'Support tickets', 'tickets.manage'],
+            ['kyc.php', 'shield', 'KYC verification', 'kyc.view'],
         ],
         'ERP' => [
             ['payments.php', 'card', 'Payments', 'payments.view'],
@@ -259,6 +260,7 @@ function admin_header(string $title, string $active): void
             $counts['suniway'] = (int) $pdo->query("SELECT COUNT(*) FROM suniway_transactions WHERE status IN ('unknown','submitting')")->fetchColumn();
             $counts['service-requests'] = (int) $pdo->query("SELECT COUNT(*) FROM service_requests WHERE status = 'pending' AND service_code IN ('UPass','UGo','ULocal')")->fetchColumn();
         } catch (Throwable $e) {}
+        try { $counts['kyc'] = (int) $pdo->query("SELECT COUNT(*) FROM kyc_submissions WHERE status = 'pending'")->fetchColumn(); } catch (Throwable $e) {}
     }
     ?><!doctype html>
 <html lang="en">

@@ -64,7 +64,7 @@ function agent_badge(string $status, string $kind = 'commission'): string
 function agent_header(string $title, string $active = ''): void
 {
     $a = agent_current();
-    $nav = ['dashboard' => 'Dashboard', 'referrals' => 'My referrals', 'earnings' => 'Earnings', 'payouts' => 'Payouts', 'profile' => 'Profile'];
+    $nav = ['dashboard' => 'Dashboard', 'referrals' => 'My referrals', 'earnings' => 'Earnings', 'payouts' => 'Payouts', 'profile' => 'Profile', 'kyc' => 'Verify ID'];
     if ($a && empty($a['parent_agent_id'])) $nav = array_slice($nav, 0, 2, true) + ['team' => 'My team'] + array_slice($nav, 2, null, true);
     ?><!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

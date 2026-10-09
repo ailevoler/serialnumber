@@ -25,7 +25,7 @@ $set = static function (string $k, string $v) use ($pdo, &$saved): void {
     if (!array_key_exists($k, $saved)) $saved[$k] = $pdo->query('SELECT setting_value FROM app_settings WHERE setting_key = ' . $pdo->quote($k))->fetchColumn();
     setting_save($pdo, $k, $v, null);
 };
-foreach (['agents.enabled' => '1', 'agents.uride.percent_bp' => '200', 'agents.uride.fixed_centavos' => '0', 'agents.ueat.percent_bp' => '300', 'agents.ueat.fixed_centavos' => '0',
+foreach (['kyc.required_agent' => '0', 'agents.enabled' => '1', 'agents.uride.percent_bp' => '200', 'agents.uride.fixed_centavos' => '0', 'agents.ueat.percent_bp' => '300', 'agents.ueat.fixed_centavos' => '0',
     'agents.ugo.percent_bp' => '500', 'agents.ugo.fixed_centavos' => '1000', 'agents.earn_days' => '365', 'agents.hold_days' => '3', 'agents.payout_min_centavos' => '1000',
     'uride.commission_type' => 'percent', 'uride.commission_percent_bp' => '1000', 'uride.min_wallet_centavos' => '0'] as $k => $v) $set($k, $v);
 

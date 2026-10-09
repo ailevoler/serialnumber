@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../includes/kyc.php';
 $a = agent_require();
 $id = (int) $a['id'];
 if ($a['status'] === 'approved' && agent_mature_pending($pdo, $id)) $a = agent_current(true);
@@ -24,6 +25,7 @@ $link = agent_referral_link($a);
 $st = agent_settings();
 agent_header('Hello, ' . explode(' ', $a['full_name'])[0], 'dashboard');
 ?>
+<?php $kycState = kyc_status($pdo, 'agent', $id); if ($kycState !== 'approved'): ?><div class="status-banner <?= $kycState === 'pending' ? 'info' : 'warn' ?>"><div><h2>Identity verification <?= kyc_badge($kycState) ?></h2><p><?= $kycState === 'pending' ? 'We are reviewing your ID and selfie.' : 'Verify your ID and do a quick selfie check. It is needed for approval and before you can cash out.' ?></p><?php if ($kycState !== 'pending'): ?><p class="mt"><a class="btn small primary" href="kyc.php">Verify now</a></p><?php endif; ?></div></div><?php endif; ?>
 <div class="status-banner <?= e($banner[0]) ?>"><div><h2><?= e($banner[1]) ?> <?= agent_badge($a['status'], 'account') ?> <span class="badge info"><?= e(agent_role($a)) ?></span></h2><p><?= e($banner[2]) ?></p>
     <?php if ($master): ?><p class="mt">Your Master Agent: <b><?= e($master['full_name']) ?></b> (<?= e($master['code']) ?>)</p><?php elseif ($a['status'] === 'approved'): ?><p class="mt">Master Agent · <?= $teamSize ?> Sub-Agent<?= $teamSize === 1 ? '' : 's' ?> · <a href="team.php">Invite or view your team</a></p><?php endif; ?></div></div>
 <?php if ($a['status'] === 'approved'): ?>

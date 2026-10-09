@@ -1,0 +1,43 @@
+/* KYC panel: self-contained so it looks the same in the app, Merchant, Driver and Agents portals. */
+.kyc{--k-ink:#121619;--k-muted:#5b636a;--k-line:#dfe4e8;--k-ok:#0f8a4f;--k-bad:#b42318;--k-warn:#9a5b00;--k-info:#1f5fbf;--k-accent:#0a7f74;color:var(--k-ink);font:inherit;max-width:760px;margin:0 auto 24px}
+.kyc *{box-sizing:border-box}
+.kyc .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;vertical-align:middle;background:#eef1f4;color:#56616c}
+.kyc .badge.good{background:#e5f6ec;color:var(--k-ok)}.kyc .badge.info{background:#e6effd;color:var(--k-info)}.kyc .badge.warn{background:#fff2dc;color:var(--k-warn)}.kyc .badge.bad{background:#fde8e7;color:var(--k-bad)}
+.kyc-status{padding:16px 18px;border:1px solid var(--k-line);border-radius:14px;background:#fff;margin:0 0 16px}
+.kyc-status h2{margin:0 0 6px;font-size:18px}.kyc-status p{margin:4px 0 0;color:var(--k-muted);font-size:14px;line-height:1.5}
+.kyc-approved{background:#f2fbf6;border-color:#bfe6cf}.kyc-pending{background:#f3f7fe;border-color:#c9dbfa}
+.kyc-note{color:var(--k-ink)!important;background:#fff8ea;border-radius:8px;padding:8px 10px}
+.kyc-alert{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:#fde8e7;color:var(--k-bad);font-size:14px}
+.kyc-form{border:1px solid var(--k-line);border-radius:14px;background:#fff;padding:16px}
+.kyc-steps{display:flex;gap:6px;list-style:none;margin:0 0 14px;padding:0;counter-reset:k}
+.kyc-steps li{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--k-muted);padding-top:8px;border-top:4px solid var(--k-line)}
+.kyc-steps li.on{color:var(--k-accent);border-top-color:var(--k-accent)}
+.kyc-pane{border:0;margin:0;padding:0;display:grid;gap:14px;min-width:0}
+.kyc-pane legend{font-size:17px;font-weight:700;margin-bottom:10px;padding:0}
+.kyc-pane label{display:grid;gap:6px;font-size:13px;font-weight:600}
+.kyc-pane label small{color:var(--k-muted);font-weight:400}
+.kyc-pane input:not([type=checkbox]):not([type=file]),.kyc-pane select{width:100%;min-width:0;padding:11px 12px;border:1px solid #cfd6dc;border-radius:8px;background:#fff;color:var(--k-ink);font:inherit;font-size:15px}
+.kyc-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kyc-ids{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kyc-id{display:grid;gap:8px;align-content:start;padding:12px;border:1px dashed #b9c3cb;border-radius:12px;background:#fafbfc;text-align:center}
+.kyc-id-title{font-weight:700;font-size:14px}.kyc-id-empty{color:var(--k-muted);font-size:12px;min-height:60px;display:grid;place-items:center}
+.kyc-id img{width:100%;aspect-ratio:1.586;object-fit:cover;border-radius:8px;background:#111}
+.kyc-hint{margin:0;color:var(--k-muted);font-size:13px;line-height:1.5}
+.kyc-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:10px 16px;border:1px solid #c7cfd6;border-radius:10px;background:#fff;color:var(--k-ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:center}
+.kyc-btn.primary{background:#111;border-color:#111;color:#fff}.kyc-btn:disabled{opacity:.45;cursor:not-allowed}
+.kyc-actions{display:flex;flex-wrap:wrap;gap:10px}.kyc-actions .kyc-btn{flex:1}
+.kyc-cam{position:relative;width:100%;max-width:420px;margin:0 auto;aspect-ratio:3/4;border-radius:18px;overflow:hidden;background:#0b1015}
+.kyc-cam video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.kyc-oval{position:absolute;left:50%;top:44%;width:62%;height:62%;transform:translate(-50%,-50%);border:4px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 0 999px rgba(11,16,21,.45)}
+.kyc-say{position:absolute;left:12px;right:12px;bottom:12px;margin:0;padding:10px 12px;border-radius:10px;background:rgba(11,16,21,.78);color:#fff;font-size:16px;font-weight:700;text-align:center}
+.kyc-checks{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;list-style:none;margin:0;padding:0}
+.kyc-checks li{display:grid;gap:4px;justify-items:center;padding:6px 2px;border-radius:10px;border:1px solid var(--k-line);font-size:11px;font-weight:600;color:var(--k-muted);text-align:center}
+.kyc-checks li img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:6px;transform:scaleX(-1)}
+.kyc-checks li.now{border-color:var(--k-accent);color:var(--k-accent)}
+.kyc-checks li.done{border-color:#bfe6cf;background:#f2fbf6;color:var(--k-ok)}
+.kyc-review{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kyc-review figure{margin:0;display:grid;gap:4px}.kyc-review img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;background:#111}
+.kyc-review figure:nth-child(-n+2) img{aspect-ratio:1.586}
+.kyc-review figcaption{font-size:11px;color:var(--k-muted);text-align:center}
+.kyc-agree{display:flex!important;grid-template-columns:none;align-items:flex-start;gap:10px!important;font-weight:400!important;font-size:13px!important;line-height:1.5}
+@media (max-width:520px){.kyc-row,.kyc-ids{grid-template-columns:1fr}.kyc-checks{grid-template-columns:repeat(3,1fr)}.kyc-review{grid-template-columns:repeat(2,1fr)}}

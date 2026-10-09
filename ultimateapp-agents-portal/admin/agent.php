@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../includes/agents.php';
+require_once __DIR__ . '/../includes/kyc.php';
 admin_require('agents.view');
 $id = (int) q('id');
 $load = static function () use ($pdo, $id): ?array {
@@ -21,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!admin_can('agents.review')) throw new InvalidArgumentException('Your role cannot change agent status.');
             $new = p('status'); $note = trim(p('note'));
             if (!isset($statuses[$new]) || $new === 'pending') throw new InvalidArgumentException('Choose a valid status.');
+            if ($new === 'approved' && kyc_required('agent') && !kyc_is_verified($pdo, 'agent', $id)) throw new InvalidArgumentException('Verify this agent\'s identity first (KYC). Open Admin › KYC verification.');
             if (in_array($new, ['rejected', 'suspended'], true) && mb_strlen($note) < 5) throw new InvalidArgumentException('Add a note for the agent explaining this decision.');
             $pdo->prepare('UPDATE agents SET status = ?, status_note = ? WHERE id = ?')->execute([$new, $note !== '' ? mb_substr($note, 0, 255) : null, $id]);
             admin_audit('agent_status', 'agent', $id, ['from' => $a['status'], 'to' => $new, 'note' => $note]);
@@ -90,6 +92,7 @@ admin_header($a['full_name'], 'agents');
     <section class="card"><h2>Profile <?= status_badge($a['status']) ?></h2>
         <dl class="facts">
             <div><dt>Referral code</dt><dd><b><?= e($a['code']) ?></b></dd></div>
+            <?php $kycState = kyc_status($pdo, 'agent', $id); ?><div><dt>KYC</dt><dd><?= kyc_badge($kycState) ?> <a href="kyc.php?status=<?= $kycState === 'none' ? 'pending' : e($kycState) ?>&amp;type=agent">Open KYC</a></dd></div>
             <div><dt>Role</dt><dd><?= e(agent_role($a)) ?><?php if ($master): ?> of <a class="row-link" href="agent.php?id=<?= (int) $master['id'] ?>"><?= e($master['full_name']) ?></a> (<?= e($master['code']) ?>)<?php elseif ($team): ?> · <?= count($team) ?> Sub-Agent<?= count($team) === 1 ? '' : 's' ?><?php endif; ?></dd></div>
             <div><dt>Email</dt><dd><?= e($a['email']) ?></dd></div>
             <div><dt>Mobile</dt><dd><?= e($a['mobile']) ?></dd></div>

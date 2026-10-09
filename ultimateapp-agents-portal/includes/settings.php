@@ -96,6 +96,10 @@ function settings_schema(): array
     }
     $schema += [
         'agents.enabled' => ['type' => 'bool', 'label' => 'Agent commissions enabled'],
+        'kyc.required_merchant' => ['type' => 'bool', 'label' => 'Merchants need a verified ID before approval'],
+        'kyc.required_driver' => ['type' => 'bool', 'label' => 'Drivers need a verified ID before approval'],
+        'kyc.required_agent' => ['type' => 'bool', 'label' => 'Agents need a verified ID before approval and cash-out'],
+        'kyc.required_user' => ['type' => 'bool', 'label' => 'Customers need a verified ID to send Credits and cash in to e-wallets'],
         'agents.sub_auto_approve' => ['type' => 'bool', 'label' => 'Approve Sub-Agents automatically'],
         'agents.earn_days' => ['type' => 'int', 'min' => 0, 'max' => 3650, 'label' => 'Agent earns for (days after sign-up, 0 = always)'],
         'agents.cookie_days' => ['type' => 'int', 'min' => 1, 'max' => 365, 'label' => 'Referral link remembered for (days)'],

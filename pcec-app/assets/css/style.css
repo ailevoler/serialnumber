@@ -268,7 +268,6 @@ code { background: rgba(26, 108, 240, .1); padding: 1px 6px; border-radius: 6px;
 .auth-switch { text-align: center; margin-top: 22px; color: #3d4a64; }
 .auth-switch a { color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; }
 .auth-switch .icon { width: 18px; height: 18px; }
-.demo-hint { text-align: center; margin-top: 14px; font-size: .8rem; color: var(--muted); }
 .prose h1, .prose h2 { text-align: left; margin: 0 0 12px; }
 .auth-panel.prose h2 { margin-top: 24px; color: var(--navy); }
 .prose p { color: #3d4a64; }
@@ -333,8 +332,6 @@ code { background: rgba(26, 108, 240, .1); padding: 1px 6px; border-radius: 6px;
   .btn-social:hover { background: rgba(26, 108, 240, .25); }
   .btn-facebook .brand circle { fill: #fff; }
   .auth-switch a { color: #4fb4ff; }
-  .demo-hint { color: rgba(225,235,255,.7); }
-  .demo-hint code { background: rgba(255,255,255,.12); color: #fff; }
   .alert { background: rgba(255,255,255,.95); }
   .auth-panel.prose h2 { color: #fff; }
   .auth-card { overflow: visible; }

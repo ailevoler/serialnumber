@@ -66,7 +66,6 @@ auth_head(t('Log In'));
         <a href="<?= e(url('social.php?p=facebook')) ?>" class="btn btn-social btn-facebook"><?= brand_icon('facebook') ?> <?= e(t('Continue with Facebook')) ?></a>
       </div>
       <p class="auth-switch"><?= e(t("Don't have an account?")) ?> <a href="<?= e(url('register.php')) ?>"><?= e(t('Create an Account')) ?> <?= icon('chevron-right') ?></a></p>
-      <p class="demo-hint">Demo: <code>johntan</code> / <code>password123</code></p>
     </div>
   </div>
 </div>

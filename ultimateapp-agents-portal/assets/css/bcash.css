@@ -1,0 +1,70 @@
+/* BCash theme. The BCash card is always blue. When BCash is the wallet on screen,
+   the home screen (html.bcash-theme) switches from black/green to the BCash blues. */
+:root{--bc-deep:#0039d6;--bc-blue:#0a6cf0;--bc-sky:#0aa2f5;--bc-cyan:#00d4f7;--bc-ink:#0b2a6b;--bc-soft:#eef6ff;--bc-grad:linear-gradient(135deg,#0039d6 0%,#0a6cf0 45%,#08a8f4 78%,#00d4f7 100%)}
+
+/* ---------- BCash card ---------- */
+.home-wallet.home-wallet-cash{background:linear-gradient(135deg,#003fdc 0%,#0866ee 42%,#0a9cf3 76%,#00cff6 100%) padding-box,linear-gradient(135deg,#7fe9ff,#ffffff 40%,#4aa8ff) border-box;box-shadow:0 10px 26px #0a5be033}
+.home-wallet.home-wallet-cash:before{background:linear-gradient(160deg,#ffffff 0%,#9fe8ff 45%,#ffffff00 80%);opacity:.16}
+.home-wallet-cash:after{content:"";position:absolute;z-index:-1;left:-10%;right:-10%;bottom:-38%;height:70%;border-radius:50%;background:radial-gradient(ellipse at 50% 0%,#00e1ff55,#00e1ff00 70%);pointer-events:none}
+.home-wallet-cash .hw-brand{font-size:11px}
+.bcash-brand{display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:800;letter-spacing:-.01em;color:#fff}
+.bcash-brand img{width:24px;height:24px;border-radius:7px;box-shadow:0 0 0 1.5px #ffffffb0}
+.home-wallet-cash .hw-brand em{color:#e3f4ff;font-size:9px;letter-spacing:.06em}
+.home-wallet-cash .hw-balance small,.home-wallet-cash .hw-unit{color:#e6f4ff}
+.home-wallet-cash .hw-eye{border-color:#ffffff59;background:#ffffff26}
+.dashboard-screen .home-wallet-cash .hw-currency{background:#00205a33;border-color:#ffffff40}
+.dashboard-screen .home-wallet-cash .hw-currency button{color:#e6f4ff}
+.dashboard-screen .home-wallet-cash .hw-currency button.active{background:#fff;color:var(--bc-deep)}
+.home-wallet-cash .hw-actions a{color:#fff}
+.home-wallet-cash .hw-actions i{background:#ffffff24;border-color:#ffffff47}
+.home-wallet-cash .hw-actions a.primary i{background:#fff;border-color:#fff;color:var(--bc-blue);box-shadow:0 4px 14px #00226e40}
+.home-wallet-cash .hw-actions a:focus-visible i{outline-color:#fff}
+
+/* ---------- Home screen while BCash is showing ---------- */
+.brand-swap{display:grid;justify-self:center;place-items:center;min-width:0}
+.brand-swap>*{grid-area:1/1;transition:opacity .35s ease,transform .35s ease}
+.bcash-wordmark{width:auto;height:36px;max-width:150px;object-fit:contain;opacity:0;transform:translateY(4px);pointer-events:none}
+html.bcash-theme .brand-swap .reference-wordmark{opacity:0;transform:translateY(-4px);pointer-events:none}
+html.bcash-theme .brand-swap .bcash-wordmark{opacity:1;transform:none}
+
+.dashboard-screen .home-tiles .tile-icon{position:relative;display:block;width:100%;max-width:70px;aspect-ratio:1/1;border-radius:19px;overflow:hidden;isolation:isolate;background:#000;box-shadow:0 6px 14px #00000024;transition:transform .12s ease,box-shadow .35s ease}
+.dashboard-screen .home-tiles .tile-icon:before{content:"";position:absolute;inset:0;background:var(--bc-grad);opacity:0;transition:opacity .35s ease}
+.dashboard-screen .home-tiles .tile-icon img{position:relative;display:block;max-width:none;width:100%;height:100%;border-radius:0;box-shadow:none;background:transparent;mix-blend-mode:screen}
+.dashboard-screen .home-tiles .service-tile:active .tile-icon{transform:scale(.93)}
+.dashboard-screen .home-tiles .service-tile:active .tile-icon img{transform:none}
+.dashboard-screen .home-tiles .service-tile:focus-visible img{outline:none}
+.dashboard-screen .home-tiles .service-tile:focus-visible .tile-icon{outline:2px solid #0b0b0c;outline-offset:3px}
+html.bcash-theme .dashboard-screen .home-tiles .tile-icon{box-shadow:0 6px 14px #0a5be038}
+html.bcash-theme .dashboard-screen .home-tiles .tile-icon:before{opacity:1}
+html.bcash-theme .dashboard-screen .home-tiles .service-tile:focus-visible .tile-icon{outline-color:var(--bc-blue)}
+
+html.bcash-theme body,html.bcash-theme .app-shell{background:var(--bc-soft)}
+.app-shell,.dashboard-screen .hello-row .avatar,.dashboard-screen .bottom-nav .scan span,.dashboard-screen .image-slider .banner-track{transition:background .35s ease,border-color .35s ease,box-shadow .35s ease}
+html.bcash-theme .dashboard-screen{background:linear-gradient(180deg,#dcefff 0,#eef6ff 340px)}
+html.bcash-theme .dashboard-screen .hello-row .avatar{background:var(--bc-grad);box-shadow:0 6px 16px #0a5be038}
+html.bcash-theme .dashboard-screen .hello-row strong,html.bcash-theme .dashboard-screen .home-section-head h2,html.bcash-theme .dashboard-screen .list-head h2{color:var(--bc-ink)}
+html.bcash-theme .dashboard-screen .home-tiles .service-tile .tile-label{color:var(--bc-ink)}
+html.bcash-theme .dashboard-screen .hw-pager button.active:after{background:var(--bc-blue)}
+html.bcash-theme .dashboard-screen .image-slider .banner-track{border-color:#9cc8f5;box-shadow:0 7px 18px #0a5be024}
+html.bcash-theme .dashboard-screen .image-slider .banner-track:after{background:linear-gradient(90deg,#0039d6,#0a9cf3 60%,#00d4f7)}
+html.bcash-theme .dashboard-screen .banner-dots button.active,html.bcash-theme .dashboard-screen .banner-dots button.active:after{background:var(--bc-blue)}
+html.bcash-theme .dashboard-screen .list-head a{color:var(--bc-blue)}
+html.bcash-theme .dashboard-screen .update-item{background:#fff;border-color:#d4e6fb}
+html.bcash-theme .dashboard-screen .bottom-nav{border-color:#d4e6fb}
+html.bcash-theme .dashboard-screen .bottom-nav .scan span{background:var(--bc-grad);box-shadow:0 8px 18px #0a5be04d}
+html.bcash-theme .dashboard-screen .bottom-nav a.active{color:var(--bc-blue)}
+html.bcash-theme .dashboard-screen .bottom-nav a.active:not(.scan) svg{fill:var(--bc-blue);stroke:var(--bc-cyan)}
+html.bcash-theme .dashboard-screen .bottom-nav a.active small{color:var(--bc-ink)}
+
+/* ---------- BCash pages (convert, receipt) ---------- */
+.cash-screen .cash-summary{background:var(--bc-grad);box-shadow:0 10px 24px #0a5be02e}
+.cash-screen .cash-summary:before{background:linear-gradient(90deg,#ffffff00,#ffffffaa,#ffffff00)}
+.cash-screen .cash-summary small,.cash-screen .cash-summary p{color:#e6f4ff}
+.cash-screen .btn.dark{background:var(--bc-grad);border-color:var(--bc-blue);color:#fff}
+.cash-screen .btn.dark:hover{filter:brightness(1.06)}
+.cash-screen .cash-direction button.active:after{background:linear-gradient(90deg,#0039d6,#00d4f7)}
+.cash-screen .cash-direction button:focus-visible,.cash-screen .cash-form>input:focus{outline-color:var(--bc-blue)}
+.cash-screen .cash-receipt-head svg{color:var(--bc-blue)}
+
+@media (max-width:360px){.bcash-wordmark{height:32px}.bcash-brand{font-size:14px}}
+@media (prefers-reduced-motion:reduce){.brand-swap>*,.dashboard-screen .home-tiles .tile-icon,.dashboard-screen .home-tiles .tile-icon:before,.app-shell{transition:none}}

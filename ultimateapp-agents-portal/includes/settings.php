@@ -35,7 +35,7 @@ function settings_schema(): array
         'p2m.min_centavos' => ['type' => 'int', 'min' => 100, 'max' => 100000000, 'label' => 'Minimum merchant payment'],
         'p2m.max_centavos' => ['type' => 'int', 'min' => 100, 'max' => 100000000, 'label' => 'Maximum merchant payment'],
     ];
-    foreach (['credits' => 'Credits', 'boracay_cash' => 'Boracay Cash'] as $source => $label) {
+    foreach (['credits' => 'Credits', 'boracay_cash' => 'BCash'] as $source => $label) {
         foreach ($p2m($label) as $key => $spec) $schema["p2m.$source.$key"] = $spec;
     }
     foreach (['balabag' => 'Balabag', 'manoc_manoc' => 'Manoc-Manoc', 'yapak' => 'Yapak'] as $slug => $label) {
@@ -82,7 +82,7 @@ function settings_schema(): array
         'suniway.fee_ecash_centavos' => ['type' => 'int', 'min' => 0, 'max' => 100000, 'label' => 'UCash In convenience fee'],
         'mctc.all_approved' => ['type' => 'bool', 'label' => 'Every approved merchant is an MCTC top-up center'],
         'uride.topup_mctc_enabled' => ['type' => 'bool', 'label' => 'Driver top-up at MCTC'],
-        'uride.topup_bcash_enabled' => ['type' => 'bool', 'label' => 'Driver top-up with Boracay Cash'],
+        'uride.topup_bcash_enabled' => ['type' => 'bool', 'label' => 'Driver top-up with BCash'],
         'uride.payout_min_centavos' => ['type' => 'int', 'min' => 100, 'max' => 10000000, 'label' => 'Minimum driver payout'],
     ];
     // Agents Portal referral commissions (Admin > Agents > Commission rates).

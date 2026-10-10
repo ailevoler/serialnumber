@@ -18,18 +18,18 @@ function get_app_render(string $focus, string $root): never
             'name' => 'Ultimate App', 'tag' => 'For residents & travelers', 'icon' => 'icon-192.png',
             'install' => 'install.php', 'open' => 'index.php', 'manifest' => 'manifest.webmanifest', 'title' => 'Ultimate App',
             'desc' => 'Your Boracay super-app: wallet, payments and island services in one place.',
-            'features' => ['Credits & Boracay Cash wallet with QR Ph top-up', 'Scan to pay merchants and send to friends', 'Book URide, order UEat, tours and island passes'],
+            'features' => ['Credits & BCash wallet with QR Ph top-up', 'Scan to pay merchants and send to friends', 'Book URide, order UEat, tours and island passes'],
         ],
         'driver' => [
             'name' => 'URide Driver', 'tag' => 'For E-Trike, motorcycle & car drivers', 'icon' => 'driver-192.png',
             'install' => 'driver/install.php', 'open' => 'driver/', 'manifest' => 'driver/manifest.webmanifest', 'title' => 'URide Driver',
             'desc' => 'Receive nearby ride requests, navigate trips and track your earnings.',
-            'features' => ['Go online and accept nearby rides', 'Trip navigation, passenger contact & live status', 'Driver wallet: QR Ph, MCTC & Boracay Cash top-ups'],
+            'features' => ['Go online and accept nearby rides', 'Trip navigation, passenger contact & live status', 'Driver wallet: QR Ph, MCTC & BCash top-ups'],
         ],
         'merchant' => [
             'name' => 'Ultimate App Merchant', 'tag' => 'For shops, restaurants & MCTC centers', 'icon' => 'merchant-192.png',
             'install' => 'merchant-portal/install.php', 'open' => 'merchant-portal/', 'manifest' => 'merchant-portal/manifest.webmanifest', 'title' => 'UA Merchant',
-            'desc' => 'Accept Credits and Boracay Cash payments and grow with Ultimate App.',
+            'desc' => 'Accept Credits and BCash payments and grow with Ultimate App.',
             'features' => ['Your payment QR and real-time sales', 'MCTC top-up center for customers & drivers', 'Payouts, reports and support in one place'],
         ],
     ];

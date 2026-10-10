@@ -54,10 +54,10 @@ portal_header('Hello, ' . explode(' ', $m['owner_name'])[0], 'dashboard');
     <section class="card"><h2>Latest payments <a href="payments.php">See all</a></h2>
         <div class="table-wrap"><table><thead><tr><th>Reference</th><th>Customer</th><th>Paid with</th><th class="num">Amount</th><th class="num">You receive</th></tr></thead><tbody>
         <?php if (!$recent): ?><tr><td colspan="5" class="muted">No payments yet. Put your QR on the counter to start.</td></tr><?php endif; ?>
-        <?php foreach ($recent as $r): ?><tr><td><b><?= e($r['reference']) ?></b><small><?= e(date('M j, g:i A', strtotime($r['created_at']))) ?></small></td><td><?= e(explode(' ', $r['full_name'])[0]) ?></td><td><?= $r['source'] === 'credits' ? 'Credits' : 'Boracay Cash' ?></td><td class="num">₱<?= peso((int) $r['amount_centavos']) ?></td><td class="num"><?= $r['status'] === 'refunded' ? portal_badge('refunded') : '₱' . peso((int) $r['merchant_net_centavos']) ?></td></tr><?php endforeach; ?>
+        <?php foreach ($recent as $r): ?><tr><td><b><?= e($r['reference']) ?></b><small><?= e(date('M j, g:i A', strtotime($r['created_at']))) ?></small></td><td><?= e(explode(' ', $r['full_name'])[0]) ?></td><td><?= $r['source'] === 'credits' ? 'Credits' : 'BCash' ?></td><td class="num">₱<?= peso((int) $r['amount_centavos']) ?></td><td class="num"><?= $r['status'] === 'refunded' ? portal_badge('refunded') : '₱' . peso((int) $r['merchant_net_centavos']) ?></td></tr><?php endforeach; ?>
         </tbody></table></div>
     </section>
-    <section class="card"><h2>Your payment QR</h2><p class="muted">Customers scan it with Ultimate App, choose Credits or Boracay Cash, and you see the payment here instantly.</p><a class="btn grad" href="qr.php">Show / print my QR</a></section>
+    <section class="card"><h2>Your payment QR</h2><p class="muted">Customers scan it with Ultimate App, choose Credits or BCash, and you see the payment here instantly.</p><a class="btn grad" href="qr.php">Show / print my QR</a></section>
 </div>
 <?php else: ?>
 <section class="card"><h2>Onboarding checklist</h2>

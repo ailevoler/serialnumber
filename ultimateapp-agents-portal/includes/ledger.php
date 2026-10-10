@@ -28,7 +28,7 @@ function ledger_account_label(string $account): string
 {
     [$type, $id] = array_pad(explode(':', $account, 2), 2, null);
     $labels = [
-        'user_credits' => 'Customer Credits', 'user_cash' => 'Customer Boracay Cash', 'merchant_payable' => 'Merchant payable',
+        'user_credits' => 'Customer Credits', 'user_cash' => 'Customer BCash', 'merchant_payable' => 'Merchant payable',
         'settlement_payable' => 'Settlement in transit', 'fee_revenue' => 'Charge revenue', 'bank_clearing' => 'Bank clearing',
         'adjustments' => 'Manual adjustments', 'brgy_payable' => 'Owed to barangay', 'paymongo_clearing' => 'PayMongo clearing',
         'driver_wallet' => 'URide driver wallet', 'mctc_collections' => 'Cash held by MCTC agent', 'office_cash' => 'Cash received at office', 'mctc_merchant_due' => 'MCTC cash due from merchant', 'uride_escrow' => 'URide fares on hold',

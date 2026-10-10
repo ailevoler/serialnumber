@@ -50,11 +50,11 @@ require __DIR__ . '/includes/header.php';
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="ref" value="<?= e($app['reference']) ?>">
         <p class="p2m-label">Pay with</p>
         <div class="p2m-sources">
-            <?php foreach ([['credits', 'Credits', 'Balance ' . peso($credits) . ' · 1 Credit = PHP 1', $credits >= $fee], ['boracay_cash', 'Boracay Cash', 'Balance PHP ' . peso($cash), $cash >= $fee], ['qrph', 'QR Ph', 'GCash, Maya or any bank app via PayMongo', true]] as [$k, $label, $hint, $ok]): ?>
+            <?php foreach ([['credits', 'Credits', 'Balance ' . peso($credits) . ' · 1 Credit = PHP 1', $credits >= $fee], ['boracay_cash', 'BCash', 'Balance PHP ' . peso($cash), $cash >= $fee], ['qrph', 'QR Ph', 'GCash, Maya or any bank app via PayMongo', true]] as [$k, $label, $hint, $ok]): ?>
             <label class="p2m-source<?= $ok ? '' : ' disabled' ?>"><input type="radio" name="method" value="<?= $k ?>"<?= $ok ? '' : ' disabled' ?><?= $k === ($credits >= $fee ? 'credits' : ($cash >= $fee ? 'boracay_cash' : 'qrph')) ? ' checked' : '' ?>><span><strong><?= e($label) ?></strong><small><?= e($ok ? $hint : 'Not enough balance') ?></small></span><em><?= $k === 'qrph' ? 'Scan to pay' : 'Instant' ?></em></label>
             <?php endforeach; ?>
         </div>
-        <p class="pay-fine">After payment your application goes to the Barangay <?= e($app['barangay']) ?> office for review. If it is rejected, Credits and Boracay Cash payments are refunded automatically.</p>
+        <p class="pay-fine">After payment your application goes to the Barangay <?= e($app['barangay']) ?> office for review. If it is rejected, Credits and BCash payments are refunded automatically.</p>
         <button class="btn dark" type="submit" data-pay-submit>Pay ₱<?= peso($fee) ?></button>
     </form>
 </section>

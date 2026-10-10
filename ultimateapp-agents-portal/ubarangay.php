@@ -54,7 +54,7 @@ require __DIR__ . '/includes/header.php';
                 <a href="brgy-application.php?ref=<?= e($a['reference']) ?>"><span><strong><?= e($a['name']) ?></strong><small><?= e($a['certificate_no'] ?? $a['reference']) ?> · <?= e(date('M j, Y', strtotime($a['created_at']))) ?></small></span><b class="ub-st st-<?= e($a['status']) ?>"><?= e($a['revoked_at'] ? 'Revoked' : brgy_statuses()[$a['status']]) ?></b></a>
             <?php endforeach; ?></div><?php endif; ?>
             <h3 class="ub-h">Apply online</h3>
-            <p class="pay-fine">Fill in the form, take a selfie, upload the requirements and pay with Credits, Boracay Cash or QR Ph. After the barangay approves, print your certificate.</p>
+            <p class="pay-fine">Fill in the form, take a selfie, upload the requirements and pay with Credits, BCash or QR Ph. After the barangay approves, print your certificate.</p>
             <div class="ub-types"><?php foreach ($types as $t): $reqs = brgy_requirements($t); ?>
                 <a href="brgy-apply.php?type=<?= e($t['code']) ?>" class="ub-type"><span class="ub-ic" data-icon="receipt"></span><span><strong><?= e($t['name']) ?></strong><small><?= e($t['description']) ?></small><small class="ub-req"><?= count($reqs) ?> requirement<?= count($reqs) === 1 ? '' : 's' ?> · valid <?= (int) $t['validity_days'] ?> days</small></span><b><?= (int) $t['fee_centavos'] === 0 ? 'Free' : '₱' . peso((int) $t['fee_centavos']) ?></b></a>
             <?php endforeach; ?></div>

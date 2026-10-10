@@ -701,7 +701,7 @@ function uride_topup_methods(): array
     return [
         'qrph' => ['QR Ph', 'GCash, Maya or any bank app'],
         'mctc' => ['MCTC', 'Pay cash at an MCTC top-up center'],
-        'boracay_cash' => ['Boracay Cash', 'Pay from an Ultimate App account'],
+        'boracay_cash' => ['BCash', 'Pay from an Ultimate App account'],
     ];
 }
 
@@ -711,13 +711,13 @@ function uride_topup_method_enabled(string $method): bool
     return $key !== null && setting($key, '1') === '1';
 }
 
-/** Service fee for a top-up method (Boracay Cash is an in-app transfer: no fee). */
+/** Service fee for a top-up method (BCash is an in-app transfer: no fee). */
 function uride_topup_fee(string $method): int
 {
     return $method === 'boracay_cash' ? 0 : uride_settings()['topup_fee'];
 }
 
-/** A pending MCTC / Boracay Cash request that is past its time limit. */
+/** A pending MCTC / BCash request that is past its time limit. */
 function uride_topup_is_expired(array $order): bool
 {
     return $order['status'] === 'pending' && $order['method'] !== 'qrph' && $order['expires_at'] !== null && strtotime((string) $order['expires_at']) <= time();
@@ -727,7 +727,7 @@ function uride_topup_is_expired(array $order): bool
  * Starts a driver wallet top-up and returns the page to open.
  * qrph: PayMongo QR Ph (in-app QR, or hosted checkout fallback).
  * mctc: a QR the MCTC agent scans after receiving cash (valid 24 hours).
- * boracay_cash: a QR / link that an Ultimate App user opens to pay from Boracay Cash (valid 30 minutes).
+ * boracay_cash: a QR / link that an Ultimate App user opens to pay from BCash (valid 30 minutes).
  */
 function uride_topup_start(PDO $pdo, array $driver, int $amount, array $config, string $method = 'qrph'): string
 {
@@ -773,7 +773,7 @@ function uride_topup_start(PDO $pdo, array $driver, int $amount, array $config, 
 
 /**
  * Credits the driver's wallet once for a paid top-up. Caller holds the top-up row lock.
- * $source is the ledger account the money came from (PayMongo clearing, an MCTC agent's cash, or a customer's Boracay Cash).
+ * $source is the ledger account the money came from (PayMongo clearing, an MCTC agent's cash, or a customer's BCash).
  */
 function uride_topup_credit(PDO $pdo, array $order, string $paymentId, string $source = 'paymongo_clearing'): void
 {
@@ -832,7 +832,7 @@ function uride_topup_admin_approve(PDO $pdo, int $topupId, int $adminId, string 
     });
 }
 
-/** An Ultimate App user pays a driver's top-up request from their Boracay Cash. */
+/** An Ultimate App user pays a driver's top-up request from their BCash. */
 function uride_topup_bcash_pay(PDO $pdo, int $userId, string $token): array
 {
     return uride_tx($pdo, function () use ($pdo, $userId, $token) {
@@ -852,7 +852,7 @@ function uride_topup_bcash_pay(PDO $pdo, int $userId, string $token): array
         $amount = (int) $order['amount_centavos'] + (int) $order['fee_centavos'];
         $stmt = $pdo->prepare('UPDATE boracay_cash_wallets SET balance_centavos = balance_centavos - ? WHERE user_id = ? AND balance_centavos >= ?');
         $stmt->execute([$amount, $userId, $amount]);
-        if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Not enough Boracay Cash for this top-up (PHP ' . peso($amount) . ').');
+        if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Not enough BCash for this top-up (PHP ' . peso($amount) . ').');
         $pdo->prepare('UPDATE uride_driver_topups SET payer_user_id = ? WHERE id = ?')->execute([$userId, $order['id']]);
         uride_topup_credit($pdo, $order, 'BC-' . $userId . '-' . substr($order['reference'], 3, 12), 'user_cash:' . $userId);
         $stmt = $pdo->prepare('SELECT * FROM uride_driver_topups WHERE id = ?');
@@ -861,7 +861,7 @@ function uride_topup_bcash_pay(PDO $pdo, int $userId, string $token): array
     });
 }
 
-/** Driver cancels an unpaid MCTC / Boracay Cash request. */
+/** Driver cancels an unpaid MCTC / BCash request. */
 function uride_topup_cancel(PDO $pdo, int $driverId, string $reference): void
 {
     uride_tx($pdo, function () use ($pdo, $driverId, $reference) {

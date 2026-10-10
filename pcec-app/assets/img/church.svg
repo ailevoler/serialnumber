@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fa8f5"/><stop offset="1" stop-color="#cfe6ff"/></linearGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6cbf4a"/><stop offset="1" stop-color="#3d8a2e"/></linearGradient>
+  </defs>
+  <rect width="320" height="200" fill="url(#sky)"/>
+  <g fill="#fff" opacity=".85"><ellipse cx="60" cy="40" rx="30" ry="10"/><ellipse cx="80" cy="34" rx="20" ry="10"/><ellipse cx="250" cy="30" rx="26" ry="8"/></g>
+  <path d="M0 150 Q80 130 160 145 T320 140 V200 H0Z" fill="url(#grass)"/>
+  <g fill="#2f7d32"><circle cx="40" cy="138" r="22"/><circle cx="62" cy="146" r="16"/><circle cx="282" cy="136" r="24"/><circle cx="258" cy="148" r="15"/></g>
+  <rect x="112" y="96" width="96" height="62" fill="#f7f1e6"/>
+  <path d="M104 100 L160 62 L216 100Z" fill="#b5452f"/>
+  <rect x="146" y="40" width="28" height="60" fill="#f7f1e6"/>
+  <path d="M140 44 L160 22 L180 44Z" fill="#b5452f"/>
+  <rect x="158" y="6" width="4" height="18" fill="#6b4b2a"/><rect x="153" y="11" width="14" height="4" fill="#6b4b2a"/>
+  <path d="M150 158 v-26 a10 10 0 0 1 20 0 v26Z" fill="#7a4b2a"/>
+  <g fill="#7fb3e6"><rect x="122" y="112" width="12" height="18" rx="6"/><rect x="186" y="112" width="12" height="18" rx="6"/><circle cx="160" cy="60" r="7"/></g>
+</svg>

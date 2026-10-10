@@ -435,6 +435,132 @@
     render();
   });
 
+  /* ---------- Copy plain text ---------- */
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-copy-text]');
+    if (!b) return;
+    e.preventDefault();
+    try { await navigator.clipboard.writeText(b.dataset.copyText); toast('Copied'); }
+    catch { prompt('Copy:', b.dataset.copyText); }
+  });
+
+  /* ---------- Payment status polling + QR countdown ---------- */
+  function watchPayment(statusUrl, expiresIn, root) {
+    const deadline = Date.now() + expiresIn * 1000;
+    const cd = root && root.querySelector('[data-countdown]');
+    let timer = null;
+    const tick = () => {
+      if (!cd) return;
+      const left = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+      cd.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    };
+    const poll = async () => {
+      if (document.hidden) return;
+      try {
+        const r = await fetch(statusUrl, { credentials: 'same-origin' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (j.status === 'paid') { clearInterval(timer); toast('Payment received! 🙏'); setTimeout(() => { location.href = j.receipt; }, 600); }
+        else if (j.status !== 'pending' || j.expired) { clearInterval(timer); location.href = j.receipt; }
+      } catch { /* retry */ }
+    };
+    tick();
+    if (cd) setInterval(tick, 1000);
+    timer = setInterval(poll, 4000);
+    document.addEventListener('visibilitychange', poll);
+  }
+  const live = $('#qr-live');
+  if (live && live.dataset.statusUrl) watchPayment(live.dataset.statusUrl, +live.dataset.expires || 1800, live);
+
+  /* ---------- Give form ---------- */
+  const give = $('#give-form');
+  if (give) {
+    const panes = $$('.give-pane', give);
+    const label = $('#give-label');
+    const other = $('.other-amount', give);
+    const otherInput = other.querySelector('input');
+    const fundLabel = $('#payee-fund');
+    panes.forEach((p) => p.setAttribute('data-js', ''));
+    const val = (name) => (give.querySelector(`input[name="${name}"]:checked`) || {}).value;
+    const peso = (n) => '₱' + Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 });
+
+    const update = () => {
+      const type = val('gift_type');
+      panes.forEach((p) => p.classList.toggle('on', p.dataset.pane.split(' ').includes(type)));
+      const amt = val('amount');
+      other.hidden = amt !== 'other';
+      const n = amt === 'other' ? parseFloat(otherInput.value || '0') : +amt;
+      const freq = type === 'recurring' ? ({ monthly: ' / month', quarterly: ' / quarter', yearly: ' / year' })[val('frequency')] || '' : '';
+      label.textContent = n >= 20 ? `Give ${peso(n)}${freq} Now` : 'Enter an amount (min ₱20)';
+      let target = val('fund');
+      if (type === 'project') {
+        const pr = give.querySelector('input[name="project_id"]:checked');
+        target = pr ? pr.closest('.project-option').querySelector('strong').textContent : 'Projects';
+      }
+      if (fundLabel) fundLabel.textContent = 'for ' + target;
+      const isQr = val('method') === 'qrph';
+      $('#qr-panel').hidden = !isQr;
+    };
+    give.addEventListener('change', update);
+    otherInput.addEventListener('input', update);
+    give.querySelectorAll('input[name="amount"]').forEach((r) => r.addEventListener('change', () => { if (r.value === 'other') otherInput.focus(); }));
+    update();
+
+    give.addEventListener('submit', async (e) => {
+      const amt = val('amount');
+      const n = amt === 'other' ? parseFloat(otherInput.value || '0') : +amt;
+      if (!(n >= 20)) { e.preventDefault(); toast('The minimum gift is ₱20'); otherInput.focus(); return; }
+      if (val('method') !== 'qrph') return; // card / e-wallet / bank: normal POST → redirect
+      e.preventDefault();
+      const btn = give.querySelector('.give-submit');
+      btn.disabled = true;
+      const old = label.textContent;
+      label.textContent = 'Generating QR code…';
+      try {
+        const res = await fetch(give.action || location.href, { method: 'POST', body: new FormData(give), credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || 'Could not start the payment');
+        if (j.redirect) { location.href = j.redirect; return; }
+        const box = $('#qr-box');
+        box.innerHTML = '';
+        const img = new Image();
+        img.src = j.qr; img.alt = 'QR Ph code ' + j.ref;
+        box.appendChild(img);
+        $('#qr-caption').innerHTML = `Scan this QR code using your banking app or e-wallet to give <b>${j.amount}</b>.<br><span class="mono">${j.ref}</span>`;
+        const panel = $('#qr-panel');
+        panel.insertAdjacentHTML('beforeend', `<p class="qr-timer"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Expires in <b data-countdown></b></p><p class="qr-waiting"><span class="spinner"></span> Waiting for payment…</p><p><a class="link" href="${j.page}">Open payment page</a></p>`);
+        const copy = $('#payee-copy');
+        if (copy) copy.dataset.copyText = j.ref;
+        give.querySelectorAll('input, textarea').forEach((i) => { if (i.type !== 'hidden') i.disabled = true; });
+        btn.hidden = true;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        watchPayment(j.status_url, j.expires_in, panel);
+      } catch (err) {
+        toast(err.message);
+        label.textContent = old;
+        btn.disabled = false;
+      }
+    });
+  }
+
+  /* ---------- Tabs (event details) ---------- */
+  $$('[data-tabs]').forEach((nav) => {
+    const card = nav.closest('.card');
+    card.classList.add('js-tabs');
+    const links = $$('[data-tab]', nav);
+    const show = (name, scroll) => {
+      if (!links.some((a) => a.dataset.tab === name)) name = links[0].dataset.tab;
+      links.forEach((a) => a.classList.toggle('on', a.dataset.tab === name));
+      $$('[data-panel]', card).forEach((p) => p.classList.toggle('on', p.dataset.panel === name));
+      if (scroll) nav.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+    links.forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.tab); show(a.dataset.tab); }));
+    show(location.hash.slice(1));
+    document.querySelectorAll('a[href="#register"]').forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault(); show('registration'); $('#register').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }));
+  });
+
   /* ---------- Auto-hide flash alerts ---------- */
   $$('.content > .alert-success').forEach((a) => setTimeout(() => { a.style.transition = 'opacity .4s'; a.style.opacity = 0; setTimeout(() => a.remove(), 400); }, 4000));
 })();

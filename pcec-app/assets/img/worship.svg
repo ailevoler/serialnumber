@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1a4a"/><stop offset=".6" stop-color="#1b3f9e"/><stop offset="1" stop-color="#2b1a5e"/></linearGradient>
+    <radialGradient id="l" cx=".5" cy=".3" r=".45"><stop offset="0" stop-color="#bfe0ff"/><stop offset="1" stop-color="#bfe0ff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6f2ff" stop-opacity=".55"/><stop offset="1" stop-color="#e6f2ff" stop-opacity="0"/></linearGradient>
+  </defs>
+  <rect width="800" height="420" fill="url(#b)"/>
+  <rect width="800" height="420" fill="url(#l)"/>
+  <g fill="url(#beam)"><path d="M400 40 L250 420 H320Z"/><path d="M400 40 L480 420 H550Z"/><path d="M120 0 L60 420 H160Z"/><path d="M680 0 L640 420 H740Z"/></g>
+  <rect x="300" y="60" width="200" height="110" rx="6" fill="#7fb4ff" opacity=".35"/>
+  <rect x="392" y="72" width="16" height="90" fill="#fff" opacity=".9"/><rect x="362" y="96" width="76" height="14" fill="#fff" opacity=".9"/>
+  <g fill="#050c26">
+    <path d="M0 420 V330 c40-20 80-10 110 6 c30-24 70-26 100-6 c40-22 80-20 110 2 c30-20 70-22 100 0 c34-22 74-22 104-2 c30-22 74-24 106-4 c30-16 50-14 70-6 V420Z"/>
+    <g stroke="#050c26" stroke-width="12" stroke-linecap="round">
+      <path d="M70 340 L40 240M100 338 L120 250M210 330 L190 220M240 332 L262 230M330 336 L320 236M420 330 L400 220M450 330 L470 225M560 334 L545 238M650 330 L630 230M680 330 L700 236M760 338 L770 250"/>
+    </g>
+  </g>
+</svg>

@@ -22,8 +22,12 @@ $sideNav = [
     'prayer' => ['prayer.php', 'pray', 'Prayer Requests'],
     'resources' => ['resources.php', 'book', 'Resources'],
     'chat' => ['chat.php', 'chat', 'Chat'],
+    'give' => ['give.php', 'gift', 'Give'],
     'notifications' => ['notifications.php', 'bell', 'Notifications'],
 ];
+if (is_admin()) {
+    $sideNav['admin'] = ['admin/index.php', 'settings', 'Admin'];
+}
 ?>
 <!doctype html>
 <html lang="<?= lang() === 'fil' ? 'fil' : 'en' ?>">
@@ -82,7 +86,8 @@ $sideNav = [
       </div>
     </div>
     <div class="hero-text">
-      <h1><?= e(t('Welcome Back,')) ?><br><span><?= e($authUser['first_name'] . ' ' . $authUser['last_name']) ?>!</span></h1>
+      <?php $hr = (int) date('G'); $greet = $hr < 12 ? 'Good Morning,' : ($hr < 18 ? 'Good Afternoon,' : 'Good Evening,'); ?>
+      <h1><?= e(t($greet)) ?><br><span><?= e($authUser['first_name'] . ' ' . $authUser['last_name']) ?>!</span></h1>
       <p><?= e(t('Together in Christ for a Greater Philippines.')) ?></p>
     </div>
   </header>

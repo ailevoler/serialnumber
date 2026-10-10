@@ -19,7 +19,7 @@ if (isset($_GET['open'])) {
 
 $items = q_all('SELECT n.*, u.first_name, u.last_name, u.title, u.username, u.avatar FROM notifications n
                 LEFT JOIN users u ON u.id = n.actor_id WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT 100', [uid()]);
-$typeIcon = ['follow' => 'user-plus', 'like' => 'heart', 'comment' => 'comment', 'message' => 'chat', 'post' => 'edit', 'rsvp' => 'calendar', 'prayer' => 'pray'];
+$typeIcon = ['follow' => 'user-plus', 'like' => 'heart', 'comment' => 'comment', 'message' => 'chat', 'post' => 'edit', 'rsvp' => 'calendar', 'prayer' => 'pray', 'payment' => 'gift', 'reminder' => 'repeat'];
 
 $pageTitle = 'Notifications';
 $activeNav = 'notifications';

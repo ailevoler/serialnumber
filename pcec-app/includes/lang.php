@@ -63,6 +63,14 @@ function t(string $key): string
         'Profile' => 'Profile',
         'Log Out' => 'Mag-log Out',
         'Learn More' => 'Alamin Pa',
+        'Good Morning,' => 'Magandang Umaga,',
+        'Good Afternoon,' => 'Magandang Hapon,',
+        'Good Evening,' => 'Magandang Gabi,',
+        'Give' => 'Magbigay',
+        'Donation & Giving' => 'Donasyon at Pagbibigay',
+        'Featured Churches' => 'Mga Tampok na Simbahan',
+        'Event Details' => 'Detalye ng Kaganapan',
+        'My Giving' => 'Aking mga Kaloob',
     ];
     return lang() === 'fil' ? ($fil[$key] ?? $key) : $key;
 }

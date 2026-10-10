@@ -30,3 +30,11 @@ define('GOOGLE_CLIENT_ID', env_or('GOOGLE_CLIENT_ID', ''));
 define('FACEBOOK_APP_ID', env_or('FACEBOOK_APP_ID', ''));
 
 date_default_timezone_set('Asia/Manila');
+
+// Key used to encrypt PayMongo secret keys stored in the database. Set APP_KEY in the
+// environment for production; otherwise a random key is generated once in config/app.key.
+define('APP_KEY_FILE', __DIR__ . '/app.key');
+define('APP_KEY', env_or('APP_KEY', ''));
+
+// PayMongo API base URL (override only for testing against a mock server).
+define('PAYMONGO_API_BASE', rtrim(env_or('PAYMONGO_API_BASE', 'https://api.paymongo.com/v1'), '/'));

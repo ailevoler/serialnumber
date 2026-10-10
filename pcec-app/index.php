@@ -13,6 +13,7 @@ $hero = true;
 $posts = fetch_posts('1=1', [], 5);
 $events = fetch_events('e.starts_at >= CURDATE()', [], 3);
 $rightRail = right_rail();
+$featured = q_all('SELECT * FROM churches WHERE is_featured = 1 ORDER BY name LIMIT 8');
 
 $tiles = [
     ['churches.php', 'church', 'Our Churches', 'blue'],
@@ -37,6 +38,33 @@ require __DIR__ . '/includes/header.php';
   <?php endforeach; ?>
 </section>
 
+<section class="give-card-home">
+  <div class="give-card-text">
+    <h2>Support God’s Work</h2>
+    <p>Your generous giving helps advance the mission, support churches, and reach more communities.</p>
+    <a href="<?= e(url('give.php')) ?>" class="btn btn-primary">Give Now <?= icon('arrow-right') ?></a>
+  </div>
+</section>
+
+<div class="mobile-only">
+  <?php section_head('Upcoming Events', 'events.php'); ?>
+  <?php foreach (array_slice($events, 0, 1) as $ev) render_event($ev); ?>
+  <?php if (!$events) empty_state('calendar', 'No upcoming events.'); ?>
+</div>
+
+<?php if ($featured): ?>
+  <?php section_head('Featured Churches', 'churches.php'); ?>
+  <div class="featured-row">
+    <?php foreach ($featured as $c): ?>
+      <a class="featured-church" href="<?= e(url('churches.php?q=' . urlencode($c['name']))) ?>">
+        <span class="featured-photo"<?= $c['photo'] ? ' style="background-image:url(\'' . e(url($c['photo'])) . '\')"' : '' ?>></span>
+        <strong><?= e($c['name']) ?></strong>
+        <small><?= e($c['city']) ?></small>
+      </a>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
 <section class="banner">
   <div class="banner-text">
     <h2>One Body<br>Many Churches<br>Greater Impact</h2>
@@ -49,10 +77,6 @@ require __DIR__ . '/includes/header.php';
 <?php foreach ($posts as $p) render_post($p); ?>
 <?php if (!$posts) empty_state('edit', 'No posts yet. Be the first to share!'); ?>
 
-<div class="mobile-only">
-  <?php section_head('Upcoming Events', 'events.php'); ?>
-  <?php foreach ($events as $ev) render_event($ev); ?>
-  <?php if (!$events) empty_state('calendar', 'No upcoming events.'); ?>
-</div>
+
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

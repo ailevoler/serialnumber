@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" preserveAspectRatio="xMaxYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef3fb"/><stop offset=".55" stop-color="#e9eef8"/><stop offset="1" stop-color="#f6dcc2"/></linearGradient>
+    <radialGradient id="glow" cx=".72" cy=".25" r=".5"><stop offset="0" stop-color="#fff4dc"/><stop offset="1" stop-color="#fff4dc" stop-opacity="0"/></radialGradient>
+    <linearGradient id="heart" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a5f"/><stop offset="1" stop-color="#c81d25"/></linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1c39b"/><stop offset="1" stop-color="#d79a6c"/></linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a5a35"/><stop offset="1" stop-color="#5e3a20"/></linearGradient>
+  </defs>
+  <rect width="600" height="360" fill="url(#bg)"/>
+  <rect width="600" height="360" fill="url(#glow)"/>
+  <g opacity=".85"><rect x="418" y="0" width="30" height="210" fill="url(#wood)"/><rect x="368" y="48" width="130" height="28" fill="url(#wood)"/></g>
+  <path d="M300 360 C330 300 380 270 440 268 C470 266 500 250 520 236 C540 222 566 230 560 252 C552 280 520 300 490 314 L600 300 V360Z" fill="url(#skin)"/>
+  <path d="M600 252 C570 262 540 270 520 290 C500 310 470 322 440 326 L600 340Z" fill="#c9875a" opacity=".55"/>
+  <path d="M455 262 c-22-28 -52-10 -40 16 c8 18 40 34 40 34 s32-16 40-34 c12-26 -18-44 -40-16z" fill="url(#heart)"/>
+  <ellipse cx="438" cy="248" rx="9" ry="5" fill="#fff" opacity=".45" transform="rotate(-30 438 248)"/>
+</svg>

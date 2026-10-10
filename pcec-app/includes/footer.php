@@ -10,7 +10,7 @@
   <a href="<?= e(url('events.php')) ?>" class="<?= $activeNav === 'events' ? 'active' : '' ?>"><?= icon('calendar') ?><span><?= e(t('Events')) ?></span></a>
   <button type="button" data-open="composer-modal"><?= icon('plus-square') ?><span><?= e(t('Post')) ?></span></button>
   <a href="<?= e(url('chat.php')) ?>" class="<?= $activeNav === 'chat' ? 'active' : '' ?>"><?= icon('chat') ?><span><?= e(t('Chat')) ?></span><?php if ($unreadChat): ?><b class="badge"><?= $unreadChat ?></b><?php endif; ?></a>
-  <button type="button" data-open="more-sheet" class="<?= in_array($activeNav, ['more', 'churches', 'members', 'resources', 'prayer', 'posts', 'profile', 'notifications'], true) ? 'active' : '' ?>"><?= icon('menu') ?><span><?= e(t('More')) ?></span></button>
+  <button type="button" data-open="more-sheet" class="<?= in_array($activeNav, ['more', 'churches', 'members', 'resources', 'prayer', 'posts', 'profile', 'notifications', 'give', 'admin'], true) ? 'active' : '' ?>"><?= icon('menu') ?><span><?= e(t('More')) ?></span></button>
 </nav>
 
 <!-- Composer modal (used by the bottom-nav "Post" button and the sidebar) -->
@@ -37,7 +37,10 @@
       <a href="<?= e(url('posts.php')) ?>"><?= icon('edit') ?><?= e(t('Posts')) ?></a>
       <a href="<?= e(url('prayer.php')) ?>"><?= icon('pray') ?><?= e(t('Prayer Requests')) ?></a>
       <a href="<?= e(url('resources.php')) ?>"><?= icon('book') ?><?= e(t('Resources')) ?></a>
+      <a href="<?= e(url('give.php')) ?>"><?= icon('gift') ?><?= e(t('Give')) ?></a>
+      <a href="<?= e(url('my_giving.php')) ?>"><?= icon('receipt') ?>My Giving</a>
       <a href="<?= e(url('notifications.php')) ?>"><?= icon('bell') ?><?= e(t('Notifications')) ?></a>
+      <?php if (is_admin()): ?><a href="<?= e(url('admin/index.php')) ?>"><?= icon('settings') ?>Admin</a><?php endif; ?>
       <a href="<?= e(url('profile.php')) ?>"><?= icon('user') ?><?= e(t('Profile')) ?></a>
       <a href="<?= e(url('logout.php')) ?>"><?= icon('logout') ?><?= e(t('Log Out')) ?></a>
     </div>

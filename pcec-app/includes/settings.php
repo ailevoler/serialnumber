@@ -1,6 +1,10 @@
 <?php
 /** Key/value settings stored in the `settings` table, plus encryption for secrets. */
 
+// Fallbacks for installs whose config/config.php predates these settings.
+if (!defined('APP_KEY')) define('APP_KEY', (string) getenv('APP_KEY'));
+if (!defined('APP_KEY_FILE')) define('APP_KEY_FILE', __DIR__ . '/../config/app.key');
+
 function setting(string $key, ?string $default = null): ?string
 {
     static $cache = null;
@@ -28,10 +32,16 @@ function app_key(): string
         return hash('sha256', APP_KEY, true);
     }
     if (!is_file(APP_KEY_FILE)) {
-        file_put_contents(APP_KEY_FILE, bin2hex(random_bytes(32)));
+        if (@file_put_contents(APP_KEY_FILE, bin2hex(random_bytes(32))) === false) {
+            throw new RuntimeException('Cannot create ' . basename(dirname(APP_KEY_FILE)) . '/app.key. Make the config folder writable, or set APP_KEY in config/config.php.');
+        }
         @chmod(APP_KEY_FILE, 0600);
     }
-    return hash('sha256', trim((string) file_get_contents(APP_KEY_FILE)), true);
+    $key = trim((string) file_get_contents(APP_KEY_FILE));
+    if ($key === '') {
+        throw new RuntimeException('config/app.key is empty. Delete it so a new key can be generated.');
+    }
+    return hash('sha256', $key, true);
 }
 
 function secret_encrypt(string $plain): string

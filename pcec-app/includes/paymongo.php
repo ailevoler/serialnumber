@@ -3,6 +3,8 @@
  * Minimal PayMongo REST client (https://developers.paymongo.com).
  * Uses the secret key server-side only. Amounts are in centavos.
  */
+if (!defined('PAYMONGO_API_BASE')) define('PAYMONGO_API_BASE', 'https://api.paymongo.com/v1');
+
 class PayMongoException extends RuntimeException {}
 
 class PayMongo

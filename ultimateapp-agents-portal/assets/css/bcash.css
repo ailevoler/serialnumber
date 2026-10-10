@@ -124,3 +124,44 @@ html.bcash-theme .dashboard-screen .tiles-bcash .service-tile:nth-child(n+5){ani
 .bcash-page .community-links a{color:inherit}
 .bcash-page .community-links a>span:first-child{color:var(--bc-blue)}
 a.update-item{text-decoration:none;color:inherit}a.update-item strong,a.update-item b{color:inherit}
+
+/* ---------- USD ⇄ PHP exchange ---------- */
+.hw-fx-link{display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:0 10px;border-radius:99px;background:#ffffff2e;border:1px solid #ffffff59;color:#fff;font-size:10.5px;font-weight:700;text-decoration:none;white-space:nowrap}
+.hw-fx-link:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.fx-rate{padding:18px 18px 16px;border-radius:20px;background:var(--bc-grad);color:#fff;box-shadow:0 10px 24px #0a5be02e}
+.fx-rate small{display:block;font-size:12px;color:#e6f4ff}
+.fx-rate>strong{display:block;margin:2px 0 12px;font-size:30px;font-weight:750;font-variant-numeric:tabular-nums}
+.fx-rate-sides{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fx-rate-sides span{padding:9px 10px;border-radius:12px;background:#ffffff24;border:1px solid #ffffff38}
+.fx-rate-sides em{display:block;font-style:normal;font-size:11px;color:#e6f4ff}
+.fx-rate-sides b{display:block;margin-top:2px;font-size:15px;font-variant-numeric:tabular-nums}
+.fx-rate p{margin:10px 0 0;font-size:11px;line-height:1.45;color:#dcecff}
+.fx-balances{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 16px}
+.fx-balances div{padding:11px 12px;border:1px solid var(--bc-line);border-radius:14px;background:#fff}
+.fx-balances small{display:block;font-size:11px;color:#5a6b85}
+.fx-balances strong{display:block;margin-top:2px;font-size:16px;color:var(--bc-ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.fx-form{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
+.fx-form .pay-amount{min-width:0}
+.fx-form .pay-amount input{min-width:0;width:100%}
+.fx-form>label{font-size:13px;font-weight:600}
+.fx-side label{display:grid;place-items:center;min-height:40px;padding:5px;border-radius:5px;color:#5e666d;font-size:13px;font-weight:700;cursor:pointer}
+.fx-side label.active{background:#fff;color:var(--bc-ink);box-shadow:0 1px 3px #0002}
+.fx-side label.active:after{content:"";display:block;width:25px;height:2px;margin-top:3px;background:linear-gradient(90deg,#0039d6,#00d4f7)}
+.fx-side input{position:absolute;opacity:0;width:1px;height:1px}
+.fx-side label:focus-within{outline:2px solid var(--bc-blue);outline-offset:2px}
+.fx-breakdown{margin:4px 0 0}
+.fx-breakdown .fx-total span{color:var(--bc-ink);font-weight:700}
+.fx-breakdown .fx-total strong{font-size:16px;font-weight:800;color:var(--bc-ink)}
+.fx-form .pay-fine.warn{color:#b42318;font-weight:600}
+.fx-form .btn[disabled]{opacity:.5;cursor:not-allowed}
+.fx-done{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border:1px solid #9fd7b9;border-radius:14px;background:#ecfbf2;color:#0f5132}
+.fx-done svg{width:22px;height:22px;flex:none;color:#0f8a4f}
+.fx-done strong{display:block;font-size:14px}
+.fx-done p{margin:2px 0 0;font-size:12px;line-height:1.45}
+.fx-screen .cash-history>a{cursor:default}
+.fx-market{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;margin:0 0 14px;padding:13px 14px;border:1px solid var(--bc-line);border-radius:16px;background:#fff;color:var(--bc-ink);text-decoration:none}
+.fx-market small{display:block;margin-top:2px;font-size:11px;font-weight:500;color:#5a6b85}
+.fx-market-pair{font-weight:800}
+.fx-market-rate{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.fx-market-go{padding:7px 11px;border-radius:99px;background:var(--bc-grad);color:#fff;font-size:12px;font-weight:700}
+@media (max-width:360px){.fx-rate>strong{font-size:26px}.fx-market{grid-template-columns:1fr auto}.fx-market-go{grid-column:1/-1;text-align:center}}

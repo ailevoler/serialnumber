@@ -8,11 +8,23 @@ $views = [
 ];
 $view = is_string($_GET['view'] ?? null) && isset($views[$_GET['view']]) ? $_GET['view'] : 'bct';
 [$title, $icon, $headline, $body] = $views[$view];
+$fxRate = null;
+if ($view === 'markets') {
+    require_once __DIR__ . '/includes/fx.php';
+    try { $fxRate = fx_current($pdo); } catch (Throwable $e) { error_log('Markets FX failed: ' . $e->getMessage()); }
+}
 $pageTitle = $title;
 require __DIR__ . '/includes/header.php';
 ?>
 <section class="screen with-nav bcash-page bcash-soon">
     <header class="page-head"><a href="dashboard.php?wallet=cash" aria-label="Back"><span data-icon="arrow-left"></span></a><h1><?= e($title) ?></h1><span></span></header>
+    <?php if ($fxRate): ?>
+    <a class="fx-market" href="bcash-exchange.php">
+        <span class="fx-market-pair">USD / PHP<small>Live · <?= e(fx_source_label($fxRate['source'])) ?></small></span>
+        <span class="fx-market-rate">PHP <?= fx_format_rate($fxRate['micro']) ?><small>Buy <?= fx_format_rate($fxRate['buy_micro'], 2) ?> · Sell <?= fx_format_rate($fxRate['sell_micro'], 2) ?></small></span>
+        <span class="fx-market-go">Exchange</span>
+    </a>
+    <?php endif; ?>
     <div class="bcash-soon-hero">
         <span class="bcash-soon-icon"><img src="assets/images/services/<?= e($icon) ?>?v=1" alt="" width="84" height="84"></span>
         <span class="bcash-soon-badge">Coming soon</span>

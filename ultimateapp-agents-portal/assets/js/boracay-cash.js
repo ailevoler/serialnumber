@@ -55,12 +55,14 @@
     const privacy = card.querySelector('[data-cash-balance-toggle]');
     const centavos = Number(card.dataset.cashCentavos);
     const rate = Number(card.dataset.usdRate);
+    const usdCents = Number(card.dataset.usdCents || 0);
     let currency = 'PHP';
     let hidden = false;
     const money = value => value.toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
     const render = () => {
-      display.textContent = hidden ? '******' : currency === 'PHP' ? `PHP ${money(centavos / 100)}` : rate > 0 ? `USD ${money(centavos / 100 / rate)}` : 'USD --';
-      note.textContent = currency === 'PHP' ? 'PHP wallet balance' : rate > 0 ? `Indicative: PHP ${money(rate)} / USD` : 'USD rate not configured';
+      // PHP shows the BCash balance; USD shows the USD wallet (bought in USD ⇄ PHP) at today's rate.
+      display.textContent = hidden ? '******' : currency === 'PHP' ? `PHP ${money(centavos / 100)}` : `USD ${money(usdCents / 100)}`;
+      note.textContent = currency === 'PHP' ? 'PHP wallet balance' : rate > 0 ? `USD wallet · 1 USD = PHP ${money(rate)}` : 'USD wallet · rate updating';
       currencyButtons.forEach(button => {
         const active = button.dataset.currency === currency;
         button.classList.toggle('active', active);

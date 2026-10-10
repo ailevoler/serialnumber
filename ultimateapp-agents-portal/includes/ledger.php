@@ -33,6 +33,7 @@ function ledger_account_label(string $account): string
         'adjustments' => 'Manual adjustments', 'brgy_payable' => 'Owed to barangay', 'paymongo_clearing' => 'PayMongo clearing',
         'driver_wallet' => 'URide driver wallet', 'mctc_collections' => 'Cash held by MCTC agent', 'office_cash' => 'Cash received at office', 'mctc_merchant_due' => 'MCTC cash due from merchant', 'uride_escrow' => 'URide fares on hold',
         'agent_payable' => 'Owed to agent', 'suniway_payable' => 'Owed to SUNIWAY (bills, load, cash-in)', 'agent_commission_expense' => 'Agent commissions (expense)',
+        'fx_usd_book' => 'Customer USD (PHP value at trade rate)', 'fx_fee_revenue' => 'USD exchange fees',
     ];
     $label = $labels[$type] ?? $type;
     return $id !== null ? $label . ' · ' . $id : $label;

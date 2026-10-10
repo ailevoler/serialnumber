@@ -207,6 +207,7 @@ function admin_nav(): array
         'ERP' => [
             ['payments.php', 'card', 'Payments', 'payments.view'],
             ['suniway.php', 'card', 'Bills & Load (SUNIWAY)', 'payments.view'],
+            ['fx.php', 'finance', 'USD ⇄ PHP exchange', 'finance.view'],
             ['finance.php', 'finance', 'Finance', 'finance.view'],
             ['ledger.php', 'book', 'General ledger', 'finance.view'],
             ['settlements.php', 'bank', 'Settlements', 'settlements.manage'],

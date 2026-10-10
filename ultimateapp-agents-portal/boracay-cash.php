@@ -45,6 +45,7 @@ require __DIR__ . '/includes/header.php';
 <section class="screen cash-screen">
     <header class="page-head"><a href="dashboard.php" aria-label="Back"><span data-icon="arrow-left"></span></a><h1>BCash</h1><span></span></header>
     <div class="cash-summary"><small>Available BCash</small><strong>PHP <?= number_format($balanceCentavos / 100, 2) ?></strong><p>PHP balance · USD is display-only on the wallet card</p></div>
+    <a class="convert-method convert-link fx-link" href="bcash-exchange.php"><span data-icon="banknote"></span><span><strong>USD ⇄ PHP</strong><small>Buy or sell USD with BCash at the live rate</small></span><span data-icon="chevron-right"></span></a>
     <?php if ($error): ?><p class="alert" role="alert"><?= e($error) ?></p><?php endif; ?>
     <div class="cash-heading"><h2>Convert between wallets</h2><p>1 Credit = PHP1.00 BCash in either direction. No conversion fee.</p></div>
     <form method="post" class="cash-form"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="request_key" value="<?= e($_SESSION['boracay_cash_key']) ?>">

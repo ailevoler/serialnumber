@@ -58,6 +58,7 @@ require __DIR__ . '/includes/header.php';
         <h2>Receive your cash</h2>
         <label class="convert-method"><input type="radio" name="method" value="mctc" checked><span data-icon="qr-code"></span><span><strong>MCTC Merchant</strong><small>Show your QR to an MCTC merchant for cash</small></span></label>
         <a class="convert-method convert-link" href="boracay-cash.php"><span data-icon="wallet"></span><span><strong>BCash</strong><small>Convert between BCash and Credits</small></span><span data-icon="chevron-right"></span></a>
+        <a class="convert-method convert-link fx-link" href="bcash-exchange.php"><span data-icon="banknote"></span><span><strong>USD ⇄ PHP</strong><small>Buy or sell USD with BCash at the live rate</small></span><span data-icon="chevron-right"></span></a>
         <label class="convert-method unavailable"><input type="radio" name="method" value="qrph" disabled><span data-icon="qr-code"></span><span><strong>QR Ph payout</strong><small>To your own bank or e-wallet QR · Coming soon</small></span></label>
         <label class="convert-method unavailable"><input type="radio" name="method" value="bank" disabled><span data-icon="credit-card"></span><span><strong>Bank / e-wallet account</strong><small>InstaPay transfer to your account · Coming soon</small></span></label>
         <p class="convert-hint">No Credits are deducted until the merchant approves the transfer. Collect cash only after the successful receipt appears.</p>

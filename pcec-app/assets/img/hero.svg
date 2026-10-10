@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a2463"/>
+      <stop offset=".45" stop-color="#1d4e9e"/>
+      <stop offset=".72" stop-color="#6d8fc7"/>
+      <stop offset=".86" stop-color="#f3b46b"/>
+      <stop offset="1" stop-color="#f7d29a"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.79" cy="0.6" r="0.45">
+      <stop offset="0" stop-color="#fff6d8"/>
+      <stop offset=".08" stop-color="#ffd27a" stop-opacity=".95"/>
+      <stop offset=".3" stop-color="#ff9f43" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#ff9f43" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f63a8"/><stop offset="1" stop-color="#2b4c8c"/></linearGradient>
+    <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#25457f"/><stop offset="1" stop-color="#1a3566"/></linearGradient>
+    <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#173061"/><stop offset="1" stop-color="#0f2248"/></linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5a2e"/><stop offset="1" stop-color="#1b2f1a"/></linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <rect width="1200" height="800" fill="url(#sun)"/>
+  <g stroke="#ffe3a3" stroke-opacity=".18" stroke-width="6">
+    <path d="M948 480 L1200 300M948 480 L1200 420M948 480 L1180 120M948 480 L1040 0M948 480 L860 0M948 480 L700 120M948 480 L640 300"/>
+  </g>
+  <path d="M0 520 L90 470 L170 500 L260 430 L360 480 L450 440 L540 490 L640 450 L740 500 L820 470 L900 510 L1000 480 L1100 520 L1200 490 V800 H0Z" fill="url(#m1)" opacity=".75"/>
+  <path d="M0 580 L120 520 L220 560 L330 500 L430 560 L520 530 L640 580 L760 540 L860 590 L980 560 L1080 600 L1200 570 V800 H0Z" fill="url(#m2)" opacity=".9"/>
+  <path d="M0 650 L140 600 L260 640 L380 590 L500 650 L640 620 L760 670 L880 640 V800 H0Z" fill="url(#m3)"/>
+  <path d="M760 800 C800 640 860 560 948 540 C1040 560 1120 620 1200 640 V800Z" fill="url(#hill)"/>
+  <g fill="#2f2215">
+    <rect x="938" y="300" width="22" height="250" rx="3"/>
+    <rect x="890" y="352" width="118" height="20" rx="3"/>
+  </g>
+  <g fill="#14261a" opacity=".85">
+    <path d="M780 800 l14-60 14 60zM820 800 l18-80 18 80zM1100 800 l16-70 16 70zM1150 800 l14-55 14 55z"/>
+  </g>
+</svg>

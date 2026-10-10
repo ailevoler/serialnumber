@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" preserveAspectRatio="xMaxYMid slice">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b3f7f"/><stop offset=".55" stop-color="#d98a4a"/><stop offset=".8" stop-color="#f6c27a"/><stop offset="1" stop-color="#8a5a35"/>
+    </linearGradient>
+    <radialGradient id="g" cx=".62" cy=".45" r=".35"><stop offset="0" stop-color="#fff3c4"/><stop offset=".25" stop-color="#ffc56b" stop-opacity=".8"/><stop offset="1" stop-color="#ffc56b" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="900" height="400" fill="url(#s)"/>
+  <rect width="900" height="400" fill="url(#g)"/>
+  <path d="M0 250 L120 220 L240 245 L380 210 L520 240 L660 215 L800 240 L900 225 V400 H0Z" fill="#5a4a5e" opacity=".55"/>
+  <g fill="#1c2233">
+    <!-- people seen from behind, arms around each other -->
+    <circle cx="330" cy="215" r="24"/><path d="M290 400 C290 290 300 250 330 248 C360 250 372 290 372 400Z"/>
+    <circle cx="420" cy="200" r="27"/><path d="M372 400 C372 290 385 240 420 236 C455 240 470 290 470 400Z"/>
+    <circle cx="515" cy="208" r="25"/><path d="M470 400 C470 290 482 246 515 243 C548 246 560 290 560 400Z"/>
+    <circle cx="610" cy="196" r="28"/><path d="M560 400 C560 285 574 236 610 232 C646 236 662 285 662 400Z"/>
+    <circle cx="708" cy="206" r="25"/><path d="M662 400 C662 290 675 244 708 241 C741 244 754 290 754 400Z"/>
+    <circle cx="800" cy="214" r="23"/><path d="M754 400 C754 295 766 252 800 249 C834 252 846 295 846 400Z"/>
+    <path d="M330 270 C380 255 470 255 520 268 C570 255 660 252 710 266 C750 258 790 262 820 272 L820 290 C780 282 750 282 710 288 C660 274 570 276 520 290 C470 276 380 276 330 292Z"/>
+  </g>
+</svg>

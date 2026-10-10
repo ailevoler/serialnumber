@@ -46,21 +46,24 @@
   }
 
   /* ---------- Turn any scanned text into an in-app destination ---------- */
-  const destinationFor = (raw) => {
+  const destinationFor = (raw, mode) => {
     const text = String(raw || '').trim();
     if (/^UM-[A-F0-9]{10}$/.test(text.toUpperCase())) {
       return new URL('pay-merchant.php?m=' + encodeURIComponent(text.toUpperCase()), location.href);
     }
     if (CODE_RE.test(text.toUpperCase())) {
-      return new URL('pay.php?to=' + encodeURIComponent(text.toUpperCase()), location.href);
+      // A bare QR ID sends Credits from the Scan QR page and BCash from the BCash Send page.
+      return new URL((mode === 'bcash' ? 'bcash-pay.php' : 'pay.php') + '?to=' + encodeURIComponent(text.toUpperCase()), location.href);
     }
     let url;
     try { url = new URL(text); } catch (error) { url = null; }
     if (url) {
       const to = (url.searchParams.get('to') || '').toUpperCase();
-      if (/\/pay\.php$/.test(url.pathname) && CODE_RE.test(to)) {
+      const personPay = /\/(bcash-pay|pay)\.php$/.exec(url.pathname);
+      if (personPay && CODE_RE.test(to)) {
         // Only the QR ID and requested amount are taken; the payment always happens on this app.
-        const target = new URL('pay.php', location.href);
+        // A BCash QR always opens BCash Send, a Credits QR always opens Pay QR, whichever page scanned it.
+        const target = new URL(personPay[1] + '.php', location.href);
         target.searchParams.set('to', to);
         const amount = url.searchParams.get('amount');
         if (amount && /^\d{1,5}(\.\d{1,2})?$/.test(amount)) target.searchParams.set('amount', amount);
@@ -95,6 +98,8 @@
   /* ---------- Scanner ---------- */
   const reader = document.getElementById('qr-reader');
   if (reader) {
+    const scanPanel = document.getElementById('scan');
+    const mode = scanPanel ? scanPanel.dataset.qrMode || '' : '';
     const idle = document.querySelector('[data-qr-idle]');
     const startBtn = document.querySelector('[data-qr-start]');
     const stopBtn = document.querySelector('[data-qr-stop]');
@@ -113,7 +118,7 @@
     const open = async (value) => {
       if (opening) return;
       try {
-        const url = destinationFor(value);
+        const url = destinationFor(value, mode);
         opening = true;
         say('QR found. Opening...');
         if (navigator.vibrate) navigator.vibrate(60);
@@ -222,10 +227,10 @@
     };
     document.querySelectorAll('.qr-screen [data-tab]').forEach(button => button.addEventListener('click', () => {
       const scan = button.dataset.tab === 'scan';
-      if (title) title.textContent = scan ? 'Scan QR' : 'My QR';
+      if (title) title.textContent = button.dataset.title || (scan ? 'Scan QR' : 'My QR');
       document.querySelectorAll('.qr-screen [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b === button)));
       const url = new URL(location.href);
-      if (scan) url.searchParams.delete('tab'); else url.searchParams.set('tab', 'myqr');
+      if (scan) url.searchParams.delete('tab'); else url.searchParams.set('tab', button.dataset.tab);
       history.replaceState(null, '', url);
       if (scan) void autoStart(); else void stop();
     }));
@@ -235,26 +240,49 @@
     if (document.getElementById('scan').classList.contains('active')) void autoStart();
   }
 
-  /* ---------- My QR ---------- */
-  const card = document.querySelector('[data-my-qr]');
-  if (card) {
+  /* ---------- My QR (Credits) and BCash QR: one box per QR on the page ---------- */
+  const loadImage = src => new Promise(resolve => {
+    if (!src) { resolve(null); return; }
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+  const roundRect = (ctx, x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  };
+  document.querySelectorAll('[data-qr-box]').forEach(box => {
+    const card = box.querySelector('[data-my-qr]');
+    if (!card) return;
     const target = card.querySelector('[data-my-qr-target]');
     const amountNote = card.querySelector('[data-my-qr-amount]');
-    const requestForm = document.querySelector('[data-my-qr-request]');
-    const amountInput = document.getElementById('my-qr-amount');
-    const copyBtn = document.querySelector('[data-my-qr-copy]');
-    const saveBtn = document.querySelector('[data-my-qr-download]');
+    const requestForm = box.querySelector('[data-my-qr-request]');
+    const amountInput = requestForm ? requestForm.querySelector('input') : null;
+    const actions = box.querySelector('[data-qr-actions]') || box.querySelector('.my-qr-actions');
+    const copyBtn = box.querySelector('[data-my-qr-copy]');
+    const saveBtn = box.querySelector('[data-my-qr-download]');
     const status = document.createElement('p');
     status.className = 'qr-status';
     status.setAttribute('role', 'status');
-    document.querySelector('.my-qr-actions').after(status);
+    (actions || card).after(status);
     const code = card.dataset.code;
     const name = card.querySelector('strong').textContent;
+    const payPath = box.dataset.payPath || 'pay.php';
+    const unit = box.dataset.unit || 'Credits';
+    const brand = box.dataset.brand || 'Ultimate App Boracay';
+    const fileName = box.dataset.file || 'ultimate-app-qr';
+    const logoSrc = box.dataset.logo || '';
+    const needsAmount = box.dataset.requireAmount === '1';
+    const logo = loadImage(logoSrc);
+    const money = n => Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const label = n => unit === 'PHP' ? 'PHP ' + money(n) + ' BCash' : money(n) + ' ' + unit;
     let amount = '';
     let qr = null;
 
     const payUrl = () => {
-      const url = new URL('pay.php', location.href);
+      const url = new URL(payPath, location.href);
       url.search = '';
       url.hash = '';
       url.searchParams.set('to', code);
@@ -263,25 +291,38 @@
     };
 
     const render = () => {
+      const show = !needsAmount || !!amount;
+      card.hidden = !show;
+      if (actions) actions.hidden = !show;
+      if (!show) return;
       try {
-        qr = qrcode(0, 'M');
+        // High error correction leaves room for the logo in the middle.
+        qr = qrcode(0, logoSrc ? 'H' : 'M');
         qr.addData(payUrl());
         qr.make();
         target.innerHTML = qr.createSvgTag({cellSize: 6, margin: 0, scalable: true});
+        if (logoSrc) {
+          const mark = document.createElement('img');
+          mark.className = 'qr-logo';
+          mark.src = logoSrc;
+          mark.alt = '';
+          target.appendChild(mark);
+          target.classList.add('has-logo');
+        }
       } catch (error) {
         target.textContent = 'QR unavailable. Share your QR ID instead: ' + code;
       }
       amountNote.hidden = !amount;
-      amountNote.textContent = amount ? 'Requesting ' + Number(amount).toLocaleString('en-PH', {minimumFractionDigits: 2}) + ' Credits' : '';
+      amountNote.textContent = amount ? 'Requesting ' + label(amount) : '';
     };
 
-    requestForm.addEventListener('submit', event => {
+    if (requestForm) requestForm.addEventListener('submit', event => {
       event.preventDefault();
       const value = amountInput.value.trim();
-      if (value === '') { amount = ''; render(); status.textContent = 'Amount cleared.'; return; }
+      if (value === '' && !needsAmount) { amount = ''; render(); status.textContent = 'Amount cleared.'; return; }
       const n = Number(value);
       if (!/^\d{1,5}(\.\d{1,2})?$/.test(value) || n < 1 || n > 10000) {
-        status.textContent = 'Enter an amount from 1 to 10,000 Credits.';
+        status.textContent = 'Enter an amount from 1 to 10,000' + (unit === 'PHP' ? ' PHP.' : ' ' + unit + '.');
         return;
       }
       amount = n.toFixed(2);
@@ -289,7 +330,7 @@
       status.textContent = 'QR updated with the requested amount.';
     });
 
-    copyBtn.addEventListener('click', async () => {
+    if (copyBtn) copyBtn.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(payUrl());
         status.textContent = 'Payment link copied.';
@@ -298,7 +339,7 @@
       }
     });
 
-    saveBtn.addEventListener('click', () => {
+    if (saveBtn) saveBtn.addEventListener('click', async () => {
       if (!qr) return;
       const count = qr.getModuleCount();
       const cell = 12;
@@ -314,17 +355,27 @@
       for (let r = 0; r < count; r++) for (let c = 0; c < count; c++) {
         if (qr.isDark(r, c)) ctx.fillRect(pad + c * cell, pad + r * cell, cell, cell);
       }
+      const mark = await logo;
+      if (mark) {
+        const m = Math.round(size * 0.22);
+        const x = pad + (size - m) / 2, y = pad + (size - m) / 2;
+        ctx.fillStyle = '#fff';
+        roundRect(ctx, x - 8, y - 8, m + 16, m + 16, 18);
+        ctx.fill();
+        ctx.drawImage(mark, x, y, m, m);
+      }
+      ctx.fillStyle = '#000';
       ctx.textAlign = 'center';
       ctx.font = '700 34px system-ui, sans-serif';
       ctx.fillText(name, canvas.width / 2, size + pad + 58);
       ctx.font = '500 24px system-ui, sans-serif';
       ctx.fillStyle = '#555';
-      ctx.fillText(code + (amount ? '  ·  ' + amount + ' Credits' : '') + '  ·  Ultimate App Boracay', canvas.width / 2, size + pad + 98);
+      ctx.fillText(code + (amount ? '  ·  ' + label(amount) : '') + '  ·  ' + brand, canvas.width / 2, size + pad + 98);
       canvas.toBlob(blob => {
         if (!blob) return;
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'ultimate-app-qr-' + code + '.png';
+        a.download = fileName + '-' + code + '.png';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -334,5 +385,5 @@
     });
 
     render();
-  }
+  });
 })();

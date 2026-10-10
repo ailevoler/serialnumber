@@ -105,5 +105,5 @@ require __DIR__ . '/includes/header.php';
     <a class="btn dark" href="qr.php">Scan another QR</a>
     <?php endif; ?>
 </section>
-<script defer src="assets/js/qr.js?v=2"></script>
+<script defer src="assets/js/qr.js?v=4"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

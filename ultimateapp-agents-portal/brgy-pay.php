@@ -58,5 +58,5 @@ require __DIR__ . '/includes/header.php';
         <button class="btn dark" type="submit" data-pay-submit>Pay ₱<?= peso($fee) ?></button>
     </form>
 </section>
-<script defer src="assets/js/qr.js?v=2"></script>
+<script defer src="assets/js/qr.js?v=4"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

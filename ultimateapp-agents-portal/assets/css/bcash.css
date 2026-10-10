@@ -68,3 +68,59 @@ html.bcash-theme .dashboard-screen .bottom-nav a.active small{color:var(--bc-ink
 
 @media (max-width:360px){.bcash-wordmark{height:32px}.bcash-brand{font-size:14px}}
 @media (prefers-reduced-motion:reduce){.brand-swap>*,.dashboard-screen .home-tiles .tile-icon,.dashboard-screen .home-tiles .tile-icon:before,.app-shell{transition:none}}
+
+/* ---------- BCash Quick Action Menu (swaps with Services) ---------- */
+.dashboard-screen .tiles-bcash,.dashboard-screen .tiles-title-bcash{display:none}
+html.bcash-theme .dashboard-screen .tiles-bcash{display:grid}
+html.bcash-theme .dashboard-screen .tiles-main{display:none}
+html.bcash-theme .dashboard-screen .tiles-title-bcash{display:block}
+html.bcash-theme .dashboard-screen .tiles-title-main{display:none}
+html.bcash-theme .dashboard-screen .tiles-bcash .service-tile{animation:bcash-tile-in .32s ease both}
+html.bcash-theme .dashboard-screen .tiles-bcash .service-tile:nth-child(n+5){animation-delay:.05s}
+@keyframes bcash-tile-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- BCash pages: Send / Receive / My QR, receipt, BCT ---------- */
+.bcash-page{--bc-line:#cfe3fb}
+.bcash-page .btn.dark{background:var(--bc-grad);border-color:var(--bc-blue);color:#fff}
+.bcash-page .btn.dark:hover{filter:brightness(1.06)}
+.bcash-page .btn.light{border-color:var(--bc-line);color:var(--bc-ink)}
+.bcash-page .segmented{border-color:var(--bc-blue)}
+.bcash-page .segmented .active{background:var(--bc-grad);color:#fff}
+.qr-screen.bcash-page .segmented{grid-template-columns:repeat(3,1fr)}
+.bcash-page .qr-idle{background:radial-gradient(circle at 50% 35%,#0a63e0,#03235e 72%)}
+.bcash-page .qr-idle p{color:#dbeaff}
+.bcash-page .qr-idle .btn{background:#fff;color:var(--bc-deep)}
+.bcash-page .pay-avatar{background:var(--bc-grad);color:#fff}
+.bcash-page .pay-amount input:focus,.bcash-page .pay-note:focus,.bcash-page .my-qr-request input:focus,.bcash-page .qr-manual input:focus{outline:2px solid var(--bc-blue);outline-offset:1px}
+.bcash-page .pay-fine a,.bcash-page .my-qr-help a{color:var(--bc-blue)}
+.bcash-page .bottom-nav .scan span{background:var(--bc-grad);box-shadow:0 8px 18px #0a5be04d}
+.bcash-page .bottom-nav a.active{color:var(--bc-blue)}
+.bcash-balance-line{display:flex;align-items:center;justify-content:center;gap:7px;margin:-6px 0 16px;font-size:13px;color:#33445f}
+.bcash-balance-line img{border-radius:6px}
+.bcash-balance-line strong{color:var(--bc-ink)}
+.my-qr-card.bcash-qr-card{background:linear-gradient(145deg,#003fdc,#0866ee 45%,#0a9cf3 80%,#00cff6) padding-box,linear-gradient(135deg,#7fe9ff,#fff 40%,#4aa8ff) border-box;box-shadow:0 12px 28px #0a5be033}
+.my-qr-card[hidden],.my-qr-actions[hidden]{display:none}
+.bcash-qr-card .my-qr-brand{margin-bottom:12px}
+.bcash-qr-card .my-qr-brand img{display:block;height:34px;width:auto;margin:0 auto;padding:5px 10px;border-radius:12px;background:#fff}
+.bcash-qr-card .my-qr-id{color:#d8ecff}
+.bcash-qr-card .my-qr-amount{background:#ffffff2e}
+.my-qr-code.has-logo{position:relative}
+.my-qr-code .qr-logo{position:absolute;left:50%;top:50%;width:23%;height:23%;transform:translate(-50%,-50%);border-radius:22%;box-shadow:0 0 0 5px #fff;background:#fff}
+.bcash-page .my-qr-request{margin-top:4px;margin-bottom:16px}
+.bcash-receipt-logo{display:block;margin:0 auto 6px;border-radius:12px}
+.tx-filter{display:grid;grid-template-columns:1fr 1fr;height:44px;margin:4px 0 14px}
+.tx-filter a{display:grid;place-items:center;border-radius:26px;color:#111;text-decoration:none;font-weight:600;font-size:14px}
+.tx-filter a.active{background:#000;color:#fff}
+.bcash-soon-hero{text-align:center;padding:26px 18px 22px;border-radius:22px;background:var(--bc-grad);color:#fff;box-shadow:0 12px 28px #0a5be02e}
+.bcash-soon-icon{display:inline-block;width:84px;height:84px;border-radius:24px;overflow:hidden;isolation:isolate;position:relative;background:linear-gradient(135deg,#2f9bf9,#0a5fe6);box-shadow:inset 0 0 0 1.5px #ffffff70,0 6px 16px #00226e40}
+.bcash-soon-icon img{width:100%;height:100%;display:block;mix-blend-mode:screen}
+.bcash-soon-badge{display:table;margin:12px auto 8px;padding:4px 12px;border-radius:99px;background:#fff;color:var(--bc-deep);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.bcash-soon-hero h2{margin:0 0 6px;font-size:19px;line-height:1.3}
+.bcash-soon-hero p{margin:0 auto;max-width:330px;font-size:13px;line-height:1.55;color:#e6f4ff}
+.bcash-soon-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0 22px}
+.bcash-soon-tabs a{display:grid;place-items:center;min-height:42px;border:1px solid var(--bc-line);border-radius:12px;background:#fff;color:var(--bc-ink);font-size:13px;font-weight:700;text-decoration:none}
+.bcash-page .bcash-soon-tabs a.active{background:var(--bc-soft);border-color:var(--bc-blue);color:var(--bc-blue)}
+.bcash-soon-sub{margin:0 0 8px;font-size:15px;color:var(--bc-ink)}
+.bcash-page .community-links a{color:inherit}
+.bcash-page .community-links a>span:first-child{color:var(--bc-blue)}
+a.update-item{text-decoration:none;color:inherit}a.update-item strong,a.update-item b{color:inherit}

@@ -82,16 +82,23 @@ require __DIR__ . '/includes/header.php';
                 </div>
             </div>
             <nav class="hw-actions" aria-label="BCash actions">
-                <a href="boracay-cash.php" class="primary"><i><span data-icon="refresh-cw"></span></i>Convert</a>
-                <a href="boracay-cash.php#history"><i><span data-icon="receipt"></span></i>History</a>
-                <a href="qr.php"><i><span data-icon="qr-code"></span></i>Pay QR</a>
-                <a href="buy-credits.php"><i><span data-icon="shopping-cart"></span></i>Buy Credits</a>
+                <a href="bcash-qr.php" class="primary"><i><span data-icon="arrow-right"></span></i>Send</a>
+                <a href="bcash-qr.php?tab=receive"><i><span data-icon="qr-code"></span></i>Receive</a>
+                <a href="boracay-cash.php"><i><span data-icon="refresh-cw"></span></i>Convert</a>
+                <a href="transactions.php?wallet=bcash"><i><span data-icon="receipt"></span></i>History</a>
             </nav>
         </section>
     </div>
     <div class="wallet-pager hw-pager" role="group" aria-label="Choose wallet"><button type="button" class="active" data-wallet-page="0" aria-label="Show Credits wallet" aria-pressed="true"></button><button type="button" data-wallet-page="1" aria-label="Show BCash wallet" aria-pressed="false"></button></div>
-    <section class="home-section-head"><h2>Services</h2></section>
-    <section class="service-grid home-tiles" aria-label="Services">
+    <section class="home-section-head"><h2 class="tiles-title-main">Services</h2><h2 class="tiles-title-bcash">BCash</h2></section>
+    <section class="service-grid home-tiles tiles-bcash" aria-label="BCash quick actions">
+        <?php foreach (bcash_dashboard_tiles() as $tile): ?>
+            <a href="<?= e($tile['href']) ?>" class="service-tile" aria-label="<?= e($tile['label']) ?>">
+                <span class="tile-icon"><img src="assets/images/services/<?= e($tile['image']) ?>?v=1" alt="" width="68" height="68"></span><span class="tile-label"><?= e($tile['short'] ?? $tile['label']) ?></span>
+            </a>
+        <?php endforeach; ?>
+    </section>
+    <section class="service-grid home-tiles tiles-main" aria-label="Services">
         <?php foreach (dashboard_tiles() as $tile): $badge = $tile['code'] === 'News' ? $unreadNews : 0; ?>
             <?php if ($tile['href'] === null): ?>
             <button type="button" class="service-tile" data-menu-open aria-controls="app-menu" aria-expanded="false">
@@ -137,6 +144,6 @@ require __DIR__ . '/includes/header.php';
     </section>
     <?php require __DIR__ . '/includes/nav.php'; ?>
 </section>
-<script defer src="assets/js/boracay-cash.js?v=4"></script>
+<script defer src="assets/js/boracay-cash.js?v=5"></script>
 <script defer src="assets/js/menu.js?v=2"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

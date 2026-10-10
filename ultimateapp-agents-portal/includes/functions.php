@@ -172,3 +172,18 @@ function dashboard_tiles(): array
     $tiles[] = ['code' => 'More', 'label' => 'UMore', 'image' => 'more.png', 'href' => null];
     return $tiles;
 }
+
+/** Quick Action Menu shown while the BCash wallet card is on screen. */
+function bcash_dashboard_tiles(): array
+{
+    return [
+        ['code' => 'BSend', 'label' => 'Send', 'image' => 'bcash-send.png', 'href' => 'bcash-qr.php'],
+        ['code' => 'BReceive', 'label' => 'Receive', 'image' => 'bcash-receive.png', 'href' => 'bcash-qr.php?tab=receive'],
+        ['code' => 'BMyQR', 'label' => 'My QR', 'image' => 'bcash-myqr.png', 'href' => 'bcash-qr.php?tab=myqr'],
+        ['code' => 'BCT', 'label' => 'BCash Token (BCT)', 'short' => 'BCT', 'image' => 'bcash-bct.png', 'href' => 'bcash-token.php?view=bct'],
+        ['code' => 'BuyBCT', 'label' => 'Buy BCT', 'image' => 'bcash-buybct.png', 'href' => 'bcash-token.php?view=buy'],
+        ['code' => 'Markets', 'label' => 'Markets', 'image' => 'bcash-markets.png', 'href' => 'bcash-token.php?view=markets'],
+        ['code' => 'BConvert', 'label' => 'Convert', 'image' => 'bcash-convert.png', 'href' => 'boracay-cash.php'],
+        ['code' => 'Community', 'label' => 'Community', 'image' => 'bcash-community.png', 'href' => 'community.php'],
+    ];
+}

@@ -3,6 +3,10 @@ require __DIR__ . '/_admin.php';
 
 $allMethods = ['qrph' => 'QR Ph (any banking app)', 'card' => 'Credit / Debit Card', 'gcash' => 'GCash', 'paymaya' => 'Maya',
                'grab_pay' => 'GrabPay', 'shopee_pay' => 'ShopeePay', 'dob' => 'Online Banking (BPI, UnionBank…)'];
+// Only show methods whose group is currently offered (see ALLOWED_METHODS in includes/payments.php).
+$methodGroup = ['qrph' => 'qrph', 'card' => 'card', 'gcash' => 'ewallet', 'paymaya' => 'ewallet', 'grab_pay' => 'ewallet', 'shopee_pay' => 'ewallet', 'dob' => 'bank'];
+$allMethods = array_filter($allMethods, fn($k) => in_array($methodGroup[$k], ALLOWED_METHODS, true), ARRAY_FILTER_USE_KEY);
+$bankAllowed = in_array('bank', ALLOWED_METHODS, true);
 $webhookUrl = abs_url('webhook/paymongo.php');
 $webhookEvents = ['payment.paid', 'payment.failed', 'checkout_session.payment.paid'];
 
@@ -49,7 +53,7 @@ if (is_post()) {
             $hook = $pm->createWebhook($webhookUrl, $webhookEvents);
             setting_set("paymongo_{$mode}_webhook_secret", secret_encrypt($hook['attributes']['secret_key']));
             flash('success', 'Webhook registered and its signing secret saved.');
-        } elseif ($action === 'save_bank') {
+        } elseif ($action === 'save_bank' && $bankAllowed) {
             setting_set('bank_enabled', !empty($_POST['bank_enabled']) ? '1' : '0');
             foreach (['bank_name' => 80, 'bank_account_name' => 120, 'bank_account_number' => 40, 'bank_instructions' => 500] as $k => $len) {
                 setting_set($k, mb_substr(trim((string) ($_POST[$k] ?? '')), 0, $len));
@@ -116,7 +120,7 @@ admin_tabs('paymongo');
         <label class="check"><input type="checkbox" name="methods[]" value="<?= $k ?>" <?= in_array($k, $enabled, true) ? 'checked' : '' ?>><span></span><?= e($label) ?></label>
       <?php endforeach; ?>
     </div>
-    <p class="hint">Only enable methods that are activated on your PayMongo account. Secret keys are stored encrypted and are never shown again.</p>
+    <p class="hint">QR Ph is the only payment method offered right now. Make sure QR Ph is activated on your PayMongo account. Secret keys are stored encrypted and are never shown again.</p>
     <button class="btn btn-gradient btn-block"><?= icon('check') ?> Save PayMongo Settings</button>
   </form>
 
@@ -131,6 +135,7 @@ admin_tabs('paymongo');
     <p class="hint">Without a webhook the app still confirms payments by checking PayMongo while the donor's payment page is open.</p>
   </section>
 
+  <?php if ($bankAllowed): ?>
   <form method="post" class="card form">
     <?= csrf_field() ?><input type="hidden" name="action" value="save_bank">
     <h2 class="card-title"><?= icon('bank') ?> Bank Transfer (manual)</h2>
@@ -144,6 +149,7 @@ admin_tabs('paymongo');
     <p class="hint">Donors submit their bank reference; confirm each transfer in <a class="link" href="<?= e(url('admin/payments.php?method=bank&status=pending')) ?>">Payments</a>. If this is off and “Online Banking” is enabled above, Bank Transfer uses PayMongo instead.</p>
     <button class="btn btn-outline btn-block"><?= icon('check') ?> Save Bank Details</button>
   </form>
+  <?php endif; ?>
 
   <form method="post" class="card form">
     <?= csrf_field() ?><input type="hidden" name="action" value="save_giving">

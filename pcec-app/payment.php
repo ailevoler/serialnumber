@@ -138,7 +138,9 @@ require __DIR__ . '/includes/header.php';
     </section>
   <?php endif; ?>
 
+  <?php $alts = array_filter(['qrph', 'bank', 'card', 'ewallet'], fn($k) => $k !== $p['method'] && !empty($opts[$k])); ?>
   <section class="card">
+    <?php if ($alts): ?>
     <h3 class="give-label">Pay another way</h3>
     <div class="pay-grid pay-grid-4">
       <?php foreach (['qrph' => ['qr', 'QR Ph'], 'bank' => ['bank', 'Bank Transfer'], 'card' => ['card', 'Card'], 'ewallet' => ['wallet', 'E-Wallet']] as $k => [$ic, $label]):
@@ -147,6 +149,7 @@ require __DIR__ . '/includes/header.php';
           <button class="pay-alt-btn"><?= icon($ic) ?><?= e($label) ?></button></form>
       <?php endforeach; ?>
     </div>
+    <?php endif; ?>
     <form method="post" data-confirm="Cancel this payment?" class="cancel-form"><?= csrf_field() ?><input type="hidden" name="action" value="cancel">
       <button class="link danger-link"><?= icon('x') ?> Cancel payment</button></form>
   </section>

@@ -20,9 +20,9 @@ Responsive web app for the **Philippine Council of Evangelical Churches**. Built
 | Chat | 1:1 messages with polling every 3 seconds, unread badges, online indicator |
 | Notifications | Likes, comments, follows, RSVPs, prayers and messages, plus mark all as read |
 | Profile | Edit photo, title, name, church and bio, plus change password |
-| Giving | Donation & Giving page with One-Time / Recurring / Projects, preset or custom amounts, fund designation, and QR Ph (inline QR), card, e-wallet and bank transfer; receipts and My Giving history |
+| Giving | Donation & Giving page with One-Time / Recurring / Projects, preset or custom amounts, fund designation, and QR Ph payment with an inline QR code; receipts and My Giving history |
 | Event Details | Cover hero, date/time/venue, Overview / Speakers / Schedule / Registration tabs, highlights, registration fee with QR Ph, Register Now (free or paid) |
-| Admin | Dashboard, PayMongo & Giving setup, Payments (verify bank transfers, CSV), Projects, Event registrations (CSV) |
+| Admin | Dashboard, PayMongo & Giving setup, Payments (check status, CSV), Projects, Event registrations (CSV) |
 
 Security: PDO prepared statements, CSRF tokens on every form and AJAX call, `password_hash`, session fixation protection, a login throttle, uploads checked by real MIME type with random filenames, PHP execution disabled in `uploads/`, and all output escaped.
 
@@ -53,15 +53,14 @@ cd pcec-app && php -S localhost:8080
 ## Giving & PayMongo
 1. Log in as an admin and open **Admin → PayMongo & Giving**.
 2. Paste your keys from **dashboard.paymongo.com → Developers → API Keys**. Start in **Test mode** with `pk_test_…` / `sk_test_…`. Secret keys are stored encrypted with `APP_KEY` (or an auto-generated `config/app.key`, so keep that file when you move servers).
-3. Tick the payment methods that are active on your PayMongo account (QR Ph, Card, GCash, Maya…).
+3. Keep **QR Ph** ticked and make sure QR Ph is activated on your PayMongo account. QR Ph is currently the only payment method offered.
 4. On your live HTTPS domain, click **Register Webhook**. Webhooks confirm payments instantly at `https://your-domain/webhook/paymongo.php`. Without a webhook, payments are still confirmed while the donor's payment page is open.
-5. Optional: fill in the **Bank Transfer** details for manual transfers, then confirm them in **Admin → Payments**.
-6. Optional: add a daily cron job for recurring-gift reminders:
+5. Optional: add a daily cron job for recurring-gift reminders:
    `15 8 * * * php /path/to/pcec-app/cron/giving_reminders.php`
 
 How it works:
 - **QR Ph:** the app creates a Payment Intent, attaches a QR Ph payment method, and shows the returned QR (valid for 30 minutes).
-- **Card / e-wallet:** the donor is sent to PayMongo's hosted Checkout page, then returns to the receipt.
+- **Other methods:** card, e-wallet and bank transfer are switched off for now. To bring them back, add `'card'`, `'ewallet'` and/or `'bank'` to `ALLOWED_METHODS` in `includes/payments.php`, then enable them in Admin.
 - **Amounts:** stored in centavos. The minimum charge is ₱20.
 
 **Upgrading an existing database** (installed before Giving was added): run

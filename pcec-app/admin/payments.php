@@ -56,7 +56,7 @@ $sel = fn($k, $v) => $flt[$k] === $v ? 'selected' : '';
     <label class="search-bar"><?= icon('search') ?><input name="q" value="<?= e($flt['q']) ?>" placeholder="Reference, name, email, bank ref…"></label>
     <select name="status"><option value="">All status</option><?php foreach (['pending', 'paid', 'failed', 'cancelled'] as $v): ?><option value="<?= $v ?>" <?= $sel('status', $v) ?>><?= ucfirst($v) ?></option><?php endforeach; ?></select>
     <select name="purpose"><option value="">All types</option><option value="donation" <?= $sel('purpose', 'donation') ?>>Donations</option><option value="event" <?= $sel('purpose', 'event') ?>>Event fees</option></select>
-    <select name="method"><option value="">All methods</option><?php foreach (['qrph', 'card', 'ewallet', 'bank'] as $v): ?><option value="<?= $v ?>" <?= $sel('method', $v) ?>><?= e(method_label($v)) ?></option><?php endforeach; ?></select>
+    <select name="method"><option value="">All methods</option><?php foreach (ALLOWED_METHODS as $v): ?><option value="<?= $v ?>" <?= $sel('method', $v) ?>><?= e(method_label($v)) ?></option><?php endforeach; ?></select>
     <button class="btn btn-gradient"><?= icon('search') ?> Filter</button>
     <a class="btn btn-outline" href="?<?= e(http_build_query($flt + ['export' => 'csv'])) ?>"><?= icon('download') ?> CSV</a>
   </form>

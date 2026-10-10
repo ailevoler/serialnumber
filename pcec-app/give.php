@@ -164,15 +164,17 @@ require __DIR__ . '/includes/header.php';
     <input type="radio" name="method" value="qrph" <?= $defaultMethod === 'qrph' ? 'checked' : '' ?> <?= $opts['qrph'] ? '' : 'disabled' ?>>
     <span class="pay-main-body"><?= qrph_badge() ?><small>(Any Banking App)</small><span class="radio-dot"></span></span>
   </label>
+  <?php if ($opts['bank'] || $opts['card'] || $opts['ewallet']): ?>
   <p class="give-sub">Other Options</p>
   <div class="pay-grid">
-    <?php foreach (['bank' => ['bank', 'Bank Transfer'], 'card' => ['card', 'Credit / Debit Card'], 'ewallet' => ['wallet', 'E-Wallet']] as $k => [$ic, $label]): ?>
+    <?php foreach (['bank' => ['bank', 'Bank Transfer'], 'card' => ['card', 'Credit / Debit Card'], 'ewallet' => ['wallet', 'E-Wallet']] as $k => [$ic, $label]): if (!$opts[$k]) continue; ?>
       <label class="pay-alt<?= $opts[$k] ? '' : ' is-disabled' ?>" title="<?= $opts[$k] ? '' : 'Not available yet' ?>">
         <input type="radio" name="method" value="<?= $k ?>" <?= $defaultMethod === $k ? 'checked' : '' ?> <?= $opts[$k] ? '' : 'disabled' ?>>
         <span><?= icon($ic) ?><?= e($label) ?></span>
       </label>
     <?php endforeach; ?>
   </div>
+  <?php endif; ?>
 
   <details class="give-more">
     <summary>Add a message (optional)</summary>

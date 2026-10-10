@@ -3,6 +3,10 @@
 
 const MIN_PAYMENT = 2000; // ₱20.00 — PayMongo's minimum charge
 
+// Payment methods offered to donors. QR Ph only for now; add 'card', 'ewallet' and/or 'bank'
+// to bring those options back (their checkout / bank-transfer flows are still implemented).
+const ALLOWED_METHODS = ['qrph'];
+
 function abs_url(string $path): string
 {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' ? 'https' : 'http';
@@ -15,13 +19,16 @@ function payment_options(): array
     $pm = PayMongo::fromSettings() !== null;
     $enabled = setting_list('paymongo_methods');
     $wallets = array_values(array_intersect($enabled, ['gcash', 'paymaya', 'grab_pay', 'shopee_pay']));
-    return [
+    $opts = [
         'qrph' => $pm && in_array('qrph', $enabled, true),
         'card' => $pm && in_array('card', $enabled, true),
         'ewallet' => $pm && (bool) $wallets,
         'bank' => setting('bank_enabled', '0') === '1' || ($pm && in_array('dob', $enabled, true)),
-        'wallet_types' => $wallets,
     ];
+    foreach ($opts as $m => $on) {
+        $opts[$m] = $on && in_array($m, ALLOWED_METHODS, true);
+    }
+    return $opts + ['wallet_types' => $wallets];
 }
 
 function method_label(string $m): string

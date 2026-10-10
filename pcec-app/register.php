@@ -5,7 +5,7 @@ require __DIR__ . '/includes/layout_auth.php';
 if (current_user()) redirect('index.php');
 
 $errors = [];
-$churches = q_all('SELECT id, name, city FROM churches ORDER BY name');
+$churches = q_all('SELECT id, name, city, region, denomination FROM churches ORDER BY name');
 
 if (is_post()) {
     csrf_check();
@@ -64,15 +64,20 @@ auth_head(t('Create Account'), 'register-body');
         <label class="field"><?= icon('user') ?><input name="username" placeholder="<?= e(t('Username')) ?>" value="<?= old('username') ?>" autocomplete="username" required></label>
         <label class="field"><?= icon('lock') ?><input type="password" name="password" placeholder="<?= e(t('Password')) ?>" autocomplete="new-password" minlength="8" required><button type="button" class="pw-toggle" aria-label="Show password"><?= icon('eye-off') ?></button></label>
         <label class="field"><?= icon('lock') ?><input type="password" name="confirm" placeholder="<?= e(t('Confirm Password')) ?>" autocomplete="new-password" required><button type="button" class="pw-toggle" aria-label="Show password"><?= icon('eye-off') ?></button></label>
-        <label class="field field-select"><?= icon('church') ?>
-          <select name="church_id">
-            <option value=""><?= e(t('Church / Organization (Optional)')) ?></option>
-            <?php foreach ($churches as $c): ?>
-              <option value="<?= (int) $c['id'] ?>" <?= (int) ($_POST['church_id'] ?? 0) === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['name'] . ($c['city'] ? ' — ' . $c['city'] : '')) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <?= icon('chevron-down', 'select-caret') ?>
-        </label>
+        <div class="picker" data-picker>
+          <label class="field field-select"><?= icon('church') ?>
+            <select name="church_id" data-picker-select aria-label="<?= e(t('Church / Organization (Optional)')) ?>"
+                    data-search-placeholder="Search church, city or denomination…" data-sheet-title="Select your church">
+              <option value=""><?= e(t('Church / Organization (Optional)')) ?></option>
+              <?php foreach ($churches as $c): ?>
+                <option value="<?= (int) $c['id'] ?>"
+                        data-city="<?= e($c['city']) ?>" data-region="<?= e($c['region']) ?>" data-denomination="<?= e($c['denomination']) ?>"
+                        <?= (int) ($_POST['church_id'] ?? 0) === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <?= icon('chevron-down', 'select-caret') ?>
+          </label>
+        </div>
         <label class="check"><input type="checkbox" name="agree" value="1" <?= is_post() && empty($_POST['agree']) ? '' : 'checked' ?>><span></span><em>I agree to the <a href="<?= e(url('terms.php')) ?>" class="link">Terms of Service</a> and <a href="<?= e(url('terms.php#privacy')) ?>" class="link u">Privacy Policy</a></em></label>
         <button class="btn btn-gradient btn-lg btn-block"><?= icon('user-plus') ?> <?= e(t('Create Account')) ?></button>
       </form>

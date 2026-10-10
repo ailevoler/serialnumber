@@ -280,6 +280,161 @@
     });
   }
 
+  /* ---------- Church picker (enhances <select data-picker-select>) ---------- */
+  const svg = (d, cls = '') => `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const IC = {
+    church: '<path d="M12 2v4M10 4h4"/><path d="M6 21V11l6-5 6 5v10"/><path d="M3 21h18"/><path d="M10 21v-4a2 2 0 0 1 4 0v4"/>',
+    pin: '<path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
+    check: '<path d="M5 12l5 5 9-10"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/>',
+    chev: '<path d="M6 9l6 6 6-6"/>',
+    x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    skip: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+  };
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const initialsOf = (name) => name.replace(/[^A-Za-z ]/g, '').split(/\s+/).filter((w) => w && !/^(of|the|and)$/i.test(w)).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const hueOf = (str) => { let h = 0; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+
+  $$('[data-picker]').forEach((wrap) => {
+    const select = $('[data-picker-select]', wrap);
+    if (!select) return;
+    const opts = Array.from(select.options);
+    const placeholder = opts[0] && opts[0].value === '' ? opts[0].text : 'Select…';
+    const listId = 'pk-' + Math.random().toString(36).slice(2, 8);
+
+    const items = opts.map((o, i) => {
+      const empty = o.value === '';
+      const meta = [o.dataset.city, o.dataset.region].filter(Boolean).join(', ');
+      return {
+        value: o.value, name: empty ? 'No church / Skip for now' : o.text, meta, denom: o.dataset.denomination || '', empty,
+        search: (o.text + ' ' + meta + ' ' + (o.dataset.denomination || '')).toLowerCase(), index: i,
+      };
+    });
+
+    wrap.classList.add('picker-ready');
+    wrap.insertAdjacentHTML('beforeend', `
+      <button type="button" class="field picker-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="${listId}">
+        ${svg(IC.church)}<span class="picker-value"></span>${svg(IC.chev, 'picker-caret')}
+      </button>
+      <div class="picker-backdrop" hidden></div>
+      <div class="picker-panel" hidden>
+        <div class="picker-sheet-head"><strong>${esc(select.dataset.sheetTitle || placeholder)}</strong>
+          <button type="button" class="icon-btn picker-close" aria-label="Close">${svg(IC.x)}</button></div>
+        <label class="picker-search">${svg(IC.search)}<input type="search" placeholder="${esc(select.dataset.searchPlaceholder || 'Search…')}" autocomplete="off" aria-controls="${listId}"></label>
+        <ul class="picker-list" role="listbox" id="${listId}">
+          ${items.map((it) => `
+            <li role="option" class="picker-option${it.empty ? ' is-empty' : ''}" data-index="${it.index}" aria-selected="false">
+              ${it.empty
+                ? `<span class="picker-badge picker-badge-skip">${svg(IC.skip)}</span>`
+                : `<span class="picker-badge" style="--h:${hueOf(it.name)}">${esc(initialsOf(it.name))}</span>`}
+              <span class="picker-text"><strong>${esc(it.name)}</strong>
+                ${it.empty ? '<small>You can add your church later in your profile</small>'
+                  : `<small>${it.meta ? svg(IC.pin) + esc(it.meta) : ''}${it.denom ? `<em>${esc(it.denom)}</em>` : ''}</small>`}</span>
+              ${svg(IC.check, 'picker-check')}
+            </li>`).join('')}
+        </ul>
+        <p class="picker-none" hidden>No church matches your search.</p>
+      </div>`);
+
+    const trigger = $('.picker-trigger', wrap);
+    const valueEl = $('.picker-value', wrap);
+    const panel = $('.picker-panel', wrap);
+    const backdrop = $('.picker-backdrop', wrap);
+    const search = $('.picker-search input', wrap);
+    const optionEls = $$('.picker-option', wrap);
+    const none = $('.picker-none', wrap);
+    let active = -1;
+
+    const render = () => {
+      const it = items[select.selectedIndex];
+      valueEl.innerHTML = !it || it.empty
+        ? `<span class="picker-placeholder">${esc(placeholder)}</span>`
+        : `<strong>${esc(it.name)}</strong>${it.meta ? `<small>${esc(it.meta)}</small>` : ''}`;
+      wrap.classList.toggle('has-value', !!it && !it.empty);
+      optionEls.forEach((el) => el.setAttribute('aria-selected', String(+el.dataset.index === select.selectedIndex)));
+    };
+    const visible = () => optionEls.filter((el) => !el.hidden);
+    const setActive = (el) => {
+      optionEls.forEach((o) => o.classList.remove('active'));
+      active = el ? +el.dataset.index : -1;
+      if (el) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest' }); }
+    };
+    const isSheet = () => window.matchMedia('(max-width: 640px)').matches;
+
+    const open = () => {
+      panel.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      wrap.classList.add('open');
+      search.value = '';
+      filter();
+      if (isSheet()) {
+        backdrop.hidden = false;
+        document.body.style.overflow = 'hidden';
+      } else {
+        // Open upwards when there is not enough room below the field.
+        const r = trigger.getBoundingClientRect();
+        wrap.classList.toggle('drop-up', window.innerHeight - r.bottom < 340 && r.top > window.innerHeight - r.bottom);
+      }
+      setActive(optionEls[select.selectedIndex] || optionEls[0]);
+      if (!isSheet() || window.matchMedia('(hover: hover)').matches) setTimeout(() => search.focus(), 30);
+    };
+    const close = (focusTrigger = true) => {
+      if (panel.hidden) return;
+      panel.hidden = true;
+      backdrop.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+      wrap.classList.remove('open', 'drop-up');
+      if (!$$('.modal:not([hidden])').length) document.body.style.overflow = '';
+      if (focusTrigger) trigger.focus();
+    };
+    const choose = (index) => {
+      select.selectedIndex = index;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      render();
+      close();
+    };
+    function filter() {
+      const q = search.value.trim().toLowerCase();
+      optionEls.forEach((el) => {
+        const it = items[+el.dataset.index];
+        el.hidden = !!q && (it.empty || !q.split(/\s+/).every((w) => it.search.includes(w)));
+      });
+      const vis = visible();
+      none.hidden = vis.length > 0;
+      if (!vis.some((el) => +el.dataset.index === active)) setActive(vis[0] || null);
+    }
+
+    trigger.addEventListener('click', () => (panel.hidden ? open() : close()));
+    $('.picker-close', wrap).addEventListener('click', () => close());
+    backdrop.addEventListener('click', () => close());
+    search.addEventListener('input', filter);
+    optionEls.forEach((el) => {
+      el.addEventListener('click', () => choose(+el.dataset.index));
+      el.addEventListener('mousemove', () => { if (active !== +el.dataset.index) setActive(el); });
+    });
+    const onKey = (e) => {
+      const vis = visible();
+      const pos = vis.findIndex((el) => +el.dataset.index === active);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (panel.hidden) { open(); return; }
+        const next = e.key === 'ArrowDown' ? Math.min(vis.length - 1, pos + 1) : Math.max(0, pos - 1);
+        setActive(vis[next]);
+      } else if (e.key === 'Enter' && !panel.hidden) {
+        e.preventDefault();
+        if (active >= 0) choose(active);
+      } else if (e.key === 'Escape' && !panel.hidden) {
+        e.preventDefault(); e.stopPropagation(); close();
+      } else if (e.key === 'Tab' && !panel.hidden) {
+        close(false);
+      }
+    };
+    trigger.addEventListener('keydown', onKey);
+    search.addEventListener('keydown', onKey);
+    document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(false); });
+    render();
+  });
+
   /* ---------- Auto-hide flash alerts ---------- */
   $$('.content > .alert-success').forEach((a) => setTimeout(() => { a.style.transition = 'opacity .4s'; a.style.opacity = 0; setTimeout(() => a.remove(), 400); }, 4000));
 })();

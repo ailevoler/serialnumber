@@ -199,4 +199,4 @@ admin_header($m['business_name'], 'merchants');
         </section>
     </div>
 </div>
-<?php admin_footer(['../assets/js/gmaps.js?v=1']);
+<?php admin_footer(['../assets/js/gmaps.js?v=2']);

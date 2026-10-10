@@ -156,3 +156,4 @@ form.inline input[name=bank_reference],form.inline input[name=note]{height:30px;
 .fx-ccy small{display:block;color:#6b7280;font-size:12px}
 .fx-ccy em{font-style:normal;font-size:11px;font-weight:700;color:#0a6cf0}
 .fx-ccy:has(input:checked){border-color:#0a6cf0;background:#f2f8ff}
+.maps-check{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:13px}.maps-check li.ok b{color:#0f8a4f}.maps-check li.bad b{color:#b42318}

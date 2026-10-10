@@ -193,6 +193,10 @@ admin_header('Settings', 'settings');
     <section class="card"><h2>Preview <?= $gm['enabled'] ? status_badge('active') : status_badge('pending') ?></h2>
         <div class="map-box" data-map-view data-markers="[]"><?= $gm['enabled'] ? 'Loading map…' : 'Add a browser key to turn on maps.' ?></div>
         <p class="table-meta" data-map-status></p></section>
+    <section class="card" data-maps-check><h2>Check place search</h2>
+        <p class="muted">Tests this key the same way URide does: map, Google place suggestions and street addresses.</p>
+        <button class="btn" type="button">Run check</button>
+        <ul class="maps-check" data-maps-check-out></ul></section>
     <section class="card"><h2>Where maps are used</h2>
         <div class="kv"><span>URide pick-up &amp; drop-off pins</span></div>
         <div class="kv"><span>Merchant Portal — business location pin during onboarding</span></div>
@@ -300,4 +304,4 @@ admin_header('Settings', 'settings');
 <div class="form-actions"><button class="btn primary" type="submit">Save charges</button><span class="muted">New charges apply to payments made after saving. Past payments keep the charge they were made with.</span></div>
 </form>
 <?php endif; ?>
-<?php admin_footer($tab === 'maps' ? ['../assets/js/gmaps.js?v=1'] : []);
+<?php admin_footer($tab === 'maps' ? ['../assets/js/gmaps.js?v=2', 'assets/maps-check.js?v=4'] : []);

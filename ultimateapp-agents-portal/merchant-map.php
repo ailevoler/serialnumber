@@ -28,5 +28,5 @@ require __DIR__ . '/includes/header.php';
     </div>
     <?php require __DIR__ . '/includes/nav.php'; ?>
 </section>
-<script defer src="assets/js/gmaps.js?v=1"></script>
+<script defer src="assets/js/gmaps.js?v=2"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -83,4 +83,4 @@ portal_header('Merchant pre-onboarding');
     <div class="reg-section"><label><input type="checkbox" name="agree" value="1"<?= mp('agree') === '1' ? ' checked' : '' ?>> I confirm these details are true and I agree to the Ultimate App merchant terms and applicable charges.</label>
         <div class="form-actions"><button class="btn grad" type="submit">Submit application</button><a href="login.php">I already have an account</a></div></div>
 </form>
-<?php portal_footer(['../assets/js/gmaps.js?v=1']);
+<?php portal_footer(['../assets/js/gmaps.js?v=2']);

@@ -484,32 +484,58 @@
     const val = (name) => (give.querySelector(`input[name="${name}"]:checked`) || {}).value;
     const peso = (n) => '₱' + Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 });
 
+    const feePct = parseFloat(give.dataset.feePercent || '0');
+    const feeFixed = parseInt(give.dataset.feeFixed || '0', 10);
+    const feeMode = give.dataset.feeMode || 'off';
+    const coverBox = give.querySelector('input[name="cover_fee"]');
+    const fb = $('#fee-breakdown');
+    const peso2 = (c) => '₱' + (c / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Same formula as processing_fee() in PHP: total = (gift + fixed) / (1 - pct), rounded up to the centavo.
+    const feeFor = (c) => {
+      if (feeMode === 'off' || (feeMode === 'optional' && coverBox && !coverBox.checked) || c <= 0 || (!feePct && !feeFixed)) return 0;
+      return Math.ceil(Math.round(((c + feeFixed) / (1 - feePct / 100)) * 10000) / 10000) - c;
+    };
+    const giftCentavos = () => {
+      const amt = val('amount');
+      const n = amt === 'other' ? parseFloat(otherInput.value || '0') : +amt;
+      return Number.isFinite(n) ? Math.round(n * 100) : 0;
+    };
+
     const update = () => {
       const type = val('gift_type');
       panes.forEach((p) => p.classList.toggle('on', p.dataset.pane.split(' ').includes(type)));
-      const amt = val('amount');
-      other.hidden = amt !== 'other';
-      const n = amt === 'other' ? parseFloat(otherInput.value || '0') : +amt;
+      other.classList.toggle('on', val('amount') === 'other');
+      const c = giftCentavos();
+      const fee = feeFor(c);
       const freq = type === 'recurring' ? ({ monthly: ' / month', quarterly: ' / quarter', yearly: ' / year' })[val('frequency')] || '' : '';
-      label.textContent = n >= 20 ? `Give ${peso(n)}${freq} Now` : 'Enter an amount (min ₱20)';
+      label.textContent = c >= 2000 ? `Give ${fee ? peso2(c + fee) : peso(c / 100)}${freq} Now` : 'Enter an amount (min ₱20)';
+      if (fb) {
+        fb.hidden = c < 2000 || fee === 0;
+        fb.querySelector('[data-fb="gift"]').textContent = peso2(c);
+        fb.querySelector('[data-fb="fee"]').textContent = peso2(fee);
+        fb.querySelector('[data-fb="total"]').textContent = peso2(c + fee);
+      }
       let target = val('fund');
       if (type === 'project') {
         const pr = give.querySelector('input[name="project_id"]:checked');
         target = pr ? pr.closest('.project-option').querySelector('strong').textContent : 'Projects';
       }
       if (fundLabel) fundLabel.textContent = 'for ' + target;
-      const isQr = val('method') === 'qrph';
-      $('#qr-panel').hidden = !isQr;
+      $('#qr-panel').hidden = val('method') !== 'qrph';
     };
     give.addEventListener('change', update);
-    otherInput.addEventListener('input', update);
-    give.querySelectorAll('input[name="amount"]').forEach((r) => r.addEventListener('change', () => { if (r.value === 'other') otherInput.focus(); }));
+    // Typing a custom amount selects "Custom"; picking a preset clears the custom field.
+    const customRadio = give.querySelector('input[name="amount"][value="other"]');
+    const pickCustom = () => { if (!customRadio.checked) { customRadio.checked = true; } update(); };
+    otherInput.addEventListener('focus', pickCustom);
+    otherInput.addEventListener('input', pickCustom);
+    give.querySelectorAll('input[name="amount"]').forEach((r) => r.addEventListener('change', () => {
+      if (r.value === 'other') otherInput.focus(); else { otherInput.value = ''; update(); }
+    }));
     update();
 
     give.addEventListener('submit', async (e) => {
-      const amt = val('amount');
-      const n = amt === 'other' ? parseFloat(otherInput.value || '0') : +amt;
-      if (!(n >= 20)) { e.preventDefault(); toast('The minimum gift is ₱20'); otherInput.focus(); return; }
+      if (giftCentavos() < 2000) { e.preventDefault(); toast('The minimum gift is ₱20'); otherInput.focus(); return; }
       if (val('method') !== 'qrph') return; // card / e-wallet / bank: normal POST → redirect
       e.preventDefault();
       const btn = give.querySelector('.give-submit');

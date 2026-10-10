@@ -59,6 +59,15 @@ if (is_post()) {
                 setting_set($k, mb_substr(trim((string) ($_POST[$k] ?? '')), 0, $len));
             }
             flash('success', 'Bank transfer settings saved.');
+        } elseif ($action === 'save_fees') {
+            $pct = (float) str_replace(',', '.', (string) ($_POST['fee_percent'] ?? '0'));
+            $fixed = (float) str_replace(',', '.', (string) ($_POST['fee_fixed'] ?? '0'));
+            if ($pct < 0 || $pct >= 20 || $fixed < 0 || $fixed > 1000) throw new RuntimeException('Enter a fee between 0% and 20% and a fixed fee between ₱0 and ₱1,000.');
+            setting_set('fee_percent', rtrim(rtrim(number_format($pct, 3, '.', ''), '0'), '.') ?: '0');
+            setting_set('fee_fixed', rtrim(rtrim(number_format($fixed, 2, '.', ''), '0'), '.') ?: '0');
+            setting_set('fee_cover_donations', in_array($_POST['fee_cover_donations'] ?? '', ['always', 'optional', 'off'], true) ? $_POST['fee_cover_donations'] : 'always');
+            setting_set('fee_cover_events', !empty($_POST['fee_cover_events']) ? '1' : '0');
+            flash('success', 'Processing fee settings saved.');
         } elseif ($action === 'save_giving') {
             $payee = trim((string) ($_POST['giving_payee'] ?? ''));
             $funds = array_filter(array_map(fn($f) => mb_substr(trim($f), 0, 80), explode(',', (string) ($_POST['giving_funds'] ?? ''))));
@@ -150,6 +159,28 @@ admin_tabs('paymongo');
     <button class="btn btn-outline btn-block"><?= icon('check') ?> Save Bank Details</button>
   </form>
   <?php endif; ?>
+
+  <?php $fc = fee_config(); ?>
+  <form method="post" class="card form">
+    <?= csrf_field() ?><input type="hidden" name="action" value="save_fees">
+    <h2 class="card-title"><?= icon('receipt') ?> Processing Fee (MDR)</h2>
+    <p class="muted">Add PayMongo's fee on top of the amount so PCEC receives the full gift. Check your current QR Ph rate in your PayMongo dashboard.</p>
+    <div class="grid-2">
+      <label>MDR rate (%)<input type="number" name="fee_percent" min="0" max="19.99" step="0.01" value="<?= e((string) $fc['percent']) ?>"></label>
+      <label>Fixed fee per transaction (₱)<input type="number" name="fee_fixed" min="0" step="0.01" value="<?= e(rtrim(rtrim(number_format($fc['fixed'] / 100, 2, '.', ''), '0'), '.')) ?>"></label>
+    </div>
+    <label>Donations
+      <select name="fee_cover_donations">
+        <option value="always" <?= $fc['donations'] === 'always' ? 'selected' : '' ?>>Always add the fee to the donor's payment</option>
+        <option value="optional" <?= $fc['donations'] === 'optional' ? 'selected' : '' ?>>Let the donor choose (checked by default)</option>
+        <option value="off" <?= $fc['donations'] === 'off' ? 'selected' : '' ?>>Don't add (PCEC absorbs the fee)</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="fee_cover_events" value="1" <?= $fc['events'] ? 'checked' : '' ?>><span></span>Also add the fee to paid event registrations</label>
+    <?php $ex = 50000; $exFee = processing_fee($ex); ?>
+    <p class="hint"><?= icon('bell') ?> Example: a <?= money($ex) ?> gift → donor pays <b><?= money($ex + $exFee, true) ?></b> (fee <?= money($exFee, true) ?>). After PayMongo deducts <?= e((string) $fc['percent']) ?>%<?= $fc['fixed'] ? ' + ' . money($fc['fixed'], true) : '' ?>, PCEC receives <?= money($ex) ?>.</p>
+    <button class="btn btn-outline btn-block"><?= icon('check') ?> Save Fee Settings</button>
+  </form>
 
   <form method="post" class="card form">
     <?= csrf_field() ?><input type="hidden" name="action" value="save_giving">

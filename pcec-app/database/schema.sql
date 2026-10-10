@@ -254,7 +254,8 @@ CREATE TABLE payments (
   user_id INT UNSIGNED NULL,
   purpose ENUM('donation','event') NOT NULL,
   description VARCHAR(255) NOT NULL,
-  amount INT UNSIGNED NOT NULL,                  -- centavos
+  amount INT UNSIGNED NOT NULL,                  -- centavos, total charged (gift + fee_amount)
+  fee_amount INT UNSIGNED NOT NULL DEFAULT 0,    -- processing fee (MDR) added on top of the gift
   method VARCHAR(20) NOT NULL DEFAULT 'qrph',    -- qrph | card | ewallet | bank
   status ENUM('pending','paid','failed','expired','cancelled') NOT NULL DEFAULT 'pending',
   livemode TINYINT(1) NOT NULL DEFAULT 0,
@@ -388,6 +389,11 @@ INSERT INTO settings (k, v) VALUES
 ('giving_funds', 'General Fund,Missions,Disaster Relief,Church Planting'),
 ('giving_amounts', '100,500,1000,2500,5000'),
 ('paymongo_mode', 'test'),
+('schema_version', '2'),
+('fee_percent', '1.5'),
+('fee_fixed', '0'),
+('fee_cover_donations', 'always'),
+('fee_cover_events', '1'),
 ('paymongo_methods', 'qrph'),
 ('bank_enabled', '0'),
 ('bank_name', 'BDO Unibank'),

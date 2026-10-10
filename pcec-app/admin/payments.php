@@ -37,13 +37,14 @@ $sql = 'SELECT p.*, u.first_name, u.last_name, u.email, d.fund, d.gift_type, d.i
 
 if (($_GET['export'] ?? '') === 'csv') {
     $rows = array_map(fn($r) => [$r['reference'], $r['created_at'], $r['paid_at'], trim($r['first_name'] . ' ' . $r['last_name']), $r['email'],
-        $r['purpose'], $r['description'], $r['fund'], method_label($r['method']), number_format($r['amount'] / 100, 2, '.', ''), $r['status'],
+        $r['purpose'], $r['description'], $r['fund'], method_label($r['method']), number_format(($r['amount'] - $r['fee_amount']) / 100, 2, '.', ''),
+        number_format($r['fee_amount'] / 100, 2, '.', ''), number_format($r['amount'] / 100, 2, '.', ''), $r['status'],
         $r['provider_payment_id'], $r['payer_reference'], $r['admin_note']], q_all($sql, $params));
     csv_out('pcec-payments-' . date('Ymd') . '.csv', ['Reference', 'Created', 'Paid at', 'Name', 'Email', 'Purpose', 'Description', 'Fund',
-        'Method', 'Amount (PHP)', 'Status', 'PayMongo payment', 'Bank reference', 'Note'], $rows);
+        'Method', 'Gift / fee (PHP)', 'Processing fee (PHP)', 'Total charged (PHP)', 'Status', 'PayMongo payment', 'Bank reference', 'Note'], $rows);
 }
 $rows = q_all($sql . ' LIMIT 300', $params);
-$total = array_sum(array_map(fn($r) => $r['status'] === 'paid' ? (int) $r['amount'] : 0, $rows));
+$total = array_sum(array_map(fn($r) => $r['status'] === 'paid' ? (int) $r['amount'] - (int) $r['fee_amount'] : 0, $rows));
 
 $pageTitle = 'Admin';
 $activeNav = 'admin';
@@ -60,7 +61,7 @@ $sel = fn($k, $v) => $flt[$k] === $v ? 'selected' : '';
     <button class="btn btn-gradient"><?= icon('search') ?> Filter</button>
     <a class="btn btn-outline" href="?<?= e(http_build_query($flt + ['export' => 'csv'])) ?>"><?= icon('download') ?> CSV</a>
   </form>
-  <p class="muted"><?= count($rows) ?> payment(s) · <?= money($total) ?> paid in this view</p>
+  <p class="muted"><?= count($rows) ?> payment(s) · <?= money($total) ?> received in this view (excluding processing fees)</p>
 
   <div class="admin-list">
     <?php foreach ($rows as $r): ?>
@@ -73,7 +74,7 @@ $sel = fn($k, $v) => $flt[$k] === $v ? 'selected' : '';
             <?php if ($r['payer_reference']): ?><small>Bank ref: <b><?= e($r['payer_reference']) ?></b></small><?php endif; ?>
             <?php if ($r['admin_note']): ?><small class="muted"><?= e($r['admin_note']) ?></small><?php endif; ?>
           </div>
-          <div class="admin-item-amt"><b><?= money((int) $r['amount'], true) ?></b><?= payment_status_badge($r['status']) ?></div>
+          <div class="admin-item-amt"><b><?= money((int) $r['amount'] - (int) $r['fee_amount'], true) ?></b><?php if ($r['fee_amount']): ?><small class="muted">+ <?= money((int) $r['fee_amount'], true) ?> fee</small><?php endif; ?><?= payment_status_badge($r['status']) ?></div>
         </div>
         <?php if ($r['status'] === 'pending'): ?>
           <div class="admin-item-actions">

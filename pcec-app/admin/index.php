@@ -2,14 +2,14 @@
 require __DIR__ . '/_admin.php';
 
 $s = q_one("SELECT
-    COALESCE(SUM(CASE WHEN purpose = 'donation' AND status = 'paid' AND paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN amount END), 0) AS month_total,
-    COALESCE(SUM(CASE WHEN purpose = 'donation' AND status = 'paid' THEN amount END), 0) AS all_total,
-    COALESCE(SUM(CASE WHEN purpose = 'event' AND status = 'paid' THEN amount END), 0) AS event_total,
+    COALESCE(SUM(CASE WHEN purpose = 'donation' AND status = 'paid' AND paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN amount - fee_amount END), 0) AS month_total,
+    COALESCE(SUM(CASE WHEN purpose = 'donation' AND status = 'paid' THEN amount - fee_amount END), 0) AS all_total,
+    COALESCE(SUM(CASE WHEN purpose = 'event' AND status = 'paid' THEN amount - fee_amount END), 0) AS event_total,
     COUNT(DISTINCT CASE WHEN purpose = 'donation' AND status = 'paid' THEN user_id END) AS donors,
     SUM(status = 'pending' AND method = 'bank' AND payer_reference IS NOT NULL) AS to_verify
   FROM payments");
 $regs = (int) q_val("SELECT COUNT(*) FROM event_registrations WHERE status = 'confirmed'");
-$byFund = q_all("SELECT d.fund, SUM(p.amount) AS total FROM donations d JOIN payments p ON p.id = d.payment_id WHERE p.status = 'paid' GROUP BY d.fund ORDER BY total DESC");
+$byFund = q_all("SELECT d.fund, SUM(p.amount - p.fee_amount) AS total FROM donations d JOIN payments p ON p.id = d.payment_id WHERE p.status = 'paid' GROUP BY d.fund ORDER BY total DESC");
 $recent = q_all("SELECT p.*, u.first_name, u.last_name FROM payments p LEFT JOIN users u ON u.id = p.user_id WHERE p.status <> 'cancelled' ORDER BY p.created_at DESC LIMIT 8");
 $fundMax = max(1, ...array_map(fn($r) => (int) $r['total'], $byFund ?: [['total' => 1]]));
 

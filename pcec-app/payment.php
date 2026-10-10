@@ -57,6 +57,10 @@ require __DIR__ . '/includes/header.php';
     <p class="muted"><?= $p['purpose'] === 'event' ? 'Your payment was received and your seat is confirmed.' : '“God loves a cheerful giver.” — 2 Corinthians 9:7' ?></p>
     <div class="receipt-amount"><?= money((int) $p['amount'], true) ?></div>
     <dl class="receipt-list">
+      <?php if ($p['fee_amount']): ?>
+        <div><dt><?= $p['purpose'] === 'event' ? 'Registration fee' : 'Gift' ?></dt><dd><?= money((int) $p['amount'] - (int) $p['fee_amount'], true) ?></dd></div>
+        <div><dt>Processing fee</dt><dd><?= money((int) $p['fee_amount'], true) ?></dd></div>
+      <?php endif; ?>
       <div><dt>Reference</dt><dd><?= e($p['reference']) ?> <button class="icon-btn" data-copy-text="<?= e($p['reference']) ?>" aria-label="Copy"><?= icon('copy') ?></button></dd></div>
       <div><dt>For</dt><dd><?= e($p['description']) ?></dd></div>
       <div><dt>Paid via</dt><dd><?= e(method_label($p['method'])) ?></dd></div>
@@ -81,7 +85,8 @@ require __DIR__ . '/includes/header.php';
 
 <?php else: ?>
   <section class="card pay-summary">
-    <div><small class="muted"><?= $p['purpose'] === 'event' ? 'Registration fee' : 'Your gift' ?></small><strong><?= money((int) $p['amount'], true) ?></strong></div>
+    <div><small class="muted"><?= $p['fee_amount'] ? 'Total to pay' : ($p['purpose'] === 'event' ? 'Registration fee' : 'Your gift') ?></small><strong><?= money((int) $p['amount'], true) ?></strong></div>
+    <?php if ($p['fee_amount']): ?><div class="pay-summary-meta"><span><?= $p['purpose'] === 'event' ? 'Registration fee' : 'Gift' ?> <?= money((int) $p['amount'] - (int) $p['fee_amount'], true) ?> + processing fee <?= money((int) $p['fee_amount'], true) ?></span></div><?php endif; ?>
     <div class="pay-summary-meta"><span><?= e($p['description']) ?></span><span class="mono"><?= e($p['reference']) ?></span></div>
   </section>
 

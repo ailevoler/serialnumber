@@ -54,7 +54,8 @@ if (!$p || $p['status'] !== 'pending') {
         flash('error', 'Online payment is not available yet. Please contact the organizer.');
         redirect($back);
     }
-    $p = payment_create('event', 'Registration — ' . $ev['title'], (int) $ev['fee'], $method);
+    $fee = fee_config()['events'] ? processing_fee((int) $ev['fee']) : 0;
+    $p = payment_create('event', 'Registration — ' . $ev['title'], (int) $ev['fee'] + $fee, $method, $fee);
     q("INSERT INTO event_registrations (event_id, user_id, status, payment_id) VALUES (?,?,'pending',?)
        ON DUPLICATE KEY UPDATE status = 'pending', payment_id = VALUES(payment_id)", [$ev['id'], uid(), $p['id']]);
     try {

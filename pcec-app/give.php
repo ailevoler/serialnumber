@@ -6,7 +6,7 @@ require_login();
 $opts = payment_options();
 $funds = setting_list('giving_funds', 'General Fund') ?: ['General Fund'];
 $presets = array_map('intval', setting_list('giving_amounts', '100,500,1000,2500,5000'));
-$projects = q_all("SELECT p.*, (SELECT COALESCE(SUM(pm.amount), 0) FROM donations d JOIN payments pm ON pm.id = d.payment_id
+$projects = q_all("SELECT p.*, (SELECT COALESCE(SUM(pm.amount - pm.fee_amount), 0) FROM donations d JOIN payments pm ON pm.id = d.payment_id
                     WHERE d.project_id = p.id AND pm.status = 'paid') AS raised
                   FROM giving_projects p WHERE p.is_active = 1 ORDER BY p.sort, p.id");
 $payee = setting('giving_payee', APP_ORG);
@@ -33,6 +33,8 @@ if (is_post()) {
     if ($amount < MIN_PAYMENT) give_fail('The minimum gift is ' . money(MIN_PAYMENT) . '.');
     if ($amount > 100000000) give_fail('For gifts above ₱1,000,000 please contact the PCEC office.');
     if (empty($opts[$method])) give_fail('Please choose an available payment method.');
+    $fees = fee_config();
+    $fee = ($fees['donations'] === 'always' || ($fees['donations'] === 'optional' && !empty($_POST['cover_fee']))) ? processing_fee($amount) : 0;
     if ($type === 'project') {
         $project = q_one('SELECT * FROM giving_projects WHERE id = ? AND is_active = 1', [(int) ($_POST['project_id'] ?? 0)]);
         if (!$project) give_fail('Please choose a project to support.');
@@ -44,7 +46,7 @@ if (is_post()) {
         'recurring' => $frequencies[$frequency] . ' gift — ' . $fund,
         default => 'Donation — ' . $fund,
     };
-    $p = payment_create('donation', $desc, $amount, $method);
+    $p = payment_create('donation', $desc, $amount + $fee, $method, $fee);
     q('INSERT INTO donations (payment_id, user_id, gift_type, frequency, fund, project_id, is_anonymous, message) VALUES (?,?,?,?,?,?,?,?)',
         [$p['id'], uid(), $type, $frequency, $fund, $project['id'] ?? null, !empty($_POST['anonymous']) ? 1 : 0,
          mb_substr(trim((string) ($_POST['message'] ?? '')), 0, 500) ?: null]);
@@ -61,7 +63,7 @@ if (is_post()) {
         $p = payment_get((int) $p['id']);
         if ($method === 'qrph') {
             json_out(['ref' => $p['reference'], 'qr' => $p['qr_image'], 'expires_in' => strtotime($p['qr_expires_at']) - time(),
-                      'amount' => money($amount), 'status_url' => url('api/payment_status.php?ref=' . urlencode($p['reference'])), 'page' => $page]);
+                      'amount' => money($amount + $fee, $fee > 0), 'status_url' => url('api/payment_status.php?ref=' . urlencode($p['reference'])), 'page' => $page]);
         }
         json_out(['redirect' => $redirect ?: $page]);
     }
@@ -72,7 +74,7 @@ if (is_post()) {
 // Prefill from "Give again" or a project link.
 $pre = ['type' => 'one_time', 'amount' => 500, 'fund' => $funds[0], 'frequency' => 'monthly', 'project' => 0];
 if (!empty($_GET['repeat'])) {
-    $d = q_one('SELECT d.*, p.amount FROM donations d JOIN payments p ON p.id = d.payment_id WHERE d.id = ? AND d.user_id = ?', [(int) $_GET['repeat'], uid()]);
+    $d = q_one('SELECT d.*, p.amount - p.fee_amount AS amount FROM donations d JOIN payments p ON p.id = d.payment_id WHERE d.id = ? AND d.user_id = ?', [(int) $_GET['repeat'], uid()]);
     if ($d) $pre = ['type' => $d['gift_type'], 'amount' => intdiv((int) $d['amount'], 100), 'fund' => $d['fund'], 'frequency' => $d['frequency'] ?: 'monthly', 'project' => (int) $d['project_id']];
 }
 if (!empty($_GET['project'])) {
@@ -81,6 +83,7 @@ if (!empty($_GET['project'])) {
 }
 if (!empty($_GET['type']) && in_array($_GET['type'], ['one_time', 'recurring', 'project'], true)) $pre['type'] = $_GET['type'];
 $isPreset = in_array($pre['amount'], $presets, true);
+$fees = fee_config();
 $defaultMethod = $opts['qrph'] ? 'qrph' : ($opts['bank'] ? 'bank' : ($opts['card'] ? 'card' : 'ewallet'));
 $anyOnline = $opts['qrph'] || $opts['card'] || $opts['ewallet'] || $opts['bank'];
 
@@ -99,7 +102,8 @@ require __DIR__ . '/includes/header.php';
   <div class="alert alert-info">Online giving is not set up yet.<?php if (is_admin()): ?> <a href="<?= e(url('admin/paymongo.php')) ?>">Set up PayMongo</a><?php endif; ?></div>
 <?php endif; ?>
 
-<form method="post" class="card give-card" id="give-form" data-payee="<?= e($payee) ?>">
+<form method="post" class="card give-card" id="give-form" data-payee="<?= e($payee) ?>"
+      data-fee-percent="<?= e((string) $fees['percent']) ?>" data-fee-fixed="<?= (int) $fees['fixed'] ?>" data-fee-mode="<?= e($fees['donations']) ?>">
   <?= csrf_field() ?>
   <div class="segmented" role="tablist">
     <?php foreach (['one_time' => 'One-Time', 'recurring' => 'Recurring', 'project' => 'Projects'] as $k => $label): ?>
@@ -153,11 +157,24 @@ require __DIR__ . '/includes/header.php';
     <?php foreach ($presets as $a): ?>
       <label class="amount"><input type="radio" name="amount" value="<?= $a ?>" <?= $isPreset && $pre['amount'] === $a ? 'checked' : '' ?>><span>₱<?= number_format($a) ?></span></label>
     <?php endforeach; ?>
-    <label class="amount"><input type="radio" name="amount" value="other" <?= $isPreset ? '' : 'checked' ?>><span>Other</span></label>
+    <label class="amount"><input type="radio" name="amount" value="other" <?= $isPreset ? '' : 'checked' ?>><span>Custom</span></label>
   </div>
-  <label class="other-amount" <?= $isPreset ? 'hidden' : '' ?>>
-    <span>₱</span><input type="number" name="other_amount" min="20" max="1000000" step="1" inputmode="decimal" placeholder="Enter amount (min ₱20)" value="<?= $isPreset ? '' : (int) $pre['amount'] ?>">
+  <label class="give-label give-label-sm" for="other-amount">Custom Amount</label>
+  <label class="other-amount<?= $isPreset ? '' : ' on' ?>">
+    <span>₱</span><input type="number" id="other-amount" name="other_amount" min="20" max="1000000" step="0.01" inputmode="decimal" placeholder="Enter any amount (min ₱20)" value="<?= $isPreset ? '' : e((string) $pre['amount']) ?>">
   </label>
+
+  <?php if ($fees['donations'] !== 'off' && ($fees['percent'] > 0 || $fees['fixed'] > 0)): ?>
+    <?php if ($fees['donations'] === 'optional'): ?>
+      <label class="check fee-check"><input type="checkbox" name="cover_fee" value="1" checked><span></span><em>Cover the processing fee so PCEC receives your full gift</em></label>
+    <?php endif; ?>
+    <div class="fee-breakdown" id="fee-breakdown">
+      <div><span>Your gift</span><b data-fb="gift">₱0.00</b></div>
+      <div><span>Processing fee <small>(<?= e(rtrim(rtrim(number_format($fees['percent'], 2), '0'), '.')) ?>%<?= $fees['fixed'] ? ' + ' . money($fees['fixed'], true) : '' ?>)</small></span><b data-fb="fee">₱0.00</b></div>
+      <div class="fb-total"><span>Total to pay</span><b data-fb="total">₱0.00</b></div>
+      <p>The processing fee is charged by the payment provider. Adding it means 100% of your gift goes to the ministry.</p>
+    </div>
+  <?php endif; ?>
 
   <h3 class="give-label">Payment Method</h3>
   <label class="pay-main<?= $opts['qrph'] ? '' : ' is-disabled' ?>">

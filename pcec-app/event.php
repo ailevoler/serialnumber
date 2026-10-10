@@ -67,6 +67,7 @@ if ($pay && $pay['status'] === 'pending') {
 $registered = $reg && $reg['status'] === 'confirmed' || (!$reg && $ev['is_going']);
 $qrValid = $pay && $pay['status'] === 'pending' && $pay['method'] === 'qrph' && $pay['qr_image'] && strtotime((string) $pay['qr_expires_at']) > time();
 $fee = (int) $ev['fee'];
+$procFee = $fee && fee_config()['events'] ? processing_fee($fee) : 0;
 $start = strtotime($ev['starts_at']);
 $end = $ev['ends_at'] ? strtotime($ev['ends_at']) : null;
 $past = $start < strtotime('today');
@@ -183,6 +184,7 @@ require __DIR__ . '/includes/header.php';
         <h3>Registration Fee</h3>
         <?php if ($fee > 0): ?>
           <div class="fee-amount"><?= money($fee) ?><small>/person</small></div>
+          <?php if ($procFee): ?><p class="fee-proc">+ <?= money($procFee, true) ?> processing fee · <b>Total <?= money($fee + $procFee, true) ?></b></p><?php endif; ?>
           <?php if ($ev['fee_note']): ?><p><?= e($ev['fee_note']) ?></p><?php endif; ?>
         <?php else: ?>
           <div class="fee-amount fee-free">FREE</div>
@@ -225,7 +227,7 @@ require __DIR__ . '/includes/header.php';
   <?php else: ?>
     <form method="post" action="<?= e(url('event_register.php')) ?>" class="cta-form"><?= csrf_field() ?>
       <input type="hidden" name="event_id" value="<?= $id ?>"><input type="hidden" name="action" value="register">
-      <button class="btn btn-primary btn-lg btn-block">Register Now<?= $fee ? ' · ' . money($fee) : '' ?> <?= icon('arrow-right') ?></button>
+      <button class="btn btn-primary btn-lg btn-block">Register Now<?= $fee ? ' · ' . money($fee + $procFee, $procFee > 0) : '' ?> <?= icon('arrow-right') ?></button>
     </form>
   <?php endif; ?>
 </div>

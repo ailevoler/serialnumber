@@ -13,7 +13,7 @@ $sent = 0;
 foreach ($intervals as $freq => $interval) {
     // Latest paid recurring gift per donor + fund whose next date has arrived.
     $due = q_all("SELECT d.user_id, d.fund, MAX(p.paid_at) AS last_paid, SUBSTRING_INDEX(GROUP_CONCAT(d.id ORDER BY p.paid_at DESC), ',', 1) AS donation_id,
-                    SUBSTRING_INDEX(GROUP_CONCAT(p.amount ORDER BY p.paid_at DESC), ',', 1) AS amount
+                    SUBSTRING_INDEX(GROUP_CONCAT(p.amount - p.fee_amount ORDER BY p.paid_at DESC), ',', 1) AS amount
                   FROM donations d JOIN payments p ON p.id = d.payment_id
                   WHERE d.gift_type = 'recurring' AND d.frequency = ? AND p.status = 'paid' AND d.user_id IS NOT NULL
                   GROUP BY d.user_id, d.fund

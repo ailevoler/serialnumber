@@ -19,4 +19,5 @@ require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/paymongo.php';
 require_once __DIR__ . '/payments.php';
 
+payments_schema_upgrade();
 auth_bootstrap();

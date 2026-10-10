@@ -6,10 +6,10 @@ require_login();
 $rows = q_all("SELECT p.*, d.id AS donation_id, d.gift_type, d.frequency, r.event_id
                FROM payments p LEFT JOIN donations d ON d.payment_id = p.id LEFT JOIN event_registrations r ON r.payment_id = p.id
                WHERE p.user_id = ? AND p.status <> 'cancelled' ORDER BY p.created_at DESC LIMIT 200", [uid()]);
-$yearTotal = (int) q_val("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE user_id = ? AND purpose = 'donation' AND status = 'paid' AND YEAR(paid_at) = YEAR(CURDATE())", [uid()]);
-$allTotal = (int) q_val("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE user_id = ? AND purpose = 'donation' AND status = 'paid'", [uid()]);
+$yearTotal = (int) q_val("SELECT COALESCE(SUM(amount - fee_amount), 0) FROM payments WHERE user_id = ? AND purpose = 'donation' AND status = 'paid' AND YEAR(paid_at) = YEAR(CURDATE())", [uid()]);
+$allTotal = (int) q_val("SELECT COALESCE(SUM(amount - fee_amount), 0) FROM payments WHERE user_id = ? AND purpose = 'donation' AND status = 'paid'", [uid()]);
 // Latest paid gift per recurring schedule.
-$pledges = q_all("SELECT d.id, d.frequency, d.fund, p.amount, p.paid_at FROM donations d JOIN payments p ON p.id = d.payment_id
+$pledges = q_all("SELECT d.id, d.frequency, d.fund, p.amount - p.fee_amount AS amount, p.paid_at FROM donations d JOIN payments p ON p.id = d.payment_id
                   WHERE d.user_id = ? AND d.gift_type = 'recurring' AND p.status = 'paid'
                     AND p.paid_at = (SELECT MAX(p2.paid_at) FROM donations d2 JOIN payments p2 ON p2.id = d2.payment_id
                                      WHERE d2.user_id = d.user_id AND d2.gift_type = 'recurring' AND d2.frequency = d.frequency AND d2.fund = d.fund AND p2.status = 'paid')

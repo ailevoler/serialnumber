@@ -62,6 +62,7 @@ How it works:
 - **QR Ph:** the app creates a Payment Intent, attaches a QR Ph payment method, and shows the returned QR (valid for 30 minutes).
 - **Other methods:** card, e-wallet and bank transfer are switched off for now. To bring them back, add `'card'`, `'ewallet'` and/or `'bank'` to `ALLOWED_METHODS` in `includes/payments.php`, then enable them in Admin.
 - **Amounts:** stored in centavos. The minimum charge is ₱20.
+- **Processing fee (MDR):** by default the fee is added on top so PCEC receives the full gift: `total = (gift + fixed fee) ÷ (1 − rate)`. Set the rate (default 1.5%), and choose *always / donor's choice / off* in **Admin → PayMongo & Giving → Processing Fee**. Reports show the gift without the fee. Older databases get the new `payments.fee_amount` column automatically on first page load.
 
 **Upgrading an existing database** (installed before Giving was added): run
 `mysql -u root -p pcec_app < database/upgrade_giving.sql` once.

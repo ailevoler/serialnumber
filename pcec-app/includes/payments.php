@@ -7,6 +7,41 @@ const MIN_PAYMENT = 2000; // ₱20.00 — PayMongo's minimum charge
 // to bring those options back (their checkout / bank-transfer flows are still implemented).
 const ALLOWED_METHODS = ['qrph'];
 
+/** Add new columns to databases created by an older schema.sql (runs once). */
+function payments_schema_upgrade(): void
+{
+    if ((int) setting('schema_version', '1') >= 2) return;
+    try {
+        db()->exec('ALTER TABLE payments ADD COLUMN fee_amount INT UNSIGNED NOT NULL DEFAULT 0 AFTER amount');
+    } catch (PDOException $e) {
+        if (($e->errorInfo[1] ?? 0) !== 1060) throw $e; // 1060 = column already exists
+    }
+    setting_set('schema_version', '2');
+}
+
+/** Processing-fee (MDR) settings: percent (e.g. 1.5) and fixed fee in centavos. */
+function fee_config(): array
+{
+    return [
+        'percent' => max(0.0, min(20.0, (float) setting('fee_percent', '1.5'))),
+        'fixed' => max(0, (int) round((float) setting('fee_fixed', '0') * 100)),
+        'donations' => in_array(setting('fee_cover_donations', 'always'), ['always', 'optional', 'off'], true) ? setting('fee_cover_donations', 'always') : 'always',
+        'events' => setting('fee_cover_events', '1') === '1',
+    ];
+}
+
+/**
+ * Processing fee to add so that, after PayMongo deducts its MDR from the total,
+ * PCEC still receives the full $base amount:  total = (base + fixed) / (1 - percent).
+ */
+function processing_fee(int $base): int
+{
+    $c = fee_config();
+    if ($base <= 0 || ($c['percent'] <= 0 && $c['fixed'] <= 0)) return 0;
+    $total = (int) ceil(round(($base + $c['fixed']) / (1 - $c['percent'] / 100), 4));
+    return $total - $base;
+}
+
 function abs_url(string $path): string
 {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' ? 'https' : 'http';
@@ -41,11 +76,12 @@ function new_reference(): string
     return 'PCEC-' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
 }
 
-function payment_create(string $purpose, string $description, int $amount, string $method): array
+/** $amount is the total to charge; $fee is the part of it that covers the processing fee. */
+function payment_create(string $purpose, string $description, int $amount, string $method, int $fee = 0): array
 {
     $ref = new_reference();
-    q('INSERT INTO payments (reference, user_id, purpose, description, amount, method, livemode) VALUES (?,?,?,?,?,?,?)',
-        [$ref, uid() ?: null, $purpose, mb_substr($description, 0, 255), $amount, $method, PayMongo::isLive() ? 1 : 0]);
+    q('INSERT INTO payments (reference, user_id, purpose, description, amount, fee_amount, method, livemode) VALUES (?,?,?,?,?,?,?,?)',
+        [$ref, uid() ?: null, $purpose, mb_substr($description, 0, 255), $amount, $fee, $method, PayMongo::isLive() ? 1 : 0]);
     return payment_get((int) db()->lastInsertId());
 }
 
@@ -156,12 +192,13 @@ function payment_mark_paid(int $id, ?string $providerPaymentId = null, ?string $
             q('INSERT IGNORE INTO event_rsvps (event_id, user_id) VALUES (?,?)', [$reg['event_id'], $reg['user_id']]);
             $ev = q_one('SELECT title, user_id FROM events WHERE id = ?', [$reg['event_id']]);
             if ($uid) notify($uid, null, 'payment', 'Payment received — you are registered for ' . $ev['title'] . '.', 'event.php?id=' . $reg['event_id']);
-            notify((int) $ev['user_id'], $uid, 'rsvp', 'New paid registration for ' . $ev['title'] . ' (' . money((int) $p['amount']) . ').', 'event.php?id=' . $reg['event_id']);
+            notify((int) $ev['user_id'], $uid, 'rsvp', 'New paid registration for ' . $ev['title'] . ' (' . money((int) $p['amount'] - (int) $p['fee_amount']) . ').', 'event.php?id=' . $reg['event_id']);
         }
     } else {
-        if ($uid) notify($uid, null, 'payment', 'Thank you! We received your gift of ' . money((int) $p['amount']) . '. God bless you.', 'payment.php?ref=' . $p['reference']);
+        $gift = (int) $p['amount'] - (int) $p['fee_amount'];
+        if ($uid) notify($uid, null, 'payment', 'Thank you! We received your gift of ' . money($gift) . '. God bless you.', 'payment.php?ref=' . $p['reference']);
         foreach (q_all("SELECT id FROM users WHERE role = 'admin'") as $a) {
-            notify((int) $a['id'], $uid, 'payment', 'New donation received: ' . money((int) $p['amount']) . ' (' . $p['reference'] . ').', 'admin/payments.php?q=' . $p['reference']);
+            notify((int) $a['id'], $uid, 'payment', 'New donation received: ' . money($gift) . ' (' . $p['reference'] . ').', 'admin/payments.php?q=' . $p['reference']);
         }
     }
     return true;

@@ -31,7 +31,7 @@ if (is_post()) {
     redirect('admin/projects.php');
 }
 
-$projects = q_all("SELECT p.*, (SELECT COALESCE(SUM(pm.amount), 0) FROM donations d JOIN payments pm ON pm.id = d.payment_id WHERE d.project_id = p.id AND pm.status = 'paid') AS raised,
+$projects = q_all("SELECT p.*, (SELECT COALESCE(SUM(pm.amount - pm.fee_amount), 0) FROM donations d JOIN payments pm ON pm.id = d.payment_id WHERE d.project_id = p.id AND pm.status = 'paid') AS raised,
                           (SELECT COUNT(*) FROM donations d JOIN payments pm ON pm.id = d.payment_id WHERE d.project_id = p.id AND pm.status = 'paid') AS gifts
                    FROM giving_projects p ORDER BY p.is_active DESC, p.sort, p.id");
 $edit = !empty($_GET['edit']) ? q_one('SELECT * FROM giving_projects WHERE id = ?', [(int) $_GET['edit']]) : null;

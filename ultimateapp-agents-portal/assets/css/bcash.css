@@ -165,3 +165,27 @@ a.update-item{text-decoration:none;color:inherit}a.update-item strong,a.update-i
 .fx-market-rate{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
 .fx-market-go{padding:7px 11px;border-radius:99px;background:var(--bc-grad);color:#fff;font-size:12px;font-weight:700}
 @media (max-width:360px){.fx-rate>strong{font-size:26px}.fx-market{grid-template-columns:1fr auto}.fx-market-go{grid-column:1/-1;text-align:center}}
+
+/* ---------- Currency picker, wallets and all-rates board ---------- */
+.fx-picker{display:grid;gap:8px;margin:0 0 14px}
+.fx-picker>label{font-size:13px;font-weight:600}
+.fx-picker>div{display:flex;gap:8px}
+.fx-picker select{flex:1;min-width:0;height:46px;padding:0 12px;border:1px solid var(--bc-line);border-radius:12px;background:#fff;color:var(--bc-ink);font:inherit;font-size:15px;font-weight:600}
+.fx-picker select:focus{outline:2px solid var(--bc-blue);outline-offset:1px}
+.fx-picker .btn{width:auto;min-height:46px;padding:0 16px;border-radius:12px}
+.fx-picker .btn[hidden]{display:none}
+.fx-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.fx-chips::-webkit-scrollbar{display:none}
+.fx-chips a{flex:none;padding:6px 11px;border:1px solid var(--bc-line);border-radius:99px;background:#fff;color:var(--bc-ink);font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap}
+.fx-chips a.active{background:var(--bc-grad);border-color:transparent;color:#fff}
+.fx-wallets,.fx-board{margin-top:26px}
+.fx-wallets h2,.fx-board h2{margin:0 0 6px;font-size:17px;font-weight:650}
+.fx-board h2 small,.fx-board h3 small{display:block;margin-top:2px;font-size:11.5px;font-weight:500;color:#5a6b85}
+.fx-wallets a,.fx-board a{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid #e3ebf5;color:var(--bc-ink);text-decoration:none}
+.fx-board a.active{background:var(--bc-soft);border-radius:10px;padding-left:6px;padding-right:6px}
+.fx-wallets strong,.fx-board strong{display:block;font-size:14px;font-variant-numeric:tabular-nums}
+.fx-wallets small,.fx-board small{display:block;font-size:11.5px;color:#5a6b85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-wallets b,.fx-board b{font-size:13px;font-variant-numeric:tabular-nums;text-align:right}
+.fx-board strong em{margin-left:4px;padding:1px 6px;border-radius:99px;background:var(--bc-grad);color:#fff;font-size:10px;font-style:normal;font-weight:700;vertical-align:1px}
+.fx-flag{font-size:22px;line-height:1;text-align:center}
+.bcash-soon .fx-board{margin:0 0 18px}

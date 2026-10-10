@@ -8,10 +8,10 @@ $views = [
 ];
 $view = is_string($_GET['view'] ?? null) && isset($views[$_GET['view']]) ? $_GET['view'] : 'bct';
 [$title, $icon, $headline, $body] = $views[$view];
-$fxRate = null;
+$fxRate = null; $fxBoard = [];
 if ($view === 'markets') {
     require_once __DIR__ . '/includes/fx.php';
-    try { $fxRate = fx_current($pdo); } catch (Throwable $e) { error_log('Markets FX failed: ' . $e->getMessage()); }
+    try { $fxRate = fx_current($pdo); $fxBoard = fx_board($pdo); } catch (Throwable $e) { error_log('Markets FX failed: ' . $e->getMessage()); }
 }
 $pageTitle = $title;
 require __DIR__ . '/includes/header.php';
@@ -21,9 +21,17 @@ require __DIR__ . '/includes/header.php';
     <?php if ($fxRate): ?>
     <a class="fx-market" href="bcash-exchange.php">
         <span class="fx-market-pair">USD / PHP<small>Live · <?= e(fx_source_label($fxRate['source'])) ?></small></span>
-        <span class="fx-market-rate">PHP <?= fx_format_rate($fxRate['micro']) ?><small>Buy <?= fx_format_rate($fxRate['buy_micro'], 2) ?> · Sell <?= fx_format_rate($fxRate['sell_micro'], 2) ?></small></span>
+        <span class="fx-market-rate">PHP <?= fx_format_rate($fxRate['scaled']) ?><small>Buy <?= fx_format_rate($fxRate['buy_scaled'], 2) ?> · Sell <?= fx_format_rate($fxRate['sell_scaled'], 2) ?></small></span>
         <span class="fx-market-go">Exchange</span>
     </a>
+    <?php endif; ?>
+    <?php if (count($fxBoard) > 1): ?>
+    <section class="fx-board" aria-label="All currencies">
+        <h3 class="bcash-soon-sub">All currencies <small>PHP per 1 unit · mid-market</small></h3>
+        <?php foreach ($fxBoard as $code => $r): if ($code === FX_MAIN) continue; ?>
+            <a href="bcash-exchange.php?ccy=<?= e($code) ?>"><span class="fx-flag" aria-hidden="true"><?= fx_currency_flag($code) ?></span><span><strong><?= e($code) ?></strong><small><?= e(fx_currency_name($code)) ?></small></span><b>PHP <?= fx_format_rate($r['scaled']) ?></b></a>
+        <?php endforeach; ?>
+    </section>
     <?php endif; ?>
     <div class="bcash-soon-hero">
         <span class="bcash-soon-icon"><img src="assets/images/services/<?= e($icon) ?>?v=1" alt="" width="84" height="84"></span>

@@ -1,6 +1,31 @@
-# USD ⇄ PHP exchange
+# Currency exchange (main pair: USD/PHP)
 
-Customers buy USD with BCash and sell USD back to BCash at a live rate. You set the fees in Admin.
+Customers buy a foreign currency with BCash and sell it back to BCash at a live rate. You set the fees in Admin.
+
+## More currencies
+
+- **USD/PHP is the main pair.** It is always on, listed first, and has its own fee.
+- **Admin › ERP › Currency exchange › Currencies** lists every active ISO currency (about 150). Tick the ones customers can use; there is a filter box (try "peso" or "dinar").
+- The default list has 21 currencies popular in Boracay: USD, EUR, JPY, GBP, AUD, CAD, KRW, CNY, SGD, HKD, TWD, AED, SAR, QAR, KWD, CHF, NZD, THB, MYR, IDR, INR.
+- **Other currencies have one shared fee:** buy 1.00% and sell 1.00% by default, set in Rate & fees.
+- **Limits** are set in USD and converted to each currency at today's rate. Example: USD 1–1,000 is about JPY 146–146,000.
+- **Rates for other currencies:**
+  - Every rate is PHP per 1 unit, worked out through USD from one source.
+  - Frankfurter covers about 30 major currencies; currency-api covers the rest.
+  - A currency that no source has stays hidden until a rate arrives.
+- **Each currency has its own wallet** and uses its own decimals (JPY 0, USD 2, KWD 3).
+- **The customer page** has:
+  - A currency picker: Main pair, Popular, More currencies;
+  - Quick chips;
+  - **My currencies**, which shows balances and their PHP value;
+  - **All rates**.
+- **Markets** lists all rates.
+- **If you stop offering a currency,** customers who hold it can still **sell** it back; they cannot buy more. Its rate keeps updating while anyone holds it.
+- **Ledger:**
+  - USD is in **Customer USD (PHP value at trade rate)**;
+  - Each other currency is in **fx_book:<code>** (e.g. `fx_book:eur`);
+  - All fees are in **USD exchange fees**.
+- **Not included:** gold, silver and crypto.
 
 ## Where customers find it
 
@@ -53,9 +78,9 @@ Customers buy USD with BCash and sell USD back to BCash at a live rate. You set 
 
 ## Deploy
 
-1. Back up, then import `database/fx_migration.sql` once. It turns the exchange on with 0.50% fees.
+1. Back up, then import `database/fx_migration.sql` once (if not done yet), then `database/fx_currencies_migration.sql` once. The second one moves existing USD wallets into the new per-currency wallets.
 2. Upload the files from the update zip.
-3. Open **Admin › USD ⇄ PHP exchange › Rate & fees**, set your fees, and press **Refresh now**.
+3. Open **Admin › Currency exchange › Rate & fees**, set your fees, and press **Refresh now**.
 4. Recommended: add an hourly cron in Hostinger (Advanced › Cron Jobs):
    `php /home/<user>/public_html/cron/fx-refresh.php`
 5. The server must be able to reach `api.frankfurter.dev` and `cdn.jsdelivr.net` over HTTPS. Hostinger allows this by default.

@@ -43,8 +43,8 @@ $cashConfig = require __DIR__ . '/config/boracay_cash.php';
 // Live USD/PHP rate and the customer's USD wallet (USD ⇄ PHP exchange). The home screen never waits for the rate API.
 require_once __DIR__ . '/includes/fx.php';
 $fxRate = null; $usdCents = 0;
-try { $fxRate = fx_current($pdo, false); $usdCents = fx_usd_balance($pdo, (int) $user['id']); } catch (Throwable $e) { error_log('Dashboard FX failed: ' . $e->getMessage()); }
-$usdRate = $fxRate ? number_format($fxRate['micro'] / 1000000, 4, '.', '') : ($cashConfig['usd_php_rate'] === null ? '' : (string) $cashConfig['usd_php_rate']);
+try { $fxRate = fx_current($pdo, FX_MAIN, false); $usdCents = fx_usd_balance($pdo, (int) $user['id']); } catch (Throwable $e) { error_log('Dashboard FX failed: ' . $e->getMessage()); }
+$usdRate = $fxRate ? str_replace(',', '', fx_format_rate($fxRate['scaled'], 4)) : ($cashConfig['usd_php_rate'] === null ? '' : (string) $cashConfig['usd_php_rate']);
 $unread = unread_notification_count(user_notifications($pdo, (int) $user['id']));
 $unreadNews = unread_news_count($pdo, (int) $user['id']);
 
@@ -83,7 +83,7 @@ require __DIR__ . '/includes/header.php';
                 <div><small>Your BCash</small><h1 id="boracay-cash-balance">PHP <?= number_format($cashCentavos / 100, 2) ?></h1><span class="hw-unit" id="boracay-cash-note">PHP wallet balance</span></div>
                 <div class="hw-side">
                     <button type="button" class="hw-eye" data-cash-balance-toggle aria-label="Hide BCash balance" title="Hide balance" aria-pressed="false"><span data-icon="eye"></span></button>
-                    <div class="cash-currency hw-currency" role="group" aria-label="Display currency"><button type="button" class="active" data-currency="PHP" aria-pressed="true">PHP</button><button type="button" data-currency="USD" aria-pressed="false">USD</button></div><a class="hw-fx-link" href="bcash-exchange.php">USD ⇄ PHP</a>
+                    <div class="cash-currency hw-currency" role="group" aria-label="Display currency"><button type="button" class="active" data-currency="PHP" aria-pressed="true">PHP</button><button type="button" data-currency="USD" aria-pressed="false">USD</button></div><a class="hw-fx-link" href="bcash-exchange.php">Exchange</a>
                 </div>
             </div>
             <nav class="hw-actions" aria-label="BCash actions">

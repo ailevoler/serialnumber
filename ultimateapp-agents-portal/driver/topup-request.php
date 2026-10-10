@@ -48,4 +48,4 @@ driver_header($label . ' top-up', 'wallet');
     <?php if ($order['mode'] === 'test'): ?><p class="table-meta">Test environment — no real money moves.</p><?php endif; ?>
     <p class="table-meta">Reference <?= e($order['reference']) ?></p>
 </section>
-<?php driver_footer(['../assets/js/qrcode.min.js', 'assets/driver.js?v=4']);
+<?php driver_footer(['../assets/js/qrcode.min.js', 'assets/driver.js?v=5']);

@@ -51,9 +51,17 @@ function settings_schema(): array
         $schema["uride.$v.included_km"] = ['type' => 'decimal', 'min' => 0, 'max' => 50, 'label' => "$label km included in base fare"];
         $schema["uride.$v.per_km_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 1000000, 'label' => "$label per km"];
         $schema["uride.$v.minimum_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 10000000, 'label' => "$label minimum fare"];
+        $schema["uride.$v.rental_enabled"] = ['type' => 'bool', 'label' => "$label rentals enabled"];
+        $schema["uride.$v.rental_hour_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 10000000, 'label' => "$label rental per hour"];
+        $schema["uride.$v.rental_min_hours"] = ['type' => 'int', 'min' => 1, 'max' => 24, 'label' => "$label rental minimum hours"];
+        $schema["uride.$v.rental_day_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 100000000, 'label' => "$label whole-day rental"];
     }
     $schema += [
         'uride.enabled' => ['type' => 'bool', 'label' => 'URide bookings enabled'],
+        'uride.rental_enabled' => ['type' => 'bool', 'label' => 'Rent a Ride enabled'],
+        'uride.rental_day_hours' => ['type' => 'int', 'min' => 4, 'max' => 24, 'label' => 'Hours in a whole-day rental'],
+        'uride.rental_max_hours' => ['type' => 'int', 'min' => 1, 'max' => 24, 'label' => 'Longest hourly rental'],
+        'uride.rental_schedule_days' => ['type' => 'int', 'min' => 0, 'max' => 30, 'label' => 'Book rentals up to (days ahead)'],
         'uride.credits_enabled' => ['type' => 'bool', 'label' => 'Pay rides with Credits'],
         'uride.cash_enabled' => ['type' => 'bool', 'label' => 'Pay rides with cash'],
         'uride.road_factor' => ['type' => 'decimal', 'min' => 1, 'max' => 3, 'label' => 'Road distance factor'],

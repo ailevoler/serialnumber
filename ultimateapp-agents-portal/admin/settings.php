@@ -68,6 +68,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setting_save($pdo, "uride.$v.minimum_centavos", $pesoToCentavos(p("{$v}_minimum", '0'), 'Minimum fare'), $aid);
             }
             foreach (['enabled', 'credits_enabled', 'cash_enabled'] as $k) setting_save($pdo, "uride.$k", p($k) === '1' ? '1' : '0', $aid);
+            // Rent a Ride (vehicle with driver by the hour / whole day)
+            foreach (array_keys(uride_vehicles()) as $v) {
+                setting_save($pdo, "uride.$v.rental_enabled", p("{$v}_rental_enabled") === '1' ? '1' : '0', $aid);
+                setting_save($pdo, "uride.$v.rental_hour_centavos", $pesoToCentavos(p("{$v}_rental_hour", '0'), 'Rental per hour'), $aid);
+                setting_save($pdo, "uride.$v.rental_min_hours", (string) max(1, (int) p("{$v}_rental_min", '1')), $aid);
+                setting_save($pdo, "uride.$v.rental_day_centavos", $pesoToCentavos(p("{$v}_rental_day", '0'), 'Whole-day rental'), $aid);
+            }
+            setting_save($pdo, 'uride.rental_enabled', p('rental_enabled') === '1' ? '1' : '0', $aid);
+            setting_save($pdo, 'uride.rental_day_hours', (string) (int) p('rental_day_hours', '8'), $aid);
+            setting_save($pdo, 'uride.rental_max_hours', (string) (int) p('rental_max_hours', '12'), $aid);
+            setting_save($pdo, 'uride.rental_schedule_days', (string) (int) p('rental_schedule_days', '7'), $aid);
             if (p('credits_enabled') !== '1' && p('cash_enabled') !== '1') throw new InvalidArgumentException('Allow at least one payment method for rides.');
             setting_save($pdo, 'uride.road_factor', trim(p('road_factor', '1.3')), $aid);
             $night = trim(p('night_pct', '0'));
@@ -224,6 +235,26 @@ admin_header('Settings', 'settings');
     <p class="section-title">Example fares with the saved settings (daytime)</p>
     <div class="table-wrap"><table><thead><tr><th>Straight-line distance</th><?php foreach (uride_vehicles() as $veh): ?><th class="num"><?= e($veh['label']) ?></th><?php endforeach; ?></tr></thead><tbody>
     <?php foreach ([0.5, 1, 2, 3, 5] as $km): ?><tr><td><?= $km ?> km <small>≈ <?= $num($km * $us['road_factor']) ?> km road</small></td><?php foreach (array_keys(uride_vehicles()) as $v): $qq = uride_quote($v, $km, 12); ?><td class="num">₱<?= peso($qq['fare']) ?></td><?php endforeach; ?></tr><?php endforeach; ?>
+    </tbody></table></div>
+</section>
+<?php $rs = uride_rental_settings(); ?>
+<section class="card mt"><h2>Rent a Ride <small>vehicle with driver · PHP</small> <?= status_badge($rs['enabled'] ? 'active' : 'disabled') ?></h2>
+    <p class="muted">Customers choose <b>Rent a Ride</b> in URide, pick a vehicle, how long (hours or a whole day) and when to start. The price is upfront: hourly rate × hours (at least the minimum hours), never more than the whole-day price. The same driver commission applies. Drivers see scheduled rentals <?= URIDE_RENTAL_LEAD_MIN ?> minutes before the start.</p>
+    <div class="form-grid">
+        <div class="field"><label for="rental_enabled">Rent a Ride</label><select id="rental_enabled" name="rental_enabled"><option value="1"<?= $rs['enabled'] ? ' selected' : '' ?>>On</option><option value="0"<?= !$rs['enabled'] ? ' selected' : '' ?>>Off</option></select></div>
+        <div class="field"><label for="rental_day_hours">Hours in a whole day</label><input id="rental_day_hours" name="rental_day_hours" type="number" min="4" max="24" value="<?= (int) $rs['day_hours'] ?>"></div>
+        <div class="field"><label for="rental_max_hours">Longest hourly package</label><input id="rental_max_hours" name="rental_max_hours" type="number" min="1" max="24" value="<?= (int) $rs['max_hours'] ?>"></div>
+        <div class="field"><label for="rental_schedule_days">Book up to (days ahead)</label><input id="rental_schedule_days" name="rental_schedule_days" type="number" min="0" max="30" value="<?= (int) $rs['schedule_days'] ?>"><small>0 = only "Now".</small></div>
+    </div>
+    <div class="table-wrap"><table class="fare-matrix"><thead><tr><th>Vehicle</th><th>Rentable</th><th>Per hour</th><th>Minimum hours</th><th>Whole day</th><th>Example: 3 hours</th></tr></thead><tbody>
+    <?php foreach (uride_vehicles() as $v => $veh): $rr = uride_rental_rule($v); $ex = uride_rental_quote($v, '3'); ?>
+        <tr><td><b><?= e($veh['label']) ?></b></td>
+            <td><select name="<?= $v ?>_rental_enabled" aria-label="<?= e($veh['label']) ?> rentable"><option value="1"<?= $rr['enabled'] ? ' selected' : '' ?>>Yes</option><option value="0"<?= !$rr['enabled'] ? ' selected' : '' ?>>No</option></select></td>
+            <td><input type="text" name="<?= $v ?>_rental_hour" inputmode="decimal" value="<?= e($pesoV($rr['hour'])) ?>" aria-label="<?= e($veh['label']) ?> per hour"></td>
+            <td><input type="number" name="<?= $v ?>_rental_min" min="1" max="24" value="<?= (int) $rr['min_hours'] ?>" aria-label="<?= e($veh['label']) ?> minimum hours"></td>
+            <td><input type="text" name="<?= $v ?>_rental_day" inputmode="decimal" value="<?= e($pesoV($rr['day'])) ?>" aria-label="<?= e($veh['label']) ?> whole day"></td>
+            <td class="num">₱<?= peso($ex['fare']) ?><?= $ex['capped'] ? ' <small>day cap</small>' : '' ?></td></tr>
+    <?php endforeach; ?>
     </tbody></table></div>
 </section>
 <div class="grid half mt">

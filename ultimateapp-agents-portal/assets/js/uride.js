@@ -35,7 +35,7 @@
   function setMode(next) {
     mode = next;
     document.querySelectorAll('[data-map-mode]').forEach(b => b.classList.toggle('active', b.dataset.mapMode === next));
-    say(`Search or tap the map to set ${next === 'pickup' ? 'pick-up' : 'drop-off'}. Drag a pin to fine-tune it.`);
+    say(form.dataset.mode === 'rental' ? 'Search or tap the map to set the pick-up. Drag the pin to fine-tune it.' : `Search or tap the map to set ${next === 'pickup' ? 'pick-up' : 'drop-off'}. Drag a pin to fine-tune it.`);
   }
 
   function closeList(kind) {
@@ -120,6 +120,11 @@
   }
 
   function afterPlaced(kind) {
+    if (isRental()) {
+      if (map) safe(() => { map.panTo(points.pickup || points[kind]); map.setZoom(Math.max(map.getZoom() || 0, 18)); });
+      say('Pick-up is set. Drag the pin to fine-tune it.');
+      return;
+    }
     if (points.pickup && points.dropoff) {
       if (map) safe(() => {
         const bounds = new google.maps.LatLngBounds();
@@ -331,6 +336,70 @@
     setTimeout(() => { if (watchId !== null) { stopWatch(); if (best) finish(true); else say('Could not get a GPS fix. Search or tap the map instead.'); } }, 21000);
   });
 
+  /* ---------- Book a Ride / Rent a Ride */
+  const rentPrices = JSON.parse(form.dataset.rental || '{}');
+  const dayHours = Number(form.dataset.dayHours) || 8;
+  const peso = c => '₱' + (Math.ceil(c / 100)).toLocaleString('en-PH');
+  function isRental() { return form.dataset.mode === 'rental'; }
+  function rentQuote() {
+    const v = selectedVehicle();
+    const pkg = form.querySelector('input[name="rental_hours"]:checked')?.value;
+    const r = rentPrices[v];
+    if (!v || !pkg || !r) return null;
+    if (!r.enabled) return {ok: false, why: 'This vehicle cannot be rented right now. Choose another.'};
+    let hours, billed, fare, capped = false;
+    if (pkg === 'day') { hours = dayHours; billed = hours; fare = r.day; }
+    else { hours = Number(pkg); billed = Math.max(hours, r.min); fare = billed * r.hour; if (r.day > 0 && hours <= dayHours && fare > r.day) { fare = r.day; capped = true; } }
+    if (!(fare > 0)) return {ok: false, why: 'This duration is not available for this vehicle.'};
+    return {ok: true, hours, billed, fare: Math.ceil(fare / 100) * 100, capped, pkg};
+  }
+  function showRent() {
+    const out = document.getElementById('uride-rent-fare'), detail = document.getElementById('uride-rent-detail');
+    if (!out) return;
+    const r = rentQuote();
+    if (!r) { out.textContent = '—'; detail.textContent = 'Choose a vehicle and duration'; return; }
+    if (!r.ok) { out.textContent = 'Not available'; detail.textContent = r.why; return; }
+    out.textContent = peso(r.fare);
+    const v = rentPrices[selectedVehicle()];
+    detail.textContent = r.pkg === 'day' ? `Whole day · ${r.hours} hours with driver`
+      : `${r.hours} hour${r.hours === 1 ? '' : 's'} with driver` + (r.capped ? ' · capped at the whole-day price' : r.billed > r.hours ? ` · minimum ${r.billed} hours` : ` · ${peso(v.hour)}/hr`);
+    const later = form.querySelector('input[name="start_mode"]:checked')?.value === 'later';
+    const when = form.querySelector('[data-rent-when]');
+    if (when) when.textContent = later ? ' 1 hour before the start time' : ' right away';
+  }
+  const texts = {
+    ride: ['Book a ride', 'Choose your pick-up, destination, and vehicle.', 'Request ride', 'e.g. near the blue gate, 2 bags'],
+    rental: ['Rent a ride', 'Hire a vehicle with its driver by the hour or for the whole day.', 'Rent this ride', 'Your plan, e.g. Puka Beach, Mt. Luho, then D\'Mall']
+  };
+  function setTrip(next) {
+    form.dataset.mode = next;
+    const t = texts[next];
+    const title = document.querySelector('[data-mode-title]'), sub = document.querySelector('[data-mode-sub]');
+    if (title) title.textContent = t[0];
+    if (sub) sub.textContent = t[1];
+    const label = form.querySelector('[data-submit-label]');
+    if (label && !form.querySelector('[type="submit"]').disabled) label.textContent = t[2];
+    const note = form.querySelector('[data-note-input]'); if (note) note.placeholder = t[3];
+    inputs.dropoff.required = next === 'ride';
+    closeList('dropoff');
+    if (next === 'rental') {
+      setMode('pickup');
+      if (markers.dropoff) safe(() => { markers.dropoff.map = null; });
+      showRent();
+    } else {
+      if (points.dropoff && map && AdvancedMarkerElement) { const p = points.dropoff, label2 = inputs.dropoff.value; place('dropoff', p, label2); }
+      showQuote(quote);
+    }
+    const url = new URL(location.href);
+    if (next === 'rental') url.searchParams.set('mode', 'rent'); else url.searchParams.delete('mode');
+    history.replaceState(null, '', url);
+  }
+  form.querySelectorAll('input[name="trip_type"]').forEach(r => r.addEventListener('change', () => setTrip(r.value)));
+  form.querySelectorAll('input[name="rental_hours"], input[name="start_mode"], input[name="vehicle_type"]').forEach(r => r.addEventListener('change', showRent));
+  const sched = document.getElementById('uride-scheduled');
+  if (sched) sched.addEventListener('focus', () => { const later = form.querySelector('input[name="start_mode"][value="later"]'); if (later) { later.checked = true; showRent(); } });
+  if (isRental()) setTrip('rental');
+
   /* ---------- Map */
   document.querySelectorAll('[data-map-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mapMode)));
   const satButton = document.querySelector('[data-map-type]');
@@ -359,7 +428,7 @@
         mapId: mapElement.dataset.mapId || 'DEMO_MAP_ID',
         mapTypeControl: false, streetViewControl: false, fullscreenControl: true, clickableIcons: false, gestureHandling: 'greedy'
       });
-      map.addListener('click', event => { if (event.latLng) place(mode, {lat: event.latLng.lat(), lng: event.latLng.lng()}, null); });
+      map.addListener('click', event => { if (event.latLng) place(isRental() ? 'pickup' : mode, {lat: event.latLng.lat(), lng: event.latLng.lng()}, null); });
       // Pins set before the map loaded (from a suggestion) now get their markers.
       for (const kind of ['pickup', 'dropoff']) if (points[kind]) { const p = points[kind]; const label = inputs[kind].value; place(kind, p, label); }
       if (satButton) satButton.hidden = false;
@@ -371,6 +440,15 @@
   }
 
   form.addEventListener('submit', event => {
+    if (isRental()) {
+      if (!points.pickup) { event.preventDefault(); say('Choose a suggestion or tap the map to set the pick-up.'); mapElement.scrollIntoView({behavior: 'smooth', block: 'center'}); return; }
+      const r = rentQuote();
+      if (!r || !r.ok) { event.preventDefault(); say(r ? r.why : 'Choose a vehicle and duration.'); return; }
+      const later = form.querySelector('input[name="start_mode"]:checked')?.value === 'later';
+      if (later && !document.getElementById('uride-scheduled').value) { event.preventDefault(); say('Choose the date and time the rental starts.'); return; }
+      form.querySelector('[type="submit"]').disabled = true;
+      return;
+    }
     if (!points.pickup || !points.dropoff) {
       event.preventDefault();
       say('Choose a suggestion or place both pins on the map.');

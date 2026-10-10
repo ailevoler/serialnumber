@@ -163,7 +163,8 @@
       f('pickup').textContent = r.pickup;
       f('dropoff').textContent = r.dropoff;
       f('passenger').textContent = r.passenger;
-      f('trip').textContent = r.trip_km.toFixed(1) + ' km trip';
+      f('trip').textContent = r.trip_type === 'rental' ? r.trip_label + (r.starts ? ' · starts ' + r.starts : '') : r.trip_km.toFixed(1) + ' km trip';
+      if (r.trip_type === 'rental') n.querySelector('.d-req').classList.add('rental');
       f('net').textContent = 'You earn ₱' + r.net;
       if (r.note) { f('note').hidden = false; f('note').textContent = 'Note: ' + r.note; }
       n.querySelectorAll('input[name="csrf"]').forEach(i => { i.value = csrf; });

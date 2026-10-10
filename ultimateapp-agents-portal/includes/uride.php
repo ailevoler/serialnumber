@@ -108,6 +108,155 @@ function uride_quote(string $vehicle, float $directKm, ?int $hour = null): array
     ];
 }
 
+/* ---------------------------------------------------------------- Rent a Ride (vehicle with driver, by the hour) */
+
+/** Requests scheduled more than this many minutes ahead are "upcoming": drivers do not see them yet. */
+const URIDE_RENTAL_LEAD_MIN = 60;
+
+function uride_rental_settings(): array
+{
+    return [
+        'enabled' => setting('uride.rental_enabled', '1') === '1',
+        'day_hours' => setting_int('uride.rental_day_hours', 8),
+        'max_hours' => setting_int('uride.rental_max_hours', 12),
+        'schedule_days' => setting_int('uride.rental_schedule_days', 7),
+    ];
+}
+
+function uride_rental_rule(string $vehicle): array
+{
+    if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
+    $d = ['e_trike' => [50000, 1, 300000], 'motorcycle' => [30000, 1, 180000], 'car' => [80000, 2, 500000]][$vehicle];
+    return [
+        'enabled' => setting("uride.$vehicle.rental_enabled", '1') === '1',
+        'hour' => setting_int("uride.$vehicle.rental_hour_centavos", $d[0]),
+        'min_hours' => max(1, setting_int("uride.$vehicle.rental_min_hours", $d[1])),
+        'day' => setting_int("uride.$vehicle.rental_day_centavos", $d[2]),
+    ];
+}
+
+/** Durations customers can pick: hour packages up to the Admin maximum, plus a whole day. */
+function uride_rental_packages(): array
+{
+    $s = uride_rental_settings();
+    $out = [];
+    foreach ([1, 2, 3, 4, 6, 8, 10, 12] as $h) if ($h <= $s['max_hours']) $out[(string) $h] = $h . ($h === 1 ? ' hour' : ' hours');
+    $out['day'] = 'Whole day (' . $s['day_hours'] . ' h)';
+    return $out;
+}
+
+/**
+ * Upfront rental price: hourly rate x hours (at least the vehicle's minimum hours). An hourly package never
+ * costs more than the whole-day price. Rounded up to the peso.
+ */
+function uride_rental_quote(string $vehicle, string $package): array
+{
+    $s = uride_rental_settings();
+    $rule = uride_rental_rule($vehicle);
+    if (!isset(uride_rental_packages()[$package])) throw new InvalidArgumentException('Choose how long you need the ride.');
+    $capped = false;
+    if ($package === 'day') {
+        $hours = $s['day_hours']; $billed = $hours; $fare = $rule['day'];
+    } else {
+        $hours = (int) $package; $billed = max($hours, $rule['min_hours']); $fare = $billed * $rule['hour'];
+        if ($rule['day'] > 0 && $hours <= $s['day_hours'] && $fare > $rule['day']) { $fare = $rule['day']; $capped = true; }
+    }
+    $fare = (int) (ceil($fare / 100) * 100);
+    return ['vehicle' => $vehicle, 'enabled' => $s['enabled'] && $rule['enabled'] && $fare > 0, 'package' => $package, 'hours' => $hours, 'billed_hours' => $billed,
+        'hour_rate' => $rule['hour'], 'day_rate' => $rule['day'], 'capped' => $capped, 'fare' => $fare];
+}
+
+function uride_rental_label(array $ride): string
+{
+    if (($ride['trip_type'] ?? 'ride') !== 'rental') return '';
+    return ($ride['rental_package'] ?? '') === 'day' ? 'Whole-day rental (' . (int) $ride['rental_hours'] . ' h)' : (int) $ride['rental_hours'] . '-hour rental';
+}
+
+/** A request scheduled far enough ahead that drivers cannot see it yet. */
+function uride_is_upcoming(array $ride): bool
+{
+    return $ride['status'] === 'requested' && !empty($ride['scheduled_at']) && strtotime((string) $ride['scheduled_at']) > time() + URIDE_RENTAL_LEAD_MIN * 60;
+}
+
+/** SQL for "has a ride in progress now" (upcoming scheduled rentals do not count). */
+function uride_active_sql(string $alias = ''): string
+{
+    $a = $alias !== '' ? $alias . '.' : '';
+    return "{$a}status IN ('requested','accepted','arrived','in_progress') AND NOT ({$a}status = 'requested' AND {$a}scheduled_at IS NOT NULL AND {$a}scheduled_at > NOW() + INTERVAL " . URIDE_RENTAL_LEAD_MIN . " MINUTE)";
+}
+
+/** Books a rental (vehicle with driver for some hours). Credits rentals hold the price now. Returns the code. */
+function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey): string
+{
+    $s = uride_settings();
+    $rs = uride_rental_settings();
+    if (!$s['enabled'] || !$rs['enabled']) throw new InvalidArgumentException('Rent a Ride is not available right now.');
+    if (!preg_match('/^[a-f0-9]{64}$/D', $requestKey)) throw new InvalidArgumentException('Invalid booking request.');
+    $vehicle = (string) ($in['vehicle_type'] ?? '');
+    $payment = (string) ($in['payment_method'] ?? '');
+    $package = (string) ($in['rental_hours'] ?? '');
+    $pickup = mb_substr(trim((string) ($in['pickup_address'] ?? '')), 0, 255);
+    $note = mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($in['passenger_note'] ?? '')) ?? ''), 0, 200);
+    if (!isset(uride_vehicles()[$vehicle]) || !in_array($payment, ['credits', 'cash'], true) || mb_strlen($pickup) < 3) {
+        throw new InvalidArgumentException('Choose the pick-up location, vehicle, duration and payment method.');
+    }
+    if (!$s[$payment . '_enabled']) throw new InvalidArgumentException(($payment === 'credits' ? 'Credits' : 'Cash') . ' payment is turned off right now.');
+    [$lat, $lng] = uride_coordinates($in, 'pickup');
+    $quote = uride_rental_quote($vehicle, $package);
+    if (!$quote['enabled']) throw new InvalidArgumentException(uride_vehicles()[$vehicle]['label'] . ' rentals are not available right now.');
+    $scheduled = null;
+    if (($in['start_mode'] ?? 'now') === 'later') {
+        $raw = (string) ($in['scheduled_at'] ?? '');
+        $ts = preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/D', $raw) ? strtotime(str_replace('T', ' ', $raw)) : false;
+        if ($ts === false) throw new InvalidArgumentException('Choose the date and time the rental starts.');
+        if ($ts < time() + 30 * 60) throw new InvalidArgumentException('Schedule at least 30 minutes from now, or choose Now.');
+        if ($ts > time() + $rs['schedule_days'] * 86400) throw new InvalidArgumentException('Rentals can be booked up to ' . $rs['schedule_days'] . ' days ahead.');
+        $scheduled = date('Y-m-d H:i:00', $ts);
+    }
+    $fare = $quote['fare'];
+    $label = $package === 'day' ? 'Whole-day rental (' . $quote['hours'] . ' h)' : $quote['hours'] . '-hour rental';
+
+    return uride_tx($pdo, function () use ($pdo, $userId, $requestKey, $vehicle, $payment, $pickup, $note, $lat, $lng, $quote, $fare, $s, $scheduled, $label, $package) {
+        $stmt = $pdo->prepare('SELECT id, credits, status FROM users WHERE id = ? FOR UPDATE');
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        if (!$user || ($user['status'] ?? 'active') !== 'active') throw new InvalidArgumentException('Your account cannot book right now.');
+        $stmt = $pdo->prepare('SELECT code FROM uride_requests WHERE request_key = ? AND user_id = ?');
+        $stmt->execute([$requestKey, $userId]);
+        if ($existing = $stmt->fetchColumn()) return (string) $existing;
+        if ($scheduled === null) {
+            $stmt = $pdo->prepare('SELECT id FROM uride_requests WHERE user_id = ? AND ' . uride_active_sql() . ' LIMIT 1');
+            $stmt->execute([$userId]);
+            if ($stmt->fetch()) throw new InvalidArgumentException('You already have an active ride. Finish or cancel it before renting.');
+        } else {
+            $stmt = $pdo->prepare("SELECT id FROM uride_requests WHERE user_id = ? AND trip_type = 'rental' AND status = 'requested' AND scheduled_at IS NOT NULL AND scheduled_at > NOW() LIMIT 1");
+            $stmt->execute([$userId]);
+            if ($stmt->fetch()) throw new InvalidArgumentException('You already have an upcoming rental. Cancel it first to book another.');
+        }
+        $code = 'UR-' . strtoupper(bin2hex(random_bytes(6)));
+        $held = 0;
+        if ($payment === 'credits') {
+            $stmt = $pdo->prepare('UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?');
+            $stmt->execute([centavos_to_decimal($fare), $userId, centavos_to_decimal($fare)]);
+            if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Not enough Credits for this rental (PHP ' . peso($fare) . '). Buy Credits or choose cash.');
+            $held = $fare;
+        }
+        $expires = $scheduled !== null ? date('Y-m-d H:i:s', strtotime($scheduled) + 15 * 60) : date('Y-m-d H:i:s', time() + 60 * max(10, 2 * $s['timeout_min']));
+        $breakdown = json_encode(['rental' => true, 'package' => $package, 'hours' => $quote['hours'], 'billed_hours' => $quote['billed_hours'], 'hour_rate' => $quote['hour_rate'], 'day_rate' => $quote['day_rate'], 'capped' => $quote['capped']]);
+        $pdo->prepare("INSERT INTO uride_requests (user_id, request_key, code, trip_type, rental_hours, rental_package, scheduled_at, vehicle_type, pickup_address, pickup_lat, pickup_lng, dropoff_address, dropoff_lat, dropoff_lng, distance_km, road_km, estimated_fare, fare_centavos, fare_breakdown, payment_method, held_centavos, passenger_note, expires_at) VALUES (?, ?, ?, 'rental', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?)")
+            ->execute([$userId, $requestKey, $code, $quote['hours'], $package, $scheduled, $vehicle, $pickup, $lat, $lng, $label . ' · ends back at pick-up', $lat, $lng, centavos_to_decimal($fare), $fare, $breakdown, $payment, $held, $note ?: null, $expires]);
+        if ($held > 0) {
+            $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
+                ->execute([$userId, 'URide rental on hold ' . $code, '-' . centavos_to_decimal($held)]);
+            ledger_post($pdo, $code, 'uride_hold', [
+                ['user_credits:' . $userId, $held, 0, 'Rental held for ' . $code],
+                ['uride_escrow', 0, $held, 'Rental price on hold'],
+            ]);
+        }
+        return $code;
+    });
+}
+
 function uride_commission_for(int $fare): int
 {
     $s = uride_settings();
@@ -431,7 +580,7 @@ function uride_book(PDO $pdo, int $userId, array $in, string $requestKey): strin
         $stmt = $pdo->prepare('SELECT code FROM uride_requests WHERE request_key = ? AND user_id = ?');
         $stmt->execute([$requestKey, $userId]);
         if ($existing = $stmt->fetchColumn()) return (string) $existing;
-        $stmt = $pdo->prepare("SELECT id FROM uride_requests WHERE user_id = ? AND status IN ('requested','accepted','arrived','in_progress') LIMIT 1");
+        $stmt = $pdo->prepare('SELECT id FROM uride_requests WHERE user_id = ? AND ' . uride_active_sql() . ' LIMIT 1');
         $stmt->execute([$userId]);
         if ($stmt->fetch()) throw new InvalidArgumentException('You already have an active ride. Finish or cancel it before booking another.');
         $code = 'UR-' . strtoupper(bin2hex(random_bytes(6)));
@@ -572,9 +721,10 @@ function uride_feed(PDO $pdo, array $driver): array
     $lat = (float) $driver['lat']; $lng = (float) $driver['lng'];
     $dLat = $s['radius_km'] / 111.0;
     $dLng = $s['radius_km'] / max(1.0, 111.0 * cos(deg2rad($lat)));
-    $stmt = $pdo->prepare("SELECT r.id, r.code, r.vehicle_type, r.pickup_address, r.pickup_lat, r.pickup_lng, r.dropoff_address, r.dropoff_lat, r.dropoff_lng, r.road_km, r.fare_centavos, r.payment_method, r.passenger_note, r.expires_at, r.created_at, u.full_name
+    $stmt = $pdo->prepare("SELECT r.id, r.code, r.trip_type, r.rental_hours, r.rental_package, r.scheduled_at, r.vehicle_type, r.pickup_address, r.pickup_lat, r.pickup_lng, r.dropoff_address, r.dropoff_lat, r.dropoff_lng, r.road_km, r.fare_centavos, r.payment_method, r.passenger_note, r.expires_at, r.created_at, u.full_name
         FROM uride_requests r JOIN users u ON u.id = r.user_id
         WHERE r.status = 'requested' AND r.vehicle_type = ? AND r.expires_at > NOW()
+          AND (r.scheduled_at IS NULL OR r.scheduled_at <= NOW() + INTERVAL " . URIDE_RENTAL_LEAD_MIN . " MINUTE)
           AND r.pickup_lat BETWEEN ? AND ? AND r.pickup_lng BETWEEN ? AND ?
           AND NOT EXISTS (SELECT 1 FROM uride_ride_skips k WHERE k.ride_id = r.id AND k.driver_id = ?)
         ORDER BY r.created_at LIMIT 30");
@@ -590,6 +740,8 @@ function uride_feed(PDO $pdo, array $driver): array
             'pickup' => $r['pickup_address'], 'dropoff' => $r['dropoff_address'], 'pickup_km' => $away, 'trip_km' => (float) $r['road_km'],
             'fare' => peso($fare), 'commission' => peso($commission), 'net' => peso($fare - $commission),
             'payment' => $r['payment_method'], 'note' => $r['passenger_note'], 'expires_in' => max(0, strtotime((string) $r['expires_at']) - time()),
+            'trip_type' => $r['trip_type'] ?? 'ride', 'trip_label' => uride_rental_label($r),
+            'starts' => !empty($r['scheduled_at']) ? date('g:i A', strtotime((string) $r['scheduled_at'])) : null,
         ];
     }
     usort($out, static fn($a, $b) => $a['pickup_km'] <=> $b['pickup_km']);
@@ -605,6 +757,7 @@ function uride_accept(PDO $pdo, int $driverId, int $rideId): array
         if (uride_driver_active_ride($pdo, $driverId)) throw new InvalidArgumentException('Finish your current ride first.');
         $ride = uride_lock_ride($pdo, $rideId);
         if ($ride['status'] !== 'requested' || strtotime((string) $ride['expires_at']) <= time()) throw new InvalidArgumentException('Sorry, this ride was taken by another driver or is no longer available.');
+        if (uride_is_upcoming($ride)) throw new InvalidArgumentException('This rental starts later. It opens to drivers ' . URIDE_RENTAL_LEAD_MIN . ' minutes before.');
         if ($ride['vehicle_type'] !== $driver['vehicle_type']) throw new InvalidArgumentException('This request is for a different vehicle type.');
         $s = uride_settings();
         $away = uride_distance((float) $driver['lat'], (float) $driver['lng'], (float) $ride['pickup_lat'], (float) $ride['pickup_lng']);
@@ -644,8 +797,10 @@ function uride_driver_action(PDO $pdo, int $driverId, int $rideId, string $actio
             case 'release':
                 if (!in_array($ride['status'], ['accepted', 'arrived'], true)) throw new InvalidArgumentException('A trip in progress cannot be given back.');
                 $timeout = uride_settings()['timeout_min'];
+                $until = time() + 60 * $timeout;
+                if (!empty($ride['scheduled_at'])) $until = max($until, strtotime((string) $ride['scheduled_at']) + 15 * 60);
                 $pdo->prepare("UPDATE uride_requests SET status = 'requested', driver_id = NULL, accepted_at = NULL, arrived_at = NULL, commission_centavos = NULL, expires_at = ? WHERE id = ?")
-                    ->execute([date('Y-m-d H:i:s', time() + 60 * $timeout), $rideId]);
+                    ->execute([date('Y-m-d H:i:s', $until), $rideId]);
                 uride_skip($pdo, $driverId, $rideId);
                 break;
             case 'complete':

@@ -86,3 +86,25 @@
 @keyframes uride-pulse{50%{box-shadow:0 0 0 6px #1a73e822}}
 @media (prefers-reduced-motion:reduce){#uride-locate.busy{animation:none}}
 #uride-map>p{padding:0 24px;text-align:center;line-height:1.5}
+/* Book a Ride / Rent a Ride */
+.uride-form[data-mode="ride"] .rent-only,.uride-form[data-mode="rental"] .ride-only{display:none!important}
+.uride-modes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 14px;padding:4px;border:1px solid #e0e3e7;border-radius:12px;background:#f4f5f6}
+.uride-modes label{position:relative;cursor:pointer}
+.uride-modes input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.uride-modes span{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 6px;border-radius:9px;color:#5d636a;text-align:center}
+.uride-modes b{font-size:14px;font-weight:700}
+.uride-modes small{font-size:10.5px;font-weight:500;color:inherit;opacity:.85}
+.uride-modes input:checked+span{background:#17191b;color:#fff;box-shadow:0 2px 6px #0002}
+.uride-modes input:focus-visible+span{outline:2px solid #17191b;outline-offset:2px}
+.uride-rental{margin:14px 0 4px}
+.uride-rental h3{margin:12px 0 8px}
+.uride-hours{display:flex;flex-wrap:wrap;gap:6px}
+.uride-hours label,.uride-start label{position:relative;cursor:pointer}
+.uride-hours input,.uride-start input[type=radio]{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.uride-hours span,.uride-start label span{display:block;padding:8px 12px;border:1px solid #dfe2e6;border-radius:99px;background:#fff;color:#2b2f33;font-size:12.5px;font-weight:600;white-space:nowrap}
+.uride-hours input:checked+span,.uride-start input:checked+span{background:#17191b;border-color:#17191b;color:#fff}
+.uride-hours input:focus-visible+span,.uride-start input:focus-visible+span{outline:2px solid #17191b;outline-offset:2px}
+.uride-start{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.uride-start input[type=datetime-local]{flex:1;min-width:180px;height:38px;padding:0 10px;border:1px solid #dfe2e6;border-radius:10px;font:inherit;font-size:13px;color:#17191b}
+.uride-form[data-mode="rental"] .uride-locations{margin-top:2px}
+.uride-active.upcoming{background:#f2f7ff;border-color:#c9dcf7}

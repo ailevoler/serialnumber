@@ -147,4 +147,4 @@ driver_header('Account', 'account');
 
 <form method="post" action="logout.php" class="d-logout"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><button class="btn ghost" type="submit"><?= driver_icon('logout') ?> Sign out</button></form>
 <p class="table-meta d-help">Need help? Email or message Ultimate App support with your driver code <?= e($driver['code']) ?>.</p>
-<?php driver_footer(['assets/driver.js?v=4']);
+<?php driver_footer(['assets/driver.js?v=5']);

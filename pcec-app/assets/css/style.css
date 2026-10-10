@@ -1146,3 +1146,64 @@ a.giving-row:hover { background: #f4f7fd; }
 .fee-breakdown p { margin: 6px 0 0; font-size: .76rem; color: var(--muted); }
 .fee-proc { color: #3d4a64 !important; }
 .admin-item-amt small { font-size: .74rem; }
+
+/* =====================================================================
+   PWA install page
+   ===================================================================== */
+.is-standalone .hide-standalone { display: none !important; }
+.install-link { text-align: center; margin: 14px 0 0; }
+.install-link a { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: .9rem; color: var(--primary); }
+.install-link .icon { width: 18px; height: 18px; }
+.install-body { background: var(--bg); }
+.install-wrap { min-height: 100vh; display: flex; flex-direction: column; }
+.install-hero {
+  color: #fff; text-align: center; padding: calc(14px + env(safe-area-inset-top, 0px)) 20px 74px;
+  background: linear-gradient(180deg, rgba(8, 30, 82, .6), rgba(8, 30, 82, .35) 60%, rgba(8,30,82,.2)), url("../img/hero.svg") center 70% / cover;
+}
+.install-hero .auth-top-bar { margin-bottom: 6px; }
+.install-icon { width: 112px; height: 112px; border-radius: 26px; margin: 4px auto 16px; display: block; box-shadow: 0 16px 40px rgba(0, 10, 40, .45); }
+.install-hero h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -.02em; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
+.install-hero > p { margin: 6px 0 14px; opacity: .92; }
+.install-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.install-badges span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 999px; background: rgba(255,255,255,.16); backdrop-filter: blur(6px); font-size: .8rem; font-weight: 600; }
+.install-badges .icon { width: 15px; height: 15px; color: #3ddc84; stroke-width: 3; }
+.install-card {
+  flex: 1; width: 100%; max-width: 620px; margin: -44px auto 0; position: relative; background: #fff;
+  border-radius: 28px 28px 0 0; padding: 22px 20px calc(28px + var(--safe-b)); box-shadow: 0 -8px 30px rgba(8, 28, 72, .08);
+}
+.install-state { margin-bottom: 18px; }
+.install-note { text-align: center; color: var(--muted); font-size: .86rem; margin: 10px 0 0; }
+.install-done { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px; display: grid; place-items: center; background: #e6f7ec; color: #158a44; }
+.install-done .icon { width: 34px; height: 34px; stroke-width: 3; }
+.install-state h2 { text-align: center; font-size: 1.3rem; color: var(--navy); }
+.install-state > p { text-align: center; margin: 6px 0 16px; }
+.install-tabs span { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .84rem; }
+.install-tabs .icon { width: 16px; height: 16px; }
+.install-steps h2, .install-why h2 { font-size: 1.15rem; color: var(--navy); margin: 4px 0 12px; }
+.install-steps ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.install-steps li { display: flex; gap: 14px; align-items: flex-start; padding: 14px; border-radius: 16px; background: var(--field); }
+.step-n { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: #fff; font-weight: 800; }
+.install-steps li > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.install-steps strong { font-size: .96rem; }
+.install-steps small { color: var(--muted); font-size: .84rem; line-height: 1.45; }
+.install-steps b { color: var(--text); }
+.kbd { display: inline-block; padding: 0 6px; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
+.inline-ic { width: 18px; height: 18px; vertical-align: -4px; color: var(--primary); }
+.install-share { margin-top: 14px; padding: 14px; border-radius: 16px; border: 1.5px dashed var(--line); }
+.install-share p { margin: 0 0 4px; font-size: .9rem; }
+.install-why { margin-top: 22px; }
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.why-grid > div { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 16px; border: 1px solid var(--line); }
+.why-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 4px; }
+.why-ic .icon { width: 22px; height: 22px; }
+.why-grid strong { font-size: .92rem; }
+.why-grid small { color: var(--muted); font-size: .8rem; line-height: 1.35; }
+.install-continue { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 22px; font-weight: 600; color: var(--primary); }
+.install-continue .icon { width: 18px; height: 18px; }
+@media (min-width: 768px) {
+  .install-body { background: linear-gradient(180deg, rgba(8, 26, 72, .25), rgba(8, 26, 72, .45)), url("../img/hero.svg") center / cover fixed; background-color: #0b2a6b; }
+  .install-hero { background: none; padding-bottom: 30px; }
+  .install-card { flex: none; margin: 0 auto 48px; border-radius: 28px; padding: 28px 34px; box-shadow: var(--shadow-lg); }
+  .why-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.install-wrap { position: relative; z-index: 1; }

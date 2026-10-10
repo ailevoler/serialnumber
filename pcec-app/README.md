@@ -50,6 +50,13 @@ cd pcec-app && php -S localhost:8080
 | `dsantos`, `mreyes`, `jlim` | leader |
 | `gracev` | member |
 
+## Install as an app (PWA)
+Share **`https://your-domain/install.php`**. It is a separate public page that shows the right steps for Android, iPhone/iPad and computers, and has an **Install App** button where the browser supports it.
+- **Files:** `manifest.json` (name, colors, icons, shortcuts), `sw.js` (service worker), `offline.html` and `assets/icons/`.
+- **Caching:** the service worker caches styles, scripts and images only. Pages with personal data are never cached. When there is no connection, an offline page is shown.
+- **HTTPS required:** the site must be on HTTPS (localhost is fine for testing).
+- **Updates:** after changing `sw.js`, bump `VERSION` inside it so installed apps pick up the change.
+
 ## Giving & PayMongo
 1. Log in as an admin and open **Admin → PayMongo & Giving**.
 2. Paste your keys from **dashboard.paymongo.com → Developers → API Keys**. Start in **Test mode** with `pk_test_…` / `sk_test_…`. Secret keys are stored encrypted with `APP_KEY` (or an auto-generated `config/app.key`, so keep that file when you move servers).

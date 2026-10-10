@@ -587,6 +587,47 @@
     }));
   });
 
+  /* ---------- PWA: service worker + install ---------- */
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (isStandalone) document.documentElement.classList.add('is-standalone');
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register(`${BASE}/sw.js`).catch(() => {}); });
+  }
+  const ua = navigator.userAgent;
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/i.test(ua);
+  let deferredPrompt = null;
+  const showState = (name) => $$('[data-pwa-state]').forEach((el) => { el.hidden = el.dataset.pwaState !== name; });
+
+  // Install page: choose the instructions that match this device.
+  const platformRadios = $$('input[name="platform"]');
+  if (platformRadios.length) {
+    const showPlatform = (p) => {
+      platformRadios.forEach((r) => { r.checked = r.value === p; });
+      $$('.install-steps').forEach((s) => { s.hidden = s.dataset.platform !== p; });
+    };
+    platformRadios.forEach((r) => r.addEventListener('change', () => showPlatform(r.value)));
+    showPlatform(isIOS ? 'ios' : isAndroid ? 'android' : 'desktop');
+    $$('[data-device-word]').forEach((el) => { el.textContent = isAndroid || isIOS ? 'home screen' : 'desktop and app list'; });
+    if (isStandalone) showState('installed');
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (!isStandalone) showState('ready');
+    $$('[data-pwa-install]').forEach((b) => { b.hidden = false; });
+  });
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-pwa-install]');
+    if (!btn || !deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if (choice.outcome === 'accepted') showState('installed');
+  });
+  window.addEventListener('appinstalled', () => { deferredPrompt = null; showState('installed'); toast('PCEC app installed 🎉'); });
+
   /* ---------- Auto-hide flash alerts ---------- */
   $$('.content > .alert-success').forEach((a) => setTimeout(() => { a.style.transition = 'opacity .4s'; a.style.opacity = 0; setTimeout(() => a.remove(), 400); }, 4000));
 })();

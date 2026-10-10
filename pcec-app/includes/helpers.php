@@ -265,3 +265,25 @@ function wants_json(): bool
 {
     return str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
 }
+
+/** URL to a static file with a version stamp so browsers and the service worker pick up changes. */
+function asset(string $path): string
+{
+    $file = __DIR__ . '/../' . ltrim($path, '/');
+    return url($path) . (is_file($file) ? '?v=' . filemtime($file) : '');
+}
+
+/** <head> tags that make every page installable as a PWA. */
+function pwa_head(): string
+{
+    return '<link rel="manifest" href="' . e(url('manifest.json')) . '">'
+        . '<meta name="base-url" content="' . e(BASE_URL) . '">'
+        . '<link rel="icon" href="' . e(url('assets/img/favicon.svg')) . '" type="image/svg+xml">'
+        . '<link rel="icon" href="' . e(url('assets/icons/favicon-32.png')) . '" type="image/png" sizes="32x32">'
+        . '<link rel="apple-touch-icon" href="' . e(url('assets/icons/apple-touch-icon.png')) . '">'
+        . '<meta name="mobile-web-app-capable" content="yes">'
+        . '<meta name="apple-mobile-web-app-capable" content="yes">'
+        . '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
+        . '<meta name="apple-mobile-web-app-title" content="PCEC">'
+        . '<meta name="application-name" content="PCEC">';
+}

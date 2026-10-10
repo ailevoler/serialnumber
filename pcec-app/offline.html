@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b2a6b">
+<title>Offline · PCEC</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; font-family: Inter, "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    color: #fff; text-align: center; background: linear-gradient(180deg, rgba(8,30,82,.55), rgba(8,30,82,.9)), url("assets/img/hero.svg") center / cover, #0b2a6b; }
+  .card { max-width: 380px; width: 100%; padding: 32px 26px; border-radius: 26px; background: rgba(6, 22, 66, .78); border: 1px solid rgba(120,170,255,.4); box-shadow: 0 20px 50px rgba(0,0,0,.35); }
+  img { width: 84px; height: 84px; border-radius: 20px; margin-bottom: 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; }
+  p { margin: 0 0 22px; opacity: .88; line-height: 1.5; }
+  button { width: 100%; height: 50px; border: 0; border-radius: 14px; font: inherit; font-weight: 700; font-size: 1rem; color: #fff; cursor: pointer;
+    background: linear-gradient(90deg, #1677ff, #12a8d8 55%, #3ddc84); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img src="assets/icons/icon-192.png" alt="PCEC">
+    <h1>You're offline</h1>
+    <p>Please check your internet connection. The PCEC app will reload as soon as you're back online.</p>
+    <button onclick="location.reload()">Try Again</button>
+  </div>
+  <script>addEventListener('online', () => location.reload());</script>
+</body>
+</html>

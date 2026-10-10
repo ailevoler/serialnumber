@@ -36,12 +36,11 @@ if (is_admin()) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b2a6b">
 <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
-<meta name="base-url" content="<?= e(BASE_URL) ?>">
 <title><?= e(t($pageTitle)) ?> · PCEC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
-<link rel="icon" href="<?= e(url('assets/img/favicon.svg')) ?>" type="image/svg+xml">
+<link rel="stylesheet" href="<?= e(asset('assets/css/style.css')) ?>">
+<?= pwa_head() ?>
 </head>
 <body class="app-body<?= $hero ? ' has-hero' : '' ?>">
 

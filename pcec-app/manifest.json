@@ -1,0 +1,24 @@
+{
+  "id": "./",
+  "name": "PCEC Community Platform",
+  "short_name": "PCEC",
+  "description": "Philippine Council of Evangelical Churches — connect, pray, give and grow together.",
+  "lang": "en-PH",
+  "start_url": "./index.php?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b2a6b",
+  "theme_color": "#0b2a6b",
+  "categories": ["social", "lifestyle"],
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Give", "short_name": "Give", "url": "./give.php?source=pwa", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Events", "short_name": "Events", "url": "./events.php?source=pwa", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Prayer Requests", "short_name": "Prayer", "url": "./prayer.php?source=pwa", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Chat", "short_name": "Chat", "url": "./chat.php?source=pwa", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

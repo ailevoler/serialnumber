@@ -42,13 +42,14 @@
       <a href="<?= e(url('notifications.php')) ?>"><?= icon('bell') ?><?= e(t('Notifications')) ?></a>
       <?php if (is_admin()): ?><a href="<?= e(url('admin/index.php')) ?>"><?= icon('settings') ?>Admin</a><?php endif; ?>
       <a href="<?= e(url('profile.php')) ?>"><?= icon('user') ?><?= e(t('Profile')) ?></a>
+      <a href="<?= e(url('install.php')) ?>" class="hide-standalone"><?= icon('download') ?>Install App</a>
       <a href="<?= e(url('logout.php')) ?>"><?= icon('logout') ?><?= e(t('Log Out')) ?></a>
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="<?= e(url('assets/js/app.js')) ?>"></script>
+<script src="<?= e(asset('assets/js/app.js')) ?>"></script>
 <?php if (!empty($pageScript)): ?><script><?= $pageScript ?></script><?php endif; ?>
 </body>
 </html>

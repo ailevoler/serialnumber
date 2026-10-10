@@ -11,8 +11,8 @@ function auth_head(string $title, string $bodyClass = ''): void
 <title><?= e($title) ?> · PCEC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
-<link rel="icon" href="<?= e(url('assets/img/favicon.svg')) ?>" type="image/svg+xml">
+<link rel="stylesheet" href="<?= e(asset('assets/css/style.css')) ?>">
+<?= pwa_head() ?>
 </head>
 <body class="auth-body <?= e($bodyClass) ?>">
 <?php }
@@ -35,7 +35,7 @@ function auth_flashes(): void
 
 function auth_foot(): void
 { ?>
-<script src="<?= e(url('assets/js/app.js')) ?>"></script>
+<script src="<?= e(asset('assets/js/app.js')) ?>"></script>
 </body>
 </html>
 <?php }

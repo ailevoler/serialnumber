@@ -55,10 +55,18 @@ function settings_schema(): array
         $schema["uride.$v.rental_hour_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 10000000, 'label' => "$label rental per hour"];
         $schema["uride.$v.rental_min_hours"] = ['type' => 'int', 'min' => 1, 'max' => 24, 'label' => "$label rental minimum hours"];
         $schema["uride.$v.rental_day_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 100000000, 'label' => "$label whole-day rental"];
+        $schema["uride.$v.self_enabled"] = ['type' => 'bool', 'label' => "$label self-drive enabled"];
+        $schema["uride.$v.self_hour_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 10000000, 'label' => "$label self-drive per hour"];
+        $schema["uride.$v.self_min_hours"] = ['type' => 'int', 'min' => 1, 'max' => 24, 'label' => "$label self-drive minimum hours"];
+        $schema["uride.$v.self_day_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 100000000, 'label' => "$label self-drive whole day"];
+        $schema["uride.$v.self_deposit_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 100000000, 'label' => "$label self-drive deposit"];
     }
     $schema += [
         'uride.enabled' => ['type' => 'bool', 'label' => 'URide bookings enabled'],
         'uride.rental_enabled' => ['type' => 'bool', 'label' => 'Rent a Ride enabled'],
+        'uride.self_drive_enabled' => ['type' => 'bool', 'label' => 'Self-drive rentals enabled'],
+        'uride.self_drive_kyc' => ['type' => 'bool', 'label' => 'Self-drive needs a verified ID (KYC)'],
+        'uride.self_drive_grace_min' => ['type' => 'int', 'min' => 0, 'max' => 120, 'label' => 'Late return grace (minutes)'],
         'uride.rental_day_hours' => ['type' => 'int', 'min' => 4, 'max' => 24, 'label' => 'Hours in a whole-day rental'],
         'uride.rental_max_hours' => ['type' => 'int', 'min' => 1, 'max' => 24, 'label' => 'Longest hourly rental'],
         'uride.rental_schedule_days' => ['type' => 'int', 'min' => 0, 'max' => 30, 'label' => 'Book rentals up to (days ahead)'],

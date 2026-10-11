@@ -108,3 +108,34 @@
 .uride-start input[type=datetime-local]{flex:1;min-width:180px;height:38px;padding:0 10px;border:1px solid #dfe2e6;border-radius:10px;font:inherit;font-size:13px;color:#17191b}
 .uride-form[data-mode="rental"] .uride-locations{margin-top:2px}
 .uride-active.upcoming{background:#f2f7ff;border-color:#c9dcf7}
+/* Rent a Ride: with driver / self-drive */
+.uride-form[data-rmode="driver"] .self-only,.uride-form[data-rmode="self"] .driver-only{display:none!important}
+.uride-form[data-mode="ride"] .self-only{display:none!important}
+.uride-drive{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.uride-drive label{position:relative;cursor:pointer}
+.uride-drive input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.uride-drive span{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid #dfe2e6;border-radius:12px;background:#fff}
+.uride-drive b{font-size:13.5px;color:#17191b}
+.uride-drive small{font-size:11px;color:#6b7178}
+.uride-drive input:checked+span{border-color:#17191b;box-shadow:inset 0 0 0 1px #17191b;background:#f6f7f8}
+.uride-drive input:focus-visible+span{outline:2px solid #17191b;outline-offset:2px}
+.uride-self{margin-top:10px;padding:12px;border:1px solid #e3e6ea;border-radius:12px;background:#fafbfc}
+.uride-reqs{margin:0 0 10px;padding:0;list-style:none;display:grid;gap:7px;font-size:12.5px;color:#2b2f33}
+.uride-reqs li{display:flex;gap:8px;align-items:flex-start;line-height:1.4}
+.uride-reqs li b{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;color:#fff;background:#9aa0a6}
+.uride-reqs li.ok b{background:#0f8a4f}.uride-reqs li.todo b{background:#d0342c}.uride-reqs li.info b{background:#1a73e8}
+.uride-reqs a{color:#1a5fb4;font-weight:600}
+.uride-terms{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.45;color:#3b4046}
+.uride-terms input{margin-top:3px;width:17px;height:17px;flex:none}
+.uride-payment label.off{opacity:.45}
+.uride-license-card{margin:6px 0 16px;padding:14px;border:1px solid #dfe2e6;border-radius:12px;background:#fafbfc}
+.uride-license-card small{display:block;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#6b7178}
+.uride-license-card strong{display:block;margin-top:3px;font-size:14px;color:#17191b}
+.uride-license-card.approved{border-color:#9fd7b9;background:#ecfbf2}.uride-license-card.rejected{border-color:#f3b4ae;background:#fff3f2}
+.uride-license-form{display:grid;gap:12px}
+.uride-license-form label{display:grid;gap:5px;font-size:12px;font-weight:600;color:#3b4046}
+.uride-license-form input:not([type=checkbox]){height:44px;padding:0 12px;border:1px solid #dfe2e6;border-radius:10px;font:inherit;font-size:14px}
+.uride-license-form input[type=file]{padding:9px 12px;height:auto}
+.uride-license-form fieldset{display:grid;gap:8px;margin:0;padding:10px 12px;border:1px solid #dfe2e6;border-radius:10px}
+.uride-license-form legend{font-size:12px;font-weight:600;color:#3b4046;padding:0 4px}
+.uride-license-form label.check{display:flex;gap:8px;align-items:center;font-weight:500}

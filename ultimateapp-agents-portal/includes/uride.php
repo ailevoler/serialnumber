@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/ledger.php';
 require_once __DIR__ . '/agents.php';
+require_once __DIR__ . '/uride_selfdrive.php';
 
 /**
  * URide: passenger bookings, driver onboarding, nearby broadcast dispatch, fare matrix,
@@ -135,6 +136,26 @@ function uride_rental_rule(string $vehicle): array
     ];
 }
 
+/** Self-drive rates: the customer drives; the owner hands over the vehicle. Includes the security deposit. */
+function uride_self_rule(string $vehicle): array
+{
+    if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
+    $d = ['e_trike' => [35000, 2, 200000, 200000], 'motorcycle' => [20000, 2, 120000, 300000], 'car' => [60000, 4, 350000, 500000]][$vehicle];
+    return [
+        'enabled' => setting('uride.self_drive_enabled', '1') === '1' && setting("uride.$vehicle.self_enabled", '1') === '1',
+        'hour' => setting_int("uride.$vehicle.self_hour_centavos", $d[0]),
+        'min_hours' => max(1, setting_int("uride.$vehicle.self_min_hours", $d[1])),
+        'day' => setting_int("uride.$vehicle.self_day_centavos", $d[2]),
+        'deposit' => setting_int("uride.$vehicle.self_deposit_centavos", $d[3]),
+    ];
+}
+
+/** License class needed: E-Trike and Motorcycle need A/A1 (motorcycle/tricycle); Car needs B. */
+function uride_license_class(string $vehicle): string
+{
+    return $vehicle === 'car' ? 'car' : 'motorcycle';
+}
+
 /** Durations customers can pick: hour packages up to the Admin maximum, plus a whole day. */
 function uride_rental_packages(): array
 {
@@ -149,10 +170,11 @@ function uride_rental_packages(): array
  * Upfront rental price: hourly rate x hours (at least the vehicle's minimum hours). An hourly package never
  * costs more than the whole-day price. Rounded up to the peso.
  */
-function uride_rental_quote(string $vehicle, string $package): array
+function uride_rental_quote(string $vehicle, string $package, string $mode = 'driver'): array
 {
     $s = uride_rental_settings();
-    $rule = uride_rental_rule($vehicle);
+    $self = $mode === 'self';
+    $rule = $self ? uride_self_rule($vehicle) : uride_rental_rule($vehicle);
     if (!isset(uride_rental_packages()[$package])) throw new InvalidArgumentException('Choose how long you need the ride.');
     $capped = false;
     if ($package === 'day') {
@@ -162,14 +184,20 @@ function uride_rental_quote(string $vehicle, string $package): array
         if ($rule['day'] > 0 && $hours <= $s['day_hours'] && $fare > $rule['day']) { $fare = $rule['day']; $capped = true; }
     }
     $fare = (int) (ceil($fare / 100) * 100);
-    return ['vehicle' => $vehicle, 'enabled' => $s['enabled'] && $rule['enabled'] && $fare > 0, 'package' => $package, 'hours' => $hours, 'billed_hours' => $billed,
-        'hour_rate' => $rule['hour'], 'day_rate' => $rule['day'], 'capped' => $capped, 'fare' => $fare];
+    return ['vehicle' => $vehicle, 'mode' => $self ? 'self' : 'driver', 'enabled' => $s['enabled'] && $rule['enabled'] && $fare > 0, 'package' => $package, 'hours' => $hours, 'billed_hours' => $billed,
+        'hour_rate' => $rule['hour'], 'day_rate' => $rule['day'], 'capped' => $capped, 'fare' => $fare, 'deposit' => $self ? $rule['deposit'] : 0];
 }
 
 function uride_rental_label(array $ride): string
 {
     if (($ride['trip_type'] ?? 'ride') !== 'rental') return '';
-    return ($ride['rental_package'] ?? '') === 'day' ? 'Whole-day rental (' . (int) $ride['rental_hours'] . ' h)' : (int) $ride['rental_hours'] . '-hour rental';
+    $self = ($ride['rental_mode'] ?? 'driver') === 'self';
+    return ($ride['rental_package'] ?? '') === 'day' ? ($self ? 'Whole-day self-drive (' : 'Whole-day rental (') . (int) $ride['rental_hours'] . ' h)' : (int) $ride['rental_hours'] . ($self ? '-hour self-drive' : '-hour rental');
+}
+
+function uride_is_self_drive(array $ride): bool
+{
+    return ($ride['trip_type'] ?? 'ride') === 'rental' && ($ride['rental_mode'] ?? 'driver') === 'self';
 }
 
 /** A request scheduled far enough ahead that drivers cannot see it yet. */
@@ -195,6 +223,7 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
     $vehicle = (string) ($in['vehicle_type'] ?? '');
     $payment = (string) ($in['payment_method'] ?? '');
     $package = (string) ($in['rental_hours'] ?? '');
+    $mode = ($in['rental_mode'] ?? 'driver') === 'self' ? 'self' : 'driver';
     $pickup = mb_substr(trim((string) ($in['pickup_address'] ?? '')), 0, 255);
     $note = mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($in['passenger_note'] ?? '')) ?? ''), 0, 200);
     if (!isset(uride_vehicles()[$vehicle]) || !in_array($payment, ['credits', 'cash'], true) || mb_strlen($pickup) < 3) {
@@ -202,8 +231,8 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
     }
     if (!$s[$payment . '_enabled']) throw new InvalidArgumentException(($payment === 'credits' ? 'Credits' : 'Cash') . ' payment is turned off right now.');
     [$lat, $lng] = uride_coordinates($in, 'pickup');
-    $quote = uride_rental_quote($vehicle, $package);
-    if (!$quote['enabled']) throw new InvalidArgumentException(uride_vehicles()[$vehicle]['label'] . ' rentals are not available right now.');
+    $quote = uride_rental_quote($vehicle, $package, $mode);
+    if (!$quote['enabled']) throw new InvalidArgumentException(uride_vehicles()[$vehicle]['label'] . ($mode === 'self' ? ' self-drive' : '') . ' rentals are not available right now.');
     $scheduled = null;
     if (($in['start_mode'] ?? 'now') === 'later') {
         $raw = (string) ($in['scheduled_at'] ?? '');
@@ -214,9 +243,26 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
         $scheduled = date('Y-m-d H:i:00', $ts);
     }
     $fare = $quote['fare'];
-    $label = $package === 'day' ? 'Whole-day rental (' . $quote['hours'] . ' h)' : $quote['hours'] . '-hour rental';
+    $deposit = $quote['deposit'];
+    $licenseId = null;
+    if ($mode === 'self') {
+        if ($payment !== 'credits') throw new InvalidArgumentException('Self-drive rentals are paid with Credits (the price and the refundable deposit are held in the app).');
+        if (($in['self_terms'] ?? '') !== '1') throw new InvalidArgumentException('Please agree to the self-drive rules.');
+        require_once __DIR__ . '/kyc.php';
+        if (setting('uride.self_drive_kyc', '1') === '1' && !kyc_is_verified($pdo, 'user', $userId)) throw new InvalidArgumentException('Verify your ID first (Profile › Verify my identity) to rent a vehicle without a driver.');
+        $lic = uride_user_license($pdo, $userId);
+        $endDate = date('Y-m-d', ($scheduled !== null ? strtotime($scheduled) : time()) + $quote['hours'] * 3600);
+        if (!$lic) throw new InvalidArgumentException('Add your driver\'s license first (URide › Self-drive › Add license).');
+        if ($lic['status'] === 'rejected') throw new InvalidArgumentException('Your driver\'s license was not accepted: ' . ($lic['review_note'] ?: 'please upload it again') . '.');
+        if (!uride_license_allows($lic, $vehicle)) throw new InvalidArgumentException('Your license does not cover a ' . uride_vehicles()[$vehicle]['label'] . (uride_license_class($vehicle) === 'car' ? ' (needs code B)' : ' (needs code A or A1)') . '.');
+        if ($lic['expiry'] < $endDate) throw new InvalidArgumentException('Your driver\'s license expires before the rental ends. Update it first.');
+        $licenseId = (int) $lic['id'];
+    }
+    $label = $mode === 'self'
+        ? ($package === 'day' ? 'Whole-day self-drive (' . $quote['hours'] . ' h)' : $quote['hours'] . '-hour self-drive')
+        : ($package === 'day' ? 'Whole-day rental (' . $quote['hours'] . ' h)' : $quote['hours'] . '-hour rental');
 
-    return uride_tx($pdo, function () use ($pdo, $userId, $requestKey, $vehicle, $payment, $pickup, $note, $lat, $lng, $quote, $fare, $s, $scheduled, $label, $package) {
+    return uride_tx($pdo, function () use ($pdo, $userId, $requestKey, $vehicle, $payment, $pickup, $note, $lat, $lng, $quote, $fare, $s, $scheduled, $label, $package, $mode, $deposit, $licenseId) {
         $stmt = $pdo->prepare('SELECT id, credits, status FROM users WHERE id = ? FOR UPDATE');
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
@@ -236,21 +282,30 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
         $code = 'UR-' . strtoupper(bin2hex(random_bytes(6)));
         $held = 0;
         if ($payment === 'credits') {
+            $need = $fare + $deposit;
             $stmt = $pdo->prepare('UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?');
-            $stmt->execute([centavos_to_decimal($fare), $userId, centavos_to_decimal($fare)]);
-            if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Not enough Credits for this rental (PHP ' . peso($fare) . '). Buy Credits or choose cash.');
+            $stmt->execute([centavos_to_decimal($need), $userId, centavos_to_decimal($need)]);
+            if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Not enough Credits for this rental (PHP ' . peso($need) . ($deposit ? ' including the PHP ' . peso($deposit) . ' refundable deposit' : '') . '). Buy Credits' . ($mode === 'self' ? '.' : ' or choose cash.'));
             $held = $fare;
         }
         $expires = $scheduled !== null ? date('Y-m-d H:i:s', strtotime($scheduled) + 15 * 60) : date('Y-m-d H:i:s', time() + 60 * max(10, 2 * $s['timeout_min']));
-        $breakdown = json_encode(['rental' => true, 'package' => $package, 'hours' => $quote['hours'], 'billed_hours' => $quote['billed_hours'], 'hour_rate' => $quote['hour_rate'], 'day_rate' => $quote['day_rate'], 'capped' => $quote['capped']]);
-        $pdo->prepare("INSERT INTO uride_requests (user_id, request_key, code, trip_type, rental_hours, rental_package, scheduled_at, vehicle_type, pickup_address, pickup_lat, pickup_lng, dropoff_address, dropoff_lat, dropoff_lng, distance_km, road_km, estimated_fare, fare_centavos, fare_breakdown, payment_method, held_centavos, passenger_note, expires_at) VALUES (?, ?, ?, 'rental', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?)")
-            ->execute([$userId, $requestKey, $code, $quote['hours'], $package, $scheduled, $vehicle, $pickup, $lat, $lng, $label . ' · ends back at pick-up', $lat, $lng, centavos_to_decimal($fare), $fare, $breakdown, $payment, $held, $note ?: null, $expires]);
+        $breakdown = json_encode(['rental' => true, 'mode' => $mode, 'package' => $package, 'hours' => $quote['hours'], 'billed_hours' => $quote['billed_hours'], 'hour_rate' => $quote['hour_rate'], 'day_rate' => $quote['day_rate'], 'capped' => $quote['capped'], 'deposit' => $deposit]);
+        $pdo->prepare("INSERT INTO uride_requests (user_id, request_key, code, trip_type, rental_hours, rental_package, rental_mode, scheduled_at, vehicle_type, pickup_address, pickup_lat, pickup_lng, dropoff_address, dropoff_lat, dropoff_lng, distance_km, road_km, estimated_fare, fare_centavos, fare_breakdown, payment_method, held_centavos, deposit_centavos, deposit_status, license_id, passenger_note, expires_at) VALUES (?, ?, ?, 'rental', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            ->execute([$userId, $requestKey, $code, $quote['hours'], $package, $mode, $scheduled, $vehicle, $pickup, $lat, $lng, $label . ($mode === 'self' ? ' · return the vehicle to the pick-up' : ' · ends back at pick-up'), $lat, $lng, centavos_to_decimal($fare), $fare, $breakdown, $payment, $held, $deposit, $deposit > 0 ? 'held' : 'none', $licenseId, $note ?: null, $expires]);
         if ($held > 0) {
             $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
                 ->execute([$userId, 'URide rental on hold ' . $code, '-' . centavos_to_decimal($held)]);
             ledger_post($pdo, $code, 'uride_hold', [
                 ['user_credits:' . $userId, $held, 0, 'Rental held for ' . $code],
                 ['uride_escrow', 0, $held, 'Rental price on hold'],
+            ]);
+        }
+        if ($deposit > 0) {
+            $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
+                ->execute([$userId, 'Self-drive deposit on hold ' . $code . ' (refundable)', '-' . centavos_to_decimal($deposit)]);
+            ledger_post($pdo, 'DP-' . substr($code, 3), 'uride_deposit_hold', [
+                ['user_credits:' . $userId, $deposit, 0, 'Deposit held for ' . $code],
+                ['uride_deposit', 0, $deposit, 'Self-drive deposit held'],
             ]);
         }
         return $code;
@@ -309,7 +364,7 @@ function uride_barangays(): array
 
 function uride_wallet_types(): array
 {
-    return ['topup' => 'Top-up', 'ride_fare' => 'Ride fare (Credits)', 'commission' => 'Commission', 'payout' => 'Payout', 'payout_returned' => 'Payout returned', 'adjustment' => 'Adjustment'];
+    return ['topup' => 'Top-up', 'ride_fare' => 'Ride fare (Credits)', 'commission' => 'Commission', 'payout' => 'Payout', 'payout_returned' => 'Payout returned', 'adjustment' => 'Adjustment', 'late_fee' => 'Self-drive late fee', 'damage_claim' => 'Self-drive damage claim'];
 }
 
 function uride_payout_methods(): array
@@ -609,6 +664,7 @@ function uride_book(PDO $pdo, int $userId, array $in, string $requestKey): strin
 /** Returns a held Credits fare to the passenger. Caller holds the ride lock. */
 function uride_release_hold(PDO $pdo, array $ride, string $why): void
 {
+    if (($ride['deposit_status'] ?? 'none') === 'held' && (int) ($ride['deposit_centavos'] ?? 0) > 0) uride_deposit_refund($pdo, $ride, (int) $ride['deposit_centavos'], $why);
     $held = (int) $ride['held_centavos'];
     if ($held <= 0) return;
     $pdo->prepare('UPDATE users SET credits = credits + ? WHERE id = ?')->execute([centavos_to_decimal($held), $ride['user_id']]);
@@ -721,10 +777,11 @@ function uride_feed(PDO $pdo, array $driver): array
     $lat = (float) $driver['lat']; $lng = (float) $driver['lng'];
     $dLat = $s['radius_km'] / 111.0;
     $dLng = $s['radius_km'] / max(1.0, 111.0 * cos(deg2rad($lat)));
-    $stmt = $pdo->prepare("SELECT r.id, r.code, r.trip_type, r.rental_hours, r.rental_package, r.scheduled_at, r.vehicle_type, r.pickup_address, r.pickup_lat, r.pickup_lng, r.dropoff_address, r.dropoff_lat, r.dropoff_lng, r.road_km, r.fare_centavos, r.payment_method, r.passenger_note, r.expires_at, r.created_at, u.full_name
+    $stmt = $pdo->prepare("SELECT r.id, r.code, r.trip_type, r.rental_hours, r.rental_package, r.rental_mode, r.deposit_centavos, r.scheduled_at, r.vehicle_type, r.pickup_address, r.pickup_lat, r.pickup_lng, r.dropoff_address, r.dropoff_lat, r.dropoff_lng, r.road_km, r.fare_centavos, r.payment_method, r.passenger_note, r.expires_at, r.created_at, u.full_name
         FROM uride_requests r JOIN users u ON u.id = r.user_id
         WHERE r.status = 'requested' AND r.vehicle_type = ? AND r.expires_at > NOW()
           AND (r.scheduled_at IS NULL OR r.scheduled_at <= NOW() + INTERVAL " . URIDE_RENTAL_LEAD_MIN . " MINUTE)
+          AND (r.rental_mode IS NULL OR r.rental_mode = 'driver' OR " . ((int) ($driver['self_drive_ok'] ?? 0) === 1 ? '1' : '0') . " = 1)
           AND r.pickup_lat BETWEEN ? AND ? AND r.pickup_lng BETWEEN ? AND ?
           AND NOT EXISTS (SELECT 1 FROM uride_ride_skips k WHERE k.ride_id = r.id AND k.driver_id = ?)
         ORDER BY r.created_at LIMIT 30");
@@ -740,7 +797,8 @@ function uride_feed(PDO $pdo, array $driver): array
             'pickup' => $r['pickup_address'], 'dropoff' => $r['dropoff_address'], 'pickup_km' => $away, 'trip_km' => (float) $r['road_km'],
             'fare' => peso($fare), 'commission' => peso($commission), 'net' => peso($fare - $commission),
             'payment' => $r['payment_method'], 'note' => $r['passenger_note'], 'expires_in' => max(0, strtotime((string) $r['expires_at']) - time()),
-            'trip_type' => $r['trip_type'] ?? 'ride', 'trip_label' => uride_rental_label($r),
+            'trip_type' => $r['trip_type'] ?? 'ride', 'trip_label' => uride_rental_label($r) . (($r['rental_mode'] ?? '') === 'self' ? ' · you hand over the vehicle · deposit ₱' . peso((int) $r['deposit_centavos']) : ''),
+            'self_drive' => ($r['rental_mode'] ?? '') === 'self',
             'starts' => !empty($r['scheduled_at']) ? date('g:i A', strtotime((string) $r['scheduled_at'])) : null,
         ];
     }
@@ -758,6 +816,7 @@ function uride_accept(PDO $pdo, int $driverId, int $rideId): array
         $ride = uride_lock_ride($pdo, $rideId);
         if ($ride['status'] !== 'requested' || strtotime((string) $ride['expires_at']) <= time()) throw new InvalidArgumentException('Sorry, this ride was taken by another driver or is no longer available.');
         if (uride_is_upcoming($ride)) throw new InvalidArgumentException('This rental starts later. It opens to drivers ' . URIDE_RENTAL_LEAD_MIN . ' minutes before.');
+        if (uride_is_self_drive($ride) && !(int) ($driver['self_drive_ok'] ?? 0)) throw new InvalidArgumentException('Turn on "Offer my vehicle for self-drive" in your account to accept self-drive rentals.');
         if ($ride['vehicle_type'] !== $driver['vehicle_type']) throw new InvalidArgumentException('This request is for a different vehicle type.');
         $s = uride_settings();
         $away = uride_distance((float) $driver['lat'], (float) $driver['lng'], (float) $ride['pickup_lat'], (float) $ride['pickup_lng']);
@@ -792,7 +851,9 @@ function uride_driver_action(PDO $pdo, int $driverId, int $rideId, string $actio
                 break;
             case 'start':
                 if (!in_array($ride['status'], ['accepted', 'arrived'], true)) throw new InvalidArgumentException('This trip cannot be started.');
-                $pdo->prepare("UPDATE uride_requests SET status = 'in_progress', started_at = NOW(), arrived_at = COALESCE(arrived_at, NOW()) WHERE id = ?")->execute([$rideId]);
+                if (uride_is_self_drive($ride) && $reason !== 'license_checked') throw new InvalidArgumentException('Check the customer\'s driver\'s license and ID before handing over the vehicle.');
+                $ends = ($ride['trip_type'] ?? 'ride') === 'rental' ? date('Y-m-d H:i:s', time() + 3600 * (int) $ride['rental_hours']) : null;
+                $pdo->prepare("UPDATE uride_requests SET status = 'in_progress', started_at = NOW(), ends_at = ?, arrived_at = COALESCE(arrived_at, NOW()) WHERE id = ?")->execute([$ends, $rideId]);
                 break;
             case 'release':
                 if (!in_array($ride['status'], ['accepted', 'arrived'], true)) throw new InvalidArgumentException('A trip in progress cannot be given back.');
@@ -805,6 +866,7 @@ function uride_driver_action(PDO $pdo, int $driverId, int $rideId, string $actio
                 break;
             case 'complete':
                 if ($ride['status'] !== 'in_progress') throw new InvalidArgumentException('Start the trip before completing it.');
+                if (uride_is_self_drive($ride)) throw new InvalidArgumentException('Use "Vehicle returned" to finish a self-drive rental.');
                 uride_settle_completed($pdo, $driver, $ride);
                 break;
             default:

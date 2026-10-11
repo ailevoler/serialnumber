@@ -6,6 +6,15 @@ $id = (int) q('id');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     admin_post_guard();
     try {
+        if (p('action') === 'claim') {
+            if (!admin_can('payments.refund')) throw new InvalidArgumentException('Your role cannot decide deposit claims.');
+            $amt = trim(p('approve'));
+            if (!preg_match('/^\d{1,7}(?:\.\d{1,2})?$/D', $amt)) throw new InvalidArgumentException('Enter the amount to pay the owner, e.g. 1500 or 0.');
+            $ride = uride_deposit_decide($pdo, $id, (int) round((float) $amt * 100), p('note'), (int) $admin['id']);
+            admin_audit('selfdrive_claim', 'ride', $id, ['code' => $ride['code'], 'approved' => $amt, 'note' => p('note')]);
+            flash('success', 'Claim decided: ₱' . peso((int) $ride['claim_approved_centavos']) . ' to the owner; the rest of the deposit was returned to the customer.');
+            redirect('ride.php?id=' . $id);
+        }
         if (!admin_can('rides.cancel')) throw new InvalidArgumentException('Your role cannot cancel rides.');
         $ride = uride_admin_cancel($pdo, $id, p('reason'));
         admin_audit('ride_cancelled', 'ride', $id, ['code' => $ride['code'], 'reason' => p('reason')]);
@@ -22,16 +31,36 @@ if (!$r) { flash('error', 'Ride not found.'); redirect('rides.php'); }
 $labels = uride_ride_statuses();
 $fare = (int) $r['fare_centavos'];
 $bd = json_decode((string) $r['fare_breakdown'], true) ?: [];
-$ledger = $pdo->prepare('SELECT * FROM ledger_entries WHERE entry_group IN (?, ?) ORDER BY id');
-$ledger->execute([$r['code'], 'RF-' . substr($r['code'], 3)]);
+$ledger = $pdo->prepare('SELECT * FROM ledger_entries WHERE entry_group IN (?, ?, ?, ?, ?, ?) ORDER BY id');
+$sfx = substr($r['code'], 3);
+$ledger->execute([$r['code'], 'RF-' . $sfx, 'DP-' . $sfx, 'DR-' . $sfx, 'LF-' . $sfx, 'DC-' . $sfx]);
 $ledger = $ledger->fetchAll();
 $active = in_array($r['status'], uride_active_statuses(), true);
 admin_header('Ride ' . $r['code'], 'rides');
 ?>
+<?php if (uride_is_self_drive($r)):
+    $lic = null;
+    if ($r['license_id']) { $ls = $pdo->prepare('SELECT * FROM user_driver_licenses WHERE id = ?'); $ls->execute([$r['license_id']]); $lic = $ls->fetch() ?: null; } ?>
+<section class="card mb"><h2>Self-drive <small>customer drives</small> <?= $r['deposit_status'] === 'claimed' ? '<span class="badge warn">Damage claim to decide</span>' : '' ?></h2>
+    <div class="kv"><span>Customer license</span><b><?= $lic ? e(uride_license_label($lic)) . ' · ' . status_badge($lic['status']) . ' <a href="license-photo.php?id=' . (int) $lic['id'] . '" target="_blank" rel="noopener">photo</a> · <a href="uride-licenses.php">review</a>' : '—' ?></b></div>
+    <div class="kv"><span>Deposit</span><b>₱<?= peso((int) $r['deposit_centavos']) ?> · <?= e(uride_deposit_status_label($r) ?: $r['deposit_status']) ?></b></div>
+    <?php if ($r['handover_note']): ?><div class="kv"><span>At hand-over</span><b><?= e($r['handover_note']) ?></b></div><?php endif; ?>
+    <?php if ($r['returned_at']): ?><div class="kv"><span>Returned</span><b><?= e($r['returned_at']) ?><?= (int) $r['late_fee_centavos'] ? ' · late fee ₱' . peso((int) $r['late_fee_centavos']) : ' · on time' ?></b></div><?php endif; ?>
+    <?php if ((int) $r['claim_centavos'] > 0): ?><div class="kv"><span>Damage claim</span><b>₱<?= peso((int) $r['claim_centavos']) ?> · <?= e((string) $r['claim_note']) ?><?= $r['claim_approved_centavos'] !== null ? ' · approved ₱' . peso((int) $r['claim_approved_centavos']) : '' ?></b></div><?php endif; ?>
+    <?php if ($r['deposit_status'] === 'claimed' && admin_can('payments.refund')): $max = min((int) $r['claim_centavos'], (int) $r['deposit_centavos'] - (int) $r['late_fee_centavos']); ?>
+    <form method="post" class="form-grid mt" data-confirm="Decide this claim? The money moves right away."><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="claim">
+        <div class="field"><label for="approve">Pay the owner (PHP)</label><input id="approve" name="approve" inputmode="decimal" value="<?= e(centavos_to_decimal($max)) ?>"><small>0 to ₱<?= peso($max) ?>. The rest of the deposit goes back to the customer.</small></div>
+        <div class="field"><label for="note">Reason</label><input id="note" name="note" required placeholder="e.g. photos confirm cracked mirror; repair quote ₱1,500"></div>
+        <div class="form-actions"><button class="btn primary" type="submit">Decide claim</button></div>
+    </form>
+    <?php endif; ?>
+</section>
+<?php endif; ?>
 <div class="grid two">
     <div class="stack">
         <section class="card"><h2><?= e($r['code']) ?> <small><?= e(uride_vehicles()[$r['vehicle_type']]['label'] ?? '') ?></small></h2>
             <div class="kv"><span>Status</span><b><?= e($labels[$r['status']] ?? $r['status']) ?></b></div>
+            <?php if (($r['trip_type'] ?? 'ride') === 'rental'): ?><div class="kv"><span>Rental</span><b><?= e(uride_rental_label($r)) ?><?= $r['scheduled_at'] ? ' · starts ' . e(date('M j, g:i A', strtotime((string) $r['scheduled_at']))) : '' ?><?= $r['ends_at'] ? ' · return by ' . e(date('M j, g:i A', strtotime((string) $r['ends_at']))) : '' ?></b></div><?php endif; ?>
             <div class="kv"><span>Passenger</span><b><a href="customer.php?id=<?= (int) $r['user_id'] ?>"><?= e($r['passenger']) ?></a> · <?= e($r['passenger_mobile'] ?? '') ?></b></div>
             <div class="kv"><span>Driver</span><b><?= $r['driver'] ? '<a href="driver.php?id=' . (int) $r['driver_id'] . '">' . e($r['driver']) . '</a> · ' . e($r['plate_no']) . ' · ' . e($r['driver_mobile']) : '—' ?></b></div>
             <div class="kv"><span>Pick-up</span><b><?= e($r['pickup_address']) ?></b></div>

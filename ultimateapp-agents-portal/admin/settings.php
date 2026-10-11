@@ -79,6 +79,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setting_save($pdo, 'uride.rental_day_hours', (string) (int) p('rental_day_hours', '8'), $aid);
             setting_save($pdo, 'uride.rental_max_hours', (string) (int) p('rental_max_hours', '12'), $aid);
             setting_save($pdo, 'uride.rental_schedule_days', (string) (int) p('rental_schedule_days', '7'), $aid);
+            // Self-drive (customer drives; deposit held in Credits)
+            foreach (array_keys(uride_vehicles()) as $v) {
+                setting_save($pdo, "uride.$v.self_enabled", p("{$v}_self_enabled") === '1' ? '1' : '0', $aid);
+                setting_save($pdo, "uride.$v.self_hour_centavos", $pesoToCentavos(p("{$v}_self_hour", '0'), 'Self-drive per hour'), $aid);
+                setting_save($pdo, "uride.$v.self_min_hours", (string) max(1, (int) p("{$v}_self_min", '1')), $aid);
+                setting_save($pdo, "uride.$v.self_day_centavos", $pesoToCentavos(p("{$v}_self_day", '0'), 'Self-drive whole day'), $aid);
+                setting_save($pdo, "uride.$v.self_deposit_centavos", $pesoToCentavos(p("{$v}_self_deposit", '0'), 'Self-drive deposit'), $aid);
+            }
+            setting_save($pdo, 'uride.self_drive_enabled', p('self_drive_enabled') === '1' ? '1' : '0', $aid);
+            setting_save($pdo, 'uride.self_drive_kyc', p('self_drive_kyc') === '1' ? '1' : '0', $aid);
+            setting_save($pdo, 'uride.self_drive_grace_min', (string) (int) p('self_drive_grace_min', '15'), $aid);
             if (p('credits_enabled') !== '1' && p('cash_enabled') !== '1') throw new InvalidArgumentException('Allow at least one payment method for rides.');
             setting_save($pdo, 'uride.road_factor', trim(p('road_factor', '1.3')), $aid);
             $night = trim(p('night_pct', '0'));
@@ -254,6 +265,25 @@ admin_header('Settings', 'settings');
             <td><input type="number" name="<?= $v ?>_rental_min" min="1" max="24" value="<?= (int) $rr['min_hours'] ?>" aria-label="<?= e($veh['label']) ?> minimum hours"></td>
             <td><input type="text" name="<?= $v ?>_rental_day" inputmode="decimal" value="<?= e($pesoV($rr['day'])) ?>" aria-label="<?= e($veh['label']) ?> whole day"></td>
             <td class="num">₱<?= peso($ex['fare']) ?><?= $ex['capped'] ? ' <small>day cap</small>' : '' ?></td></tr>
+    <?php endforeach; ?>
+    </tbody></table></div>
+</section>
+<section class="card mt"><h2>Self-drive <small>customer drives · PHP</small> <?= status_badge(setting('uride.self_drive_enabled', '1') === '1' ? 'active' : 'disabled') ?></h2>
+    <p class="muted">Rent a Ride › <b>Self-drive</b>: drivers who turn on "Offer my vehicle for self-drive" bring the vehicle, check the customer's license and ID, and hand it over. Paid with Credits only; the deposit is held in the app. Late returns cost the hourly rate per started hour after the grace minutes, taken from the deposit. Damage claims are decided in <a href="uride-licenses.php?view=claims">Self-drive licenses &amp; claims</a>. E-Trike and Motorcycle need license code A/A1; Car needs code B.</p>
+    <div class="form-grid">
+        <div class="field"><label for="self_drive_enabled">Self-drive</label><select id="self_drive_enabled" name="self_drive_enabled"><option value="1"<?= setting('uride.self_drive_enabled', '1') === '1' ? ' selected' : '' ?>>On</option><option value="0"<?= setting('uride.self_drive_enabled', '1') !== '1' ? ' selected' : '' ?>>Off</option></select></div>
+        <div class="field"><label for="self_drive_kyc">Needs a verified ID (KYC)</label><select id="self_drive_kyc" name="self_drive_kyc"><option value="1"<?= setting('uride.self_drive_kyc', '1') === '1' ? ' selected' : '' ?>>Yes (recommended)</option><option value="0"<?= setting('uride.self_drive_kyc', '1') !== '1' ? ' selected' : '' ?>>No</option></select></div>
+        <div class="field"><label for="self_drive_grace_min">Late return grace (minutes)</label><input id="self_drive_grace_min" name="self_drive_grace_min" type="number" min="0" max="120" value="<?= setting_int('uride.self_drive_grace_min', 15) ?>"></div>
+    </div>
+    <div class="table-wrap"><table class="fare-matrix"><thead><tr><th>Vehicle</th><th>Self-drive</th><th>Per hour</th><th>Minimum hours</th><th>Whole day</th><th>Deposit</th><th>Example: 4 hours</th></tr></thead><tbody>
+    <?php foreach (uride_vehicles() as $v => $veh): $sr = uride_self_rule($v); $ex = uride_rental_quote($v, '4', 'self'); ?>
+        <tr><td><b><?= e($veh['label']) ?></b><small>License <?= uride_license_class($v) === 'car' ? 'B' : 'A / A1' ?></small></td>
+            <td><select name="<?= $v ?>_self_enabled" aria-label="<?= e($veh['label']) ?> self-drive"><option value="1"<?= setting("uride.$v.self_enabled", '1') === '1' ? ' selected' : '' ?>>Yes</option><option value="0"<?= setting("uride.$v.self_enabled", '1') !== '1' ? ' selected' : '' ?>>No</option></select></td>
+            <td><input type="text" name="<?= $v ?>_self_hour" inputmode="decimal" value="<?= e($pesoV($sr['hour'])) ?>" aria-label="<?= e($veh['label']) ?> self-drive per hour"></td>
+            <td><input type="number" name="<?= $v ?>_self_min" min="1" max="24" value="<?= (int) $sr['min_hours'] ?>" aria-label="<?= e($veh['label']) ?> self-drive minimum hours"></td>
+            <td><input type="text" name="<?= $v ?>_self_day" inputmode="decimal" value="<?= e($pesoV($sr['day'])) ?>" aria-label="<?= e($veh['label']) ?> self-drive whole day"></td>
+            <td><input type="text" name="<?= $v ?>_self_deposit" inputmode="decimal" value="<?= e($pesoV($sr['deposit'])) ?>" aria-label="<?= e($veh['label']) ?> deposit"></td>
+            <td class="num">₱<?= peso($ex['fare']) ?> <small>+ ₱<?= peso($ex['deposit']) ?> deposit</small></td></tr>
     <?php endforeach; ?>
     </tbody></table></div>
 </section>

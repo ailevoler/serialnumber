@@ -45,6 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 dflash('success', 'Details saved' . ($added ? " and $added document(s) uploaded" : '') . '.');
             }
+        } elseif ($action === 'self_drive') {
+            $on = dp('self_drive_ok') === '1';
+            if ($on && $driver['status'] !== 'approved') throw new InvalidArgumentException('Your account must be approved first.');
+            $pdo->prepare('UPDATE uride_drivers SET self_drive_ok = ? WHERE id = ?')->execute([$on ? 1 : 0, $id]);
+            dflash('success', $on ? 'You will now also get self-drive rental requests for your vehicle.' : 'Self-drive requests turned off.');
         } elseif ($action === 'password') {
             if (!password_verify(dp('current_password'), $driver['password_hash'])) throw new InvalidArgumentException('Your current password is incorrect.');
             $new = dp('password');
@@ -78,6 +83,21 @@ driver_header('Account', 'account');
 </section>
 <?php if ($driver['status'] === 'needs_info' && $driver['review_note']): ?><div class="alert warn"><b>Reviewer note:</b> <?= e($driver['review_note']) ?></div><?php endif; ?>
 
+<?php if (setting('uride.self_drive_enabled', '1') === '1' && array_key_exists('self_drive_ok', $driver)): $sr = uride_self_rule((string) $driver['vehicle_type']); ?>
+<form class="d-card" method="post">
+    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="self_drive">
+    <h2>Self-drive rentals</h2>
+    <p class="table-meta">Rent out your <?= e(uride_vehicles()[$driver['vehicle_type']]['label'] ?? 'vehicle') ?> without you driving. You bring it to the customer, check their driver's license and ID, hand it over, and check it when it comes back.</p>
+    <ul class="d-list">
+        <li>Self-drive rate: ₱<?= peso($sr['hour']) ?>/hour (minimum <?= (int) $sr['min_hours'] ?> h) or ₱<?= peso($sr['day']) ?> for a whole day, less the URide commission.</li>
+        <li>The customer pays with Credits and leaves a ₱<?= peso($sr['deposit']) ?> deposit in the app.</li>
+        <li>Late returns: the hourly rate for each started hour after <?= setting_int('uride.self_drive_grace_min', 15) ?> minutes, paid to you from the deposit.</li>
+        <li>Damage: report it when the vehicle comes back. Ultimate App reviews it and pays you from the deposit.</li>
+    </ul>
+    <label class="d-check"><input type="checkbox" name="self_drive_ok" value="1"<?= (int) $driver['self_drive_ok'] ? ' checked' : '' ?>> Offer my vehicle for self-drive rentals</label>
+    <button class="btn" type="submit">Save</button>
+</form>
+<?php endif; ?>
 <?php $kycState = kyc_status($pdo, 'driver', $id); ?>
 <a class="d-card" href="kyc.php" style="display:flex;justify-content:space-between;align-items:center;text-decoration:none;color:inherit"><span><b>Verify ID (KYC)</b><br><small>Valid ID and selfie check</small></span><?= kyc_badge($kycState) ?></a>
 <form class="d-card" method="post" enctype="multipart/form-data" id="documents">

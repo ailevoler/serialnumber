@@ -193,3 +193,11 @@ details.d-card summary{font-size:13.5px}
 
 .auth-flash{position:fixed;top:16px;left:50%;transform:translateX(-50%);width:min(460px,calc(100% - 32px));z-index:50;margin:0}
 .d-req.rental{border-left:4px solid #1a73e8}.d-req.rental [data-f="trip"]{color:#1a5fb4;font-weight:700}
+.d-handover,.d-return{display:grid;gap:10px}
+.d-handover h3,.d-return h3,.d-self h3{margin:0;font-size:15px}
+.d-handover label,.d-return label{display:grid;gap:4px;font-size:12.5px}
+.d-handover input[name],.d-return input[name=claim],.d-return input[name=return_note]{height:42px;padding:0 10px;border:1px solid #d9dde2;border-radius:10px;font:inherit}
+.d-check{display:flex!important;gap:8px;align-items:flex-start;font-size:13px;line-height:1.4}
+.d-check input{margin-top:2px;flex:none}
+.d-list{margin:6px 0 10px;padding-left:18px;font-size:12.5px;line-height:1.5;color:#3b4046}
+.d-self .kv b small{font-weight:500;color:#6b7178}

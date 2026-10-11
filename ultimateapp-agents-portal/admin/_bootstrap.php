@@ -219,6 +219,7 @@ function admin_nav(): array
             ['driver-topups.php', 'card', 'Driver top-ups', 'drivers.view'],
             ['driver-payouts.php', 'bank', 'Driver payouts', 'driver_payouts.manage'],
             ['uride-places.php', 'report', 'URide places', 'rides.view'],
+            ['uride-licenses.php', 'shield', 'Self-drive licenses & claims', 'rides.view'],
         ],
         'Agents' => [
             ['agents.php', 'users', 'Agents', 'agents.view'],

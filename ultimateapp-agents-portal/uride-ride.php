@@ -48,7 +48,8 @@ $now = $steps[$status] ?? -1;
 $showDriver = $driver && in_array($status, ['accepted', 'arrived', 'in_progress', 'completed'], true);
 $isRental = ($ride['trip_type'] ?? 'ride') === 'rental';
 $upcoming = uride_is_upcoming($ride);
-$rentalEnds = $isRental && $ride['started_at'] ? strtotime((string) $ride['started_at']) + 3600 * (int) $ride['rental_hours'] : null;
+$rentalEnds = $isRental && $ride['started_at'] ? strtotime((string) ($ride['ends_at'] ?? '') ?: (string) $ride['started_at']) + ($ride['ends_at'] ? 0 : 3600 * (int) $ride['rental_hours']) : null;
+$isSelf = uride_is_self_drive($ride);
 $phone = $driver && $active && preg_match('/^09\d{9}$/D', (string) $driver['mobile']) ? (string) $driver['mobile'] : '';
 $pageTitle = 'Your ride';
 require __DIR__ . '/includes/header.php';
@@ -64,6 +65,10 @@ require __DIR__ . '/includes/header.php';
         <p data-rs-sub><?php
             if ($upcoming) echo 'Starts ' . e(date('D, M j · g:i A', strtotime((string) $ride['scheduled_at']))) . '. Nearby drivers get your request ' . URIDE_RENTAL_LEAD_MIN . ' minutes before.';
             elseif ($status === 'requested') echo 'Sending your request to nearby drivers…';
+            elseif ($isSelf && $status === 'accepted') echo 'The owner is bringing the vehicle to your pick-up. Have your driver\'s license and ID ready.';
+            elseif ($isSelf && $status === 'arrived') echo 'The vehicle is at the pick-up. Show your driver\'s license and ID to the owner.';
+            elseif ($isSelf && $status === 'in_progress') echo 'Enjoy the drive. Return the vehicle to the pick-up point by ' . ($rentalEnds ? e(date('g:i A', $rentalEnds)) : 'the end time') . '. Late returns use your deposit.';
+            elseif ($isSelf && $status === 'completed') echo 'Vehicle returned. Thank you! ' . e(uride_deposit_status_label($ride));
             elseif ($isRental && $status === 'in_progress') echo 'Your rental is running' . ($rentalEnds ? ' until about ' . e(date('g:i A', $rentalEnds)) : '') . '. Your driver brings you back to the pick-up point.';
             elseif ($status === 'accepted') echo 'Your driver is heading to the pick-up point.';
             elseif ($status === 'arrived') echo 'Your driver is at the pick-up point.';
@@ -96,7 +101,8 @@ require __DIR__ . '/includes/header.php';
         <p class="uride-pt"><span class="uride-dot pickup"></span><span><small>Pick-up</small><?= e($ride['pickup_address']) ?></span></p>
         <p class="uride-pt"><span class="uride-dot dropoff"></span><span><small><?= $isRental ? 'Rental' : 'Drop-off' ?></small><?= e($ride['dropoff_address']) ?><?= !empty($ride['scheduled_at']) ? ' · starts ' . e(date('M j, g:i A', strtotime((string) $ride['scheduled_at']))) : '' ?></span></p>
         <div class="uride-fare-row"><span><?= $isRental ? e(uride_rental_label($ride)) . ' · ' : ($ride['road_km'] !== null ? e(number_format((float) $ride['road_km'], 1)) . ' km · ' : '') ?><?= $ride['payment_method'] === 'cash' ? 'Pay cash to driver' : 'Paid with Credits' ?></span><strong><?= $fare ? '₱' . peso($fare) : '—' ?></strong></div>
-        <?php if ($ride['payment_method'] === 'credits' && $active): ?><p class="uride-help">₱<?= peso($fare) ?> is on hold and goes to the driver when the trip is completed.</p><?php endif; ?>
+        <?php if ($ride['payment_method'] === 'credits' && $active): ?><p class="uride-help">₱<?= peso($fare) ?> is on hold and goes to the <?= $isSelf ? 'owner when the vehicle is returned' : 'driver when the trip is completed' ?>.</p><?php endif; ?>
+        <?php if ($isSelf && (int) $ride['deposit_centavos'] > 0): ?><p class="uride-help uride-deposit"><b>Deposit:</b> <?= e(uride_deposit_status_label($ride)) ?><?= $ride['deposit_status'] === 'held' ? ' (returned when the vehicle comes back on time and undamaged)' : '' ?></p><?php endif; ?>
     </div>
 
     <?php if (in_array($status, ['requested', 'accepted', 'arrived'], true)): ?>

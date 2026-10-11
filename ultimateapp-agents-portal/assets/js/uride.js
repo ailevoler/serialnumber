@@ -338,38 +338,52 @@
 
   /* ---------- Book a Ride / Rent a Ride */
   const rentPrices = JSON.parse(form.dataset.rental || '{}');
+  const selfPrices = JSON.parse(form.dataset.self || '{}');
+  const isSelf = () => isRental() && form.dataset.rmode === 'self';
   const dayHours = Number(form.dataset.dayHours) || 8;
   const peso = c => '₱' + (Math.ceil(c / 100)).toLocaleString('en-PH');
   function isRental() { return form.dataset.mode === 'rental'; }
   function rentQuote() {
     const v = selectedVehicle();
     const pkg = form.querySelector('input[name="rental_hours"]:checked')?.value;
-    const r = rentPrices[v];
+    const self = isSelf();
+    const r = (self ? selfPrices : rentPrices)[v];
     if (!v || !pkg || !r) return null;
-    if (!r.enabled) return {ok: false, why: 'This vehicle cannot be rented right now. Choose another.'};
+    if (!r.enabled) return {ok: false, why: self ? 'This vehicle is not available for self-drive. Choose another, or rent it with a driver.' : 'This vehicle cannot be rented right now. Choose another.'};
     let hours, billed, fare, capped = false;
     if (pkg === 'day') { hours = dayHours; billed = hours; fare = r.day; }
     else { hours = Number(pkg); billed = Math.max(hours, r.min); fare = billed * r.hour; if (r.day > 0 && hours <= dayHours && fare > r.day) { fare = r.day; capped = true; } }
     if (!(fare > 0)) return {ok: false, why: 'This duration is not available for this vehicle.'};
-    return {ok: true, hours, billed, fare: Math.ceil(fare / 100) * 100, capped, pkg};
+    if (self) {
+      const lic = r.class === 'car' ? form.dataset.licCar === '1' : form.dataset.licMoto === '1';
+      if (form.dataset.kycOk !== '1') return {ok: false, why: 'Verify your ID first (link above) to drive yourself.', fare: Math.ceil(fare / 100) * 100, deposit: r.deposit, hours, billed, capped, pkg, soft: true};
+      if (!lic) return {ok: false, why: r.class === 'car' ? 'Self-drive car needs a license with code B on file (link above).' : 'Self-drive e-trike or motorcycle needs a license with code A or A1 on file (link above).', fare: Math.ceil(fare / 100) * 100, deposit: r.deposit, hours, billed, capped, pkg, soft: true};
+    }
+    return {ok: true, hours, billed, fare: Math.ceil(fare / 100) * 100, capped, pkg, deposit: self ? r.deposit : 0};
   }
   function showRent() {
     const out = document.getElementById('uride-rent-fare'), detail = document.getElementById('uride-rent-detail');
     if (!out) return;
     const r = rentQuote();
+    const hold = document.getElementById('uride-rent-hold'), dep = form.querySelector('[data-self-deposit]');
+    if (hold) hold.textContent = '';
     if (!r) { out.textContent = '—'; detail.textContent = 'Choose a vehicle and duration'; return; }
-    if (!r.ok) { out.textContent = 'Not available'; detail.textContent = r.why; return; }
+    if (dep && isSelf()) dep.textContent = r.deposit ? `Refundable deposit ${peso(r.deposit)} for this vehicle, held in Credits and returned when the vehicle comes back` : 'No deposit for this vehicle';
+    if (!r.ok && !r.soft) { out.textContent = 'Not available'; detail.textContent = r.why; return; }
     out.textContent = peso(r.fare);
-    const v = rentPrices[selectedVehicle()];
-    detail.textContent = r.pkg === 'day' ? `Whole day · ${r.hours} hours with driver`
-      : `${r.hours} hour${r.hours === 1 ? '' : 's'} with driver` + (r.capped ? ' · capped at the whole-day price' : r.billed > r.hours ? ` · minimum ${r.billed} hours` : ` · ${peso(v.hour)}/hr`);
+    if (!r.ok) { detail.textContent = r.why; return; }
+    if (hold && r.deposit) hold.textContent = `+ ${peso(r.deposit)} refundable deposit · ${peso(r.fare + r.deposit)} held in Credits now`;
+    const v = (isSelf() ? selfPrices : rentPrices)[selectedVehicle()];
+    const who = isSelf() ? 'self-drive' : 'with driver';
+    detail.textContent = r.pkg === 'day' ? `Whole day · ${r.hours} hours ${who}`
+      : `${r.hours} hour${r.hours === 1 ? '' : 's'} ${who}` + (r.capped ? ' · capped at the whole-day price' : r.billed > r.hours ? ` · minimum ${r.billed} hours` : ` · ${peso(v.hour)}/hr`);
     const later = form.querySelector('input[name="start_mode"]:checked')?.value === 'later';
     const when = form.querySelector('[data-rent-when]');
     if (when) when.textContent = later ? ' 1 hour before the start time' : ' right away';
   }
   const texts = {
     ride: ['Book a ride', 'Choose your pick-up, destination, and vehicle.', 'Request ride', 'e.g. near the blue gate, 2 bags'],
-    rental: ['Rent a ride', 'Hire a vehicle with its driver by the hour or for the whole day.', 'Rent this ride', 'Your plan, e.g. Puka Beach, Mt. Luho, then D\'Mall']
+    rental: ['Rent a ride', 'Hire a vehicle with its driver, or drive it yourself, by the hour or for the whole day.', 'Rent this ride', 'Your plan, e.g. Puka Beach, Mt. Luho, then D\'Mall']
   };
   function setTrip(next) {
     form.dataset.mode = next;
@@ -381,6 +395,7 @@
     if (label && !form.querySelector('[type="submit"]').disabled) label.textContent = t[2];
     const note = form.querySelector('[data-note-input]'); if (note) note.placeholder = t[3];
     inputs.dropoff.required = next === 'ride';
+    if (cash) { const lock = next === 'rental' && form.dataset.rmode === 'self'; cash.disabled = lock; cash.closest('label').classList.toggle('off', lock); }
     closeList('dropoff');
     if (next === 'rental') {
       setMode('pickup');
@@ -395,10 +410,25 @@
     history.replaceState(null, '', url);
   }
   form.querySelectorAll('input[name="trip_type"]').forEach(r => r.addEventListener('change', () => setTrip(r.value)));
+  const cash = form.querySelector('input[name="payment_method"][value="cash"]');
+  const credits = form.querySelector('input[name="payment_method"][value="credits"]');
+  function setDrive(next) {
+    form.dataset.rmode = next;
+    const selfNow = isSelf();
+    if (cash) { cash.disabled = selfNow; if (selfNow && cash.checked && credits) credits.checked = true; cash.closest('label').classList.toggle('off', selfNow); }
+    const label = form.querySelector('[data-submit-label]');
+    if (label && isRental() && !form.querySelector('[type="submit"]').disabled) label.textContent = selfNow ? 'Rent and drive myself' : 'Rent this ride';
+    const url = new URL(location.href);
+    if (selfNow) url.searchParams.set('drive', 'self'); else url.searchParams.delete('drive');
+    history.replaceState(null, '', url);
+    showRent();
+  }
+  form.querySelectorAll('input[name="rental_mode"]').forEach(r => r.addEventListener('change', () => setDrive(r.value)));
   form.querySelectorAll('input[name="rental_hours"], input[name="start_mode"], input[name="vehicle_type"]').forEach(r => r.addEventListener('change', showRent));
   const sched = document.getElementById('uride-scheduled');
   if (sched) sched.addEventListener('focus', () => { const later = form.querySelector('input[name="start_mode"][value="later"]'); if (later) { later.checked = true; showRent(); } });
   if (isRental()) setTrip('rental');
+  if (form.querySelector('input[name="rental_mode"]')) setDrive(form.dataset.rmode || 'driver');
 
   /* ---------- Map */
   document.querySelectorAll('[data-map-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mapMode)));
@@ -444,6 +474,7 @@
       if (!points.pickup) { event.preventDefault(); say('Choose a suggestion or tap the map to set the pick-up.'); mapElement.scrollIntoView({behavior: 'smooth', block: 'center'}); return; }
       const r = rentQuote();
       if (!r || !r.ok) { event.preventDefault(); say(r ? r.why : 'Choose a vehicle and duration.'); return; }
+      if (isSelf() && !form.querySelector('input[name="self_terms"]')?.checked) { event.preventDefault(); say('Please agree to the self-drive rules.'); form.querySelector('.uride-terms')?.scrollIntoView({behavior: 'smooth', block: 'center'}); return; }
       const later = form.querySelector('input[name="start_mode"]:checked')?.value === 'later';
       if (later && !document.getElementById('uride-scheduled').value) { event.preventDefault(); say('Choose the date and time the rental starts.'); return; }
       form.querySelector('[type="submit"]').disabled = true;

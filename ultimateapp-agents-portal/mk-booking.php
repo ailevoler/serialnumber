@@ -25,7 +25,7 @@ $at = array_search($b['status'], $order, true);
 $pageTitle = 'Booking ' . $b['reference'];
 require __DIR__ . '/includes/header.php';
 ?>
-<link rel="stylesheet" href="assets/css/market.css?v=1">
+<link rel="stylesheet" href="assets/css/market.css?v=2">
 <section class="screen mk-screen">
     <header class="page-head"><a href="mk-bookings.php?s=<?= e($b['service']) ?>" aria-label="Back"><span data-icon="arrow-left"></span></a><h1>Booking</h1><span></span></header>
     <?php foreach ($_SESSION['flash'] ?? [] as [$type, $message]): ?><p class="alert <?= $type === 'success' ? 'ok' : '' ?>" role="status"><?= e($message) ?></p><?php endforeach; unset($_SESSION['flash']); ?>
@@ -43,7 +43,7 @@ require __DIR__ . '/includes/header.php';
             <?php if ($b['status_note']): ?><p class="mk-note"><b><?= $b['status'] === 'declined' ? 'Reason' : 'Note' ?>:</b> <?= e($b['status_note']) ?></p><?php endif; ?>
             <dl class="mk-dl">
                 <div><dt>Date</dt><dd><?= e(date('D, M j, Y', strtotime($b['booking_date']))) ?><?= $b['booking_time'] ? ' · ' . e(date('g:i A', strtotime($b['booking_time']))) : '' ?></dd></div>
-                <div><dt><?= $b['service'] === 'ugo' ? 'Guests' : 'Quantity' ?></dt><dd><?= (int) $b['quantity'] ?></dd></div>
+                <div><dt><?= $cfg['guests'] ? 'Guests' : 'Quantity' ?></dt><dd><?= (int) $b['quantity'] ?></dd></div>
                 <?php if ($b['duration_minutes']): ?><div><dt>Duration</dt><dd><?= e(mk_duration_label((int) $b['duration_minutes'])) ?></dd></div><?php endif; ?>
                 <?php if ($b['meeting_point'] || $b['location']): ?><div><dt>Where</dt><dd><?= e($b['address'] ?: ($b['meeting_point'] ?: $b['location'])) ?></dd></div><?php elseif ($b['address']): ?><div><dt>Where</dt><dd><?= e($b['address']) ?></dd></div><?php endif; ?>
                 <div><dt>Total</dt><dd><b><?= e(mk_money((int) $b['total_centavos'])) ?></b></dd></div>
@@ -56,7 +56,7 @@ require __DIR__ . '/includes/header.php';
             <?php elseif ($b['status'] === 'confirmed'): ?><p class="mk-fine">Free cancellation ended <?= (int) $b['cancel_hours'] ?> hours before the start. Contact the provider for changes.</p><?php endif; ?>
         </div>
     </div>
-    <a class="mk-cta" href="<?= e($cfg['page']) ?>">Explore more <?= $b['service'] === 'ugo' ? 'activities' : 'services' ?></a>
+    <a class="mk-cta" href="<?= e($cfg['page']) ?>">Explore more <?= e($cfg['plural']) ?></a>
 </section>
 <script defer src="assets/js/market.js?v=1"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

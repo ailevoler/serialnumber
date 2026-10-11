@@ -70,6 +70,10 @@ driver_header('', 'dashboard', 'drive');
         </a>
     <?php endif; ?>
 
+    <?php $outNow = uride_fleet_ready($pdo) ? uride_driver_rentals_out($pdo, $id) : []; if ($outNow): ?>
+        <div class="d-out"><small>Self-drive vehicles out now</small><?php foreach ($outNow as $o): ?><a href="ride.php?id=<?= (int) $o['id'] ?>"><span><b><?= e(uride_vehicles()[$o['vehicle_type']]['label'] ?? '') ?></b> · <?= e(uride_short_name((string) $o['full_name'])) ?> · <?= e($o['code']) ?></span><span>back by <?= $o['ends_at'] ? e(date('g:i A', strtotime((string) $o['ends_at']))) : '—' ?></span></a><?php endforeach; ?></div>
+    <?php endif; ?>
+
     <form method="post" class="d-online <?= $online ? 'on' : 'off' ?>" data-drive data-online="<?= $online ? '1' : '0' ?>" data-csrf="<?= e(csrf_token()) ?>" data-active="<?= $active ? (int) $active['id'] : 0 ?>">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="action" value="<?= $online ? 'offline' : 'online' ?>">

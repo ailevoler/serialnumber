@@ -46,10 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 dflash('success', 'Details saved' . ($added ? " and $added document(s) uploaded" : '') . '.');
             }
         } elseif ($action === 'self_drive') {
-            $on = dp('self_drive_ok') === '1';
-            if ($on && $driver['status'] !== 'approved') throw new InvalidArgumentException('Your account must be approved first.');
-            $pdo->prepare('UPDATE uride_drivers SET self_drive_ok = ? WHERE id = ?')->execute([$on ? 1 : 0, $id]);
-            dflash('success', $on ? 'You will now also get self-drive rental requests for your vehicle.' : 'Self-drive requests turned off.');
+            $units = is_array($_POST['units'] ?? null) ? $_POST['units'] : [];
+            $models = is_array($_POST['models'] ?? null) ? $_POST['models'] : [];
+            $total = array_sum(array_map('intval', $units));
+            if ($total > 0 && $driver['status'] !== 'approved') throw new InvalidArgumentException('Your account must be approved first.');
+            uride_fleet_save($pdo, $id, array_map('intval', $units), array_map('strval', $models));
+            dflash('success', $total ? "Rental fleet saved: $total unit(s). Customers see how many are free while you are online." : 'Self-drive rentals turned off.');
         } elseif ($action === 'password') {
             if (!password_verify(dp('current_password'), $driver['password_hash'])) throw new InvalidArgumentException('Your current password is incorrect.');
             $new = dp('password');
@@ -83,19 +85,25 @@ driver_header('Account', 'account');
 </section>
 <?php if ($driver['status'] === 'needs_info' && $driver['review_note']): ?><div class="alert warn"><b>Reviewer note:</b> <?= e($driver['review_note']) ?></div><?php endif; ?>
 
-<?php if (setting('uride.self_drive_enabled', '1') === '1' && array_key_exists('self_drive_ok', $driver)): $sr = uride_self_rule((string) $driver['vehicle_type']); ?>
-<form class="d-card" method="post">
+<?php if (setting('uride.self_drive_enabled', '1') === '1' && uride_fleet_ready($pdo)): $fleetUnits = uride_fleet_units($pdo, $id); $fleetUse = uride_fleet_in_use($pdo, $id);
+    $fm = $pdo->prepare('SELECT vehicle_type, model FROM uride_fleet WHERE driver_id = ?'); $fm->execute([$id]); $fleetModels = $fm->fetchAll(PDO::FETCH_KEY_PAIR); ?>
+<form class="d-card" method="post" id="fleet">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="self_drive">
-    <h2>Self-drive rentals</h2>
-    <p class="table-meta">Rent out your <?= e(uride_vehicles()[$driver['vehicle_type']]['label'] ?? 'vehicle') ?> without you driving. You bring it to the customer, check their driver's license and ID, hand it over, and check it when it comes back.</p>
+    <h2>Self-drive rental fleet</h2>
+    <p class="table-meta">Rent out your vehicles without you driving: E-Bike, Motorcycle, E-Trike, Car or Van. Enter how many units you have of each. Customers see how many are free, and you can rent out up to that many at the same time. You bring each vehicle to the customer, check their license and ID, hand it over, and check it when it comes back.</p>
+    <div class="d-fleet">
+    <?php foreach (uride_vehicles() as $v => $veh): $sr = uride_self_rule($v); if (!$sr['enabled']) continue; $out = $fleetUse[$v] ?? 0; ?>
+        <div class="d-fleet-row"><span><b><?= e($veh['label']) ?></b><small>₱<?= peso($sr['hour']) ?>/h · ₱<?= peso($sr['day']) ?>/day · deposit ₱<?= peso($sr['deposit']) ?><?= $out ? ' · <strong>' . $out . ' out now</strong>' : '' ?></small></span>
+            <input type="text" name="models[<?= e($v) ?>]" maxlength="80" placeholder="Model (optional)" value="<?= e((string) ($fleetModels[$v] ?? '')) ?>" aria-label="<?= e($veh['label']) ?> model">
+            <input type="number" name="units[<?= e($v) ?>]" min="<?= $out ?>" max="200" value="<?= (int) ($fleetUnits[$v] ?? 0) ?>" aria-label="<?= e($veh['label']) ?> units"></div>
+    <?php endforeach; ?>
+    </div>
     <ul class="d-list">
-        <li>Self-drive rate: ₱<?= peso($sr['hour']) ?>/hour (minimum <?= (int) $sr['min_hours'] ?> h) or ₱<?= peso($sr['day']) ?> for a whole day, less the URide commission.</li>
-        <li>The customer pays with Credits and leaves a ₱<?= peso($sr['deposit']) ?> deposit in the app.</li>
-        <li>Late returns: the hourly rate for each started hour after <?= setting_int('uride.self_drive_grace_min', 15) ?> minutes, paid to you from the deposit.</li>
+        <li>Rates are set by Ultimate App; you receive the rental less the URide commission.</li>
+        <li>The customer pays with Credits and leaves a deposit in the app. Late returns are paid to you from the deposit.</li>
         <li>Damage: report it when the vehicle comes back. Ultimate App reviews it and pays you from the deposit.</li>
     </ul>
-    <label class="d-check"><input type="checkbox" name="self_drive_ok" value="1"<?= (int) $driver['self_drive_ok'] ? ' checked' : '' ?>> Offer my vehicle for self-drive rentals</label>
-    <button class="btn" type="submit">Save</button>
+    <button class="btn" type="submit">Save fleet</button>
 </form>
 <?php endif; ?>
 <?php $kycState = kyc_status($pdo, 'driver', $id); ?>

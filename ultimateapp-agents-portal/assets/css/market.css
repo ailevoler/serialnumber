@@ -93,3 +93,8 @@
 .ue-track h2{margin:12px 0 4px;font-size:22px}.ue-track>p{margin:0;color:var(--mute);font-size:13px}.ue-progress{width:100%}
 .ue-receipt{margin:16px 0 0}
 @media (max-width:360px){.mk-grid{gap:12px 8px}.mk-row{grid-template-columns:1fr}.ue-item-img{width:76px;height:76px}}
+/* Buy Credits: where Credits can be used */
+.credit-uses{margin:4px 0 6px}.credit-uses-row{display:flex;gap:10px;overflow-x:auto;margin:0 -22px;padding:2px 22px 8px;scrollbar-width:none}.credit-uses-row::-webkit-scrollbar{display:none}
+.credit-uses-row a{flex:none;display:grid;justify-items:center;gap:3px;width:82px;text-align:center;text-decoration:none;color:#15181b}
+.credit-uses-row span{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:#f2f4f5}.credit-uses-row img{width:44px;height:44px}.credit-uses-row i svg{width:24px;height:24px}
+.credit-uses-row b{font-size:12px}.credit-uses-row small{font-size:10px;line-height:1.25;color:#6c757c}

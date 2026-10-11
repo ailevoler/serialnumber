@@ -76,7 +76,7 @@ function driver_header(string $title, string $active = '', string $bodyClass = '
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= e($title) ?> · URide Driver</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../merchant-portal/assets/base.css?v=5"><link rel="stylesheet" href="assets/driver.css?v=6">
+<link rel="stylesheet" href="../merchant-portal/assets/base.css?v=5"><link rel="stylesheet" href="assets/driver.css?v=7">
 <link rel="icon" href="../assets/images/pwa/driver-192.png"><meta name="theme-color" content="#0b1015"><meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="../assets/images/pwa/driver-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="URide Driver"><meta name="apple-mobile-web-app-status-bar-style" content="black">
 <script defer src="../assets/js/pwa.js?v=1"></script>

@@ -14,12 +14,15 @@ require_once __DIR__ . '/uride_selfdrive.php';
  * driver's wallet on completion; cash rides only deduct the commission from the driver's wallet.
  */
 
+/** Vehicle types. 'ride' = can be booked for point-to-point rides (E-Bike is rental only). */
 function uride_vehicles(): array
 {
     return [
-        'e_trike' => ['label' => 'E-Trike', 'seats' => '3 passengers'],
-        'motorcycle' => ['label' => 'Motorcycle', 'seats' => '1 passenger'],
-        'car' => ['label' => 'Car', 'seats' => '4 passengers'],
+        'e_bike' => ['label' => 'E-Bike', 'seats' => '1 rider', 'ride' => false],
+        'motorcycle' => ['label' => 'Motorcycle', 'seats' => '1 passenger', 'ride' => true],
+        'e_trike' => ['label' => 'E-Trike', 'seats' => '3 passengers', 'ride' => true],
+        'car' => ['label' => 'Car', 'seats' => '4 passengers', 'ride' => true],
+        'van' => ['label' => 'Van', 'seats' => '10–12 passengers', 'ride' => true],
     ];
 }
 
@@ -71,9 +74,9 @@ function uride_settings(): array
 function uride_fare_rule(string $vehicle): array
 {
     if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
-    $defaults = ['e_trike' => [3000, 1500, 3000], 'motorcycle' => [4000, 1200, 4000], 'car' => [10000, 2500, 10000]][$vehicle];
+    $defaults = ['e_bike' => [3000, 1000, 3000], 'e_trike' => [3000, 1500, 3000], 'motorcycle' => [4000, 1200, 4000], 'car' => [10000, 2500, 10000], 'van' => [30000, 4000, 30000]][$vehicle];
     return [
-        'enabled' => setting("uride.$vehicle.enabled", '1') === '1',
+        'enabled' => uride_vehicles()[$vehicle]['ride'] && setting("uride.$vehicle.enabled", '1') === '1',
         'base' => setting_int("uride.$vehicle.base_centavos", $defaults[0]),
         'included_km' => is_numeric(setting("uride.$vehicle.included_km")) ? (float) setting("uride.$vehicle.included_km") : 1.0,
         'per_km' => setting_int("uride.$vehicle.per_km_centavos", $defaults[1]),
@@ -127,9 +130,10 @@ function uride_rental_settings(): array
 function uride_rental_rule(string $vehicle): array
 {
     if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
-    $d = ['e_trike' => [50000, 1, 300000], 'motorcycle' => [30000, 1, 180000], 'car' => [80000, 2, 500000]][$vehicle];
+    $d = ['e_bike' => [15000, 1, 80000], 'e_trike' => [50000, 1, 300000], 'motorcycle' => [30000, 1, 180000], 'car' => [80000, 2, 500000], 'van' => [150000, 3, 900000]][$vehicle];
     return [
-        'enabled' => setting("uride.$vehicle.rental_enabled", '1') === '1',
+        // An E-Bike carries one rider, so it is rented without a driver (self-drive) unless Admin turns this on.
+        'enabled' => setting("uride.$vehicle.rental_enabled", $vehicle === 'e_bike' ? '0' : '1') === '1',
         'hour' => setting_int("uride.$vehicle.rental_hour_centavos", $d[0]),
         'min_hours' => max(1, setting_int("uride.$vehicle.rental_min_hours", $d[1])),
         'day' => setting_int("uride.$vehicle.rental_day_centavos", $d[2]),
@@ -140,7 +144,7 @@ function uride_rental_rule(string $vehicle): array
 function uride_self_rule(string $vehicle): array
 {
     if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
-    $d = ['e_trike' => [35000, 2, 200000, 200000], 'motorcycle' => [20000, 2, 120000, 300000], 'car' => [60000, 4, 350000, 500000]][$vehicle];
+    $d = ['e_bike' => [10000, 1, 60000, 100000], 'e_trike' => [35000, 2, 200000, 200000], 'motorcycle' => [20000, 2, 120000, 300000], 'car' => [60000, 4, 350000, 500000], 'van' => [120000, 4, 700000, 1000000]][$vehicle];
     return [
         'enabled' => setting('uride.self_drive_enabled', '1') === '1' && setting("uride.$vehicle.self_enabled", '1') === '1',
         'hour' => setting_int("uride.$vehicle.self_hour_centavos", $d[0]),
@@ -150,10 +154,14 @@ function uride_self_rule(string $vehicle): array
     ];
 }
 
-/** License class needed: E-Trike and Motorcycle need A/A1 (motorcycle/tricycle); Car needs B. */
+/**
+ * License class needed: E-Trike and Motorcycle need A/A1 (motorcycle/tricycle); Car and Van need B (B1 for 9+ seats).
+ * E-Bike: a verified ID only, unless Admin turns on "E-Bike needs a driver's license".
+ */
 function uride_license_class(string $vehicle): string
 {
-    return $vehicle === 'car' ? 'car' : 'motorcycle';
+    if ($vehicle === 'e_bike') return setting('uride.e_bike_license', '0') === '1' ? 'motorcycle' : 'none';
+    return in_array($vehicle, ['car', 'van'], true) ? 'car' : 'motorcycle';
 }
 
 /** Durations customers can pick: hour packages up to the Admin maximum, plus a whole day. */
@@ -213,6 +221,113 @@ function uride_active_sql(string $alias = ''): string
     return "{$a}status IN ('requested','accepted','arrived','in_progress') AND NOT ({$a}status = 'requested' AND {$a}scheduled_at IS NOT NULL AND {$a}scheduled_at > NOW() + INTERVAL " . URIDE_RENTAL_LEAD_MIN . " MINUTE)";
 }
 
+/* ---------------------------------------------------------------- rental fleet (units per vehicle type) */
+
+function uride_fleet_ready(PDO $pdo): bool
+{
+    static $ready = null;
+    if ($ready === null) {
+        try { $pdo->query('SELECT id FROM uride_fleet LIMIT 0'); $ready = true; } catch (Throwable) { $ready = false; }
+    }
+    return $ready;
+}
+
+/** An owner's self-drive rental units: [vehicle type => units]. */
+function uride_fleet_units(PDO $pdo, int $driverId): array
+{
+    if (!uride_fleet_ready($pdo)) return [];
+    $s = $pdo->prepare('SELECT vehicle_type, units FROM uride_fleet WHERE driver_id = ? AND units > 0');
+    $s->execute([$driverId]);
+    return array_map('intval', $s->fetchAll(PDO::FETCH_KEY_PAIR));
+}
+
+/** Units out now (accepted, being delivered or with the customer): [vehicle type => count]. */
+function uride_fleet_in_use(PDO $pdo, int $driverId): array
+{
+    $s = $pdo->prepare("SELECT vehicle_type, COUNT(*) FROM uride_requests WHERE driver_id = ? AND rental_mode = 'self' AND status IN ('accepted','arrived','in_progress') GROUP BY vehicle_type");
+    $s->execute([$driverId]);
+    return array_map('intval', $s->fetchAll(PDO::FETCH_KEY_PAIR));
+}
+
+/** Free units per vehicle type for an owner. */
+function uride_fleet_free(PDO $pdo, int $driverId): array
+{
+    $use = uride_fleet_in_use($pdo, $driverId);
+    $out = [];
+    foreach (uride_fleet_units($pdo, $driverId) as $v => $n) $out[$v] = max(0, $n - ($use[$v] ?? 0));
+    return $out;
+}
+
+/** Saves an owner's fleet: $units = [vehicle type => count], $models = [vehicle type => text]. */
+function uride_fleet_save(PDO $pdo, int $driverId, array $units, array $models = []): void
+{
+    if (!uride_fleet_ready($pdo)) throw new InvalidArgumentException('Rental fleet is being set up. Please try again later.');
+    $use = uride_fleet_in_use($pdo, $driverId);
+    foreach (array_keys(uride_vehicles()) as $v) {
+        $n = (int) ($units[$v] ?? 0);
+        if ($n < 0 || $n > 200) throw new InvalidArgumentException('Units must be 0 to 200.');
+        if ($n < ($use[$v] ?? 0)) throw new InvalidArgumentException(($use[$v]) . ' ' . uride_vehicles()[$v]['label'] . ' unit(s) are rented out now. Set at least that many until they come back.');
+        $model = mb_substr(trim((string) ($models[$v] ?? '')), 0, 80);
+        $pdo->prepare('INSERT INTO uride_fleet (driver_id, vehicle_type, units, model) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE units = VALUES(units), model = VALUES(model)')
+            ->execute([$driverId, $v, $n, $model !== '' ? $model : null]);
+    }
+    $pdo->prepare('UPDATE uride_drivers SET self_drive_ok = ? WHERE id = ?')->execute([array_sum(array_map('intval', $units)) > 0 ? 1 : 0, $driverId]);
+}
+
+/**
+ * How many vehicles can take a new rental, or null when not counted.
+ * - Self-drive now: free units of approved owners who are online (they deliver the vehicle).
+ * - Self-drive later: all approved owners' units minus self-drive rentals that overlap that time.
+ * - With driver now: approved drivers of that vehicle online and not on a trip. With driver later: not counted
+ *   (drivers come online by then).
+ */
+function uride_rental_available(PDO $pdo, string $vehicle, string $mode, ?string $startsAt = null, int $hours = 1): ?int
+{
+    if ($mode === 'self') {
+        if (!uride_fleet_ready($pdo)) return null;
+        if ($startsAt === null) {
+            $s = $pdo->prepare("SELECT COALESCE(SUM(f.units), 0) - (SELECT COUNT(*) FROM uride_requests r JOIN uride_drivers d2 ON d2.id = r.driver_id
+                    WHERE r.rental_mode = 'self' AND r.vehicle_type = ? AND r.status IN ('accepted','arrived','in_progress') AND d2.status = 'approved' AND d2.is_online = 1 AND d2.location_at >= NOW() - INTERVAL 10 MINUTE)
+                FROM uride_fleet f JOIN uride_drivers d ON d.id = f.driver_id WHERE f.vehicle_type = ? AND d.status = 'approved' AND d.is_online = 1 AND d.location_at >= NOW() - INTERVAL 10 MINUTE");
+            $s->execute([$vehicle, $vehicle]);
+            return max(0, (int) $s->fetchColumn());
+        }
+        $start = $startsAt; $end = date('Y-m-d H:i:s', strtotime($startsAt) + $hours * 3600);
+        $s = $pdo->prepare("SELECT (SELECT COALESCE(SUM(f.units), 0) FROM uride_fleet f JOIN uride_drivers d ON d.id = f.driver_id WHERE f.vehicle_type = ? AND d.status = 'approved')
+            - (SELECT COUNT(*) FROM uride_requests r WHERE r.rental_mode = 'self' AND r.vehicle_type = ? AND r.status IN ('requested','accepted','arrived','in_progress')
+                AND COALESCE(r.started_at, r.scheduled_at, r.created_at) < ? AND COALESCE(r.ends_at, COALESCE(r.started_at, r.scheduled_at, r.created_at) + INTERVAL r.rental_hours HOUR) > ?)");
+        $s->execute([$vehicle, $vehicle, $end, $start]);
+        return max(0, (int) $s->fetchColumn());
+    }
+    if ($startsAt !== null) return null;
+    $s = $pdo->prepare("SELECT COUNT(*) FROM uride_drivers d WHERE d.vehicle_type = ? AND d.status = 'approved' AND d.is_online = 1 AND d.location_at >= NOW() - INTERVAL 2 MINUTE
+        AND NOT EXISTS (SELECT 1 FROM uride_requests r WHERE r.driver_id = d.id AND (r.status IN ('accepted','arrived') OR (r.status = 'in_progress' AND (r.rental_mode IS NULL OR r.rental_mode <> 'self'))))");
+    $s->execute([$vehicle]);
+    return (int) $s->fetchColumn();
+}
+
+/** Units shown to customers on the vehicle cards: [vehicle => ['driver' => now, 'self' => now, 'fleet' => total self units]]. */
+function uride_rental_counts(PDO $pdo): array
+{
+    $out = [];
+    $total = [];
+    if (uride_fleet_ready($pdo)) {
+        $total = array_map('intval', $pdo->query("SELECT f.vehicle_type, SUM(f.units) FROM uride_fleet f JOIN uride_drivers d ON d.id = f.driver_id WHERE d.status = 'approved' GROUP BY f.vehicle_type")->fetchAll(PDO::FETCH_KEY_PAIR));
+    }
+    foreach (array_keys(uride_vehicles()) as $v) {
+        $out[$v] = ['driver' => (int) uride_rental_available($pdo, $v, 'driver'), 'self' => (int) uride_rental_available($pdo, $v, 'self'), 'fleet' => $total[$v] ?? 0];
+    }
+    return $out;
+}
+
+/** Self-drive vehicles an owner has handed over right now (shown on the driver dashboard). */
+function uride_driver_rentals_out(PDO $pdo, int $driverId): array
+{
+    $s = $pdo->prepare("SELECT r.id, r.code, r.vehicle_type, r.ends_at, u.full_name FROM uride_requests r JOIN users u ON u.id = r.user_id WHERE r.driver_id = ? AND r.rental_mode = 'self' AND r.status = 'in_progress' ORDER BY r.ends_at");
+    $s->execute([$driverId]);
+    return $s->fetchAll();
+}
+
 /** Books a rental (vehicle with driver for some hours). Credits rentals hold the price now. Returns the code. */
 function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey): string
 {
@@ -250,13 +365,21 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
         if (($in['self_terms'] ?? '') !== '1') throw new InvalidArgumentException('Please agree to the self-drive rules.');
         require_once __DIR__ . '/kyc.php';
         if (setting('uride.self_drive_kyc', '1') === '1' && !kyc_is_verified($pdo, 'user', $userId)) throw new InvalidArgumentException('Verify your ID first (Profile › Verify my identity) to rent a vehicle without a driver.');
-        $lic = uride_user_license($pdo, $userId);
-        $endDate = date('Y-m-d', ($scheduled !== null ? strtotime($scheduled) : time()) + $quote['hours'] * 3600);
-        if (!$lic) throw new InvalidArgumentException('Add your driver\'s license first (URide › Self-drive › Add license).');
-        if ($lic['status'] === 'rejected') throw new InvalidArgumentException('Your driver\'s license was not accepted: ' . ($lic['review_note'] ?: 'please upload it again') . '.');
-        if (!uride_license_allows($lic, $vehicle)) throw new InvalidArgumentException('Your license does not cover a ' . uride_vehicles()[$vehicle]['label'] . (uride_license_class($vehicle) === 'car' ? ' (needs code B)' : ' (needs code A or A1)') . '.');
-        if ($lic['expiry'] < $endDate) throw new InvalidArgumentException('Your driver\'s license expires before the rental ends. Update it first.');
-        $licenseId = (int) $lic['id'];
+        if (uride_license_class($vehicle) !== 'none') {
+            $lic = uride_user_license($pdo, $userId);
+            $endDate = date('Y-m-d', ($scheduled !== null ? strtotime($scheduled) : time()) + $quote['hours'] * 3600);
+            if (!$lic) throw new InvalidArgumentException('Add your driver\'s license first (URide › Self-drive › Add license).');
+            if ($lic['status'] === 'rejected') throw new InvalidArgumentException('Your driver\'s license was not accepted: ' . ($lic['review_note'] ?: 'please upload it again') . '.');
+            if (!uride_license_allows($lic, $vehicle)) throw new InvalidArgumentException('Your license does not cover a ' . uride_vehicles()[$vehicle]['label'] . (uride_license_class($vehicle) === 'car' ? ' (needs code B' . ($vehicle === 'van' ? ' or B1' : '') . ')' : ' (needs code A or A1)') . '.');
+            if ($lic['expiry'] < $endDate) throw new InvalidArgumentException('Your driver\'s license expires before the rental ends. Update it first.');
+            $licenseId = (int) $lic['id'];
+        }
+    }
+    // Units: refuse when nothing is free for the chosen time (owners' fleets for self-drive, drivers online for now).
+    $avail = uride_rental_available($pdo, $vehicle, $mode, $scheduled, $quote['hours']);
+    if ($avail !== null && $avail < 1) {
+        $what = uride_vehicles()[$vehicle]['label'] . ($mode === 'self' ? ' for self-drive' : ' with driver');
+        throw new InvalidArgumentException($scheduled === null ? 'No ' . $what . ' is available right now. Choose another vehicle or schedule it for later.' : 'All ' . $what . ' units are booked at that time. Choose another time or vehicle.');
     }
     $label = $mode === 'self'
         ? ($package === 'day' ? 'Whole-day self-drive (' . $quote['hours'] . ' h)' : $quote['hours'] . '-hour self-drive')
@@ -745,7 +868,8 @@ function uride_driver_is_live(array $driver): bool
 
 function uride_driver_active_ride(PDO $pdo, int $driverId): ?array
 {
-    $stmt = $pdo->prepare("SELECT r.*, u.full_name passenger_name, u.mobile passenger_mobile FROM uride_requests r JOIN users u ON u.id = r.user_id WHERE r.driver_id = ? AND r.status IN ('accepted','arrived','in_progress') ORDER BY r.id DESC LIMIT 1");
+    // A self-drive vehicle already handed over does not keep the owner busy (fleet owners can rent out more units).
+    $stmt = $pdo->prepare("SELECT r.*, u.full_name passenger_name, u.mobile passenger_mobile FROM uride_requests r JOIN users u ON u.id = r.user_id WHERE r.driver_id = ? AND (r.status IN ('accepted','arrived') OR (r.status = 'in_progress' AND (r.rental_mode IS NULL OR r.rental_mode <> 'self'))) ORDER BY r.id DESC LIMIT 1");
     $stmt->execute([$driverId]);
     return $stmt->fetch() ?: null;
 }
@@ -777,15 +901,18 @@ function uride_feed(PDO $pdo, array $driver): array
     $lat = (float) $driver['lat']; $lng = (float) $driver['lng'];
     $dLat = $s['radius_km'] / 111.0;
     $dLng = $s['radius_km'] / max(1.0, 111.0 * cos(deg2rad($lat)));
+    // Self-drive requests: vehicle types in the owner's rental fleet that still have a free unit.
+    $selfTypes = array_keys(array_filter(uride_fleet_free($pdo, (int) $driver['id']), static fn($n) => $n > 0));
+    $selfIn = $selfTypes ? implode(',', array_fill(0, count($selfTypes), '?')) : "''";
     $stmt = $pdo->prepare("SELECT r.id, r.code, r.trip_type, r.rental_hours, r.rental_package, r.rental_mode, r.deposit_centavos, r.scheduled_at, r.vehicle_type, r.pickup_address, r.pickup_lat, r.pickup_lng, r.dropoff_address, r.dropoff_lat, r.dropoff_lng, r.road_km, r.fare_centavos, r.payment_method, r.passenger_note, r.expires_at, r.created_at, u.full_name
         FROM uride_requests r JOIN users u ON u.id = r.user_id
-        WHERE r.status = 'requested' AND r.vehicle_type = ? AND r.expires_at > NOW()
+        WHERE r.status = 'requested' AND r.expires_at > NOW()
           AND (r.scheduled_at IS NULL OR r.scheduled_at <= NOW() + INTERVAL " . URIDE_RENTAL_LEAD_MIN . " MINUTE)
-          AND (r.rental_mode IS NULL OR r.rental_mode = 'driver' OR " . ((int) ($driver['self_drive_ok'] ?? 0) === 1 ? '1' : '0') . " = 1)
+          AND ((r.vehicle_type = ? AND (r.rental_mode IS NULL OR r.rental_mode = 'driver')) OR (r.rental_mode = 'self' AND r.vehicle_type IN ($selfIn)))
           AND r.pickup_lat BETWEEN ? AND ? AND r.pickup_lng BETWEEN ? AND ?
           AND NOT EXISTS (SELECT 1 FROM uride_ride_skips k WHERE k.ride_id = r.id AND k.driver_id = ?)
         ORDER BY r.created_at LIMIT 30");
-    $stmt->execute([$driver['vehicle_type'], $lat - $dLat, $lat + $dLat, $lng - $dLng, $lng + $dLng, $driver['id']]);
+    $stmt->execute([$driver['vehicle_type'], ...$selfTypes, $lat - $dLat, $lat + $dLat, $lng - $dLng, $lng + $dLng, $driver['id']]);
     $out = [];
     foreach ($stmt as $r) {
         $away = uride_distance($lat, $lng, (float) $r['pickup_lat'], (float) $r['pickup_lng']);
@@ -816,8 +943,12 @@ function uride_accept(PDO $pdo, int $driverId, int $rideId): array
         $ride = uride_lock_ride($pdo, $rideId);
         if ($ride['status'] !== 'requested' || strtotime((string) $ride['expires_at']) <= time()) throw new InvalidArgumentException('Sorry, this ride was taken by another driver or is no longer available.');
         if (uride_is_upcoming($ride)) throw new InvalidArgumentException('This rental starts later. It opens to drivers ' . URIDE_RENTAL_LEAD_MIN . ' minutes before.');
-        if (uride_is_self_drive($ride) && !(int) ($driver['self_drive_ok'] ?? 0)) throw new InvalidArgumentException('Turn on "Offer my vehicle for self-drive" in your account to accept self-drive rentals.');
-        if ($ride['vehicle_type'] !== $driver['vehicle_type']) throw new InvalidArgumentException('This request is for a different vehicle type.');
+        if (uride_is_self_drive($ride)) {
+            $free = uride_fleet_free($pdo, $driverId)[$ride['vehicle_type']] ?? 0;
+            if ($free < 1) throw new InvalidArgumentException(isset(uride_fleet_units($pdo, $driverId)[$ride['vehicle_type']]) ? 'All your ' . uride_vehicles()[$ride['vehicle_type']]['label'] . ' units are rented out right now.' : 'Add ' . uride_vehicles()[$ride['vehicle_type']]['label'] . ' units to your rental fleet (Account) to accept this self-drive rental.');
+        } elseif ($ride['vehicle_type'] !== $driver['vehicle_type']) {
+            throw new InvalidArgumentException('This request is for a different vehicle type.');
+        }
         $s = uride_settings();
         $away = uride_distance((float) $driver['lat'], (float) $driver['lng'], (float) $ride['pickup_lat'], (float) $ride['pickup_lng']);
         if ($away > $s['radius_km'] + 0.5) throw new InvalidArgumentException('You are too far from this pick-up.');

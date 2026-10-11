@@ -133,7 +133,7 @@ elseif ($view === 'listings'):
         <select name="s" data-autosubmit aria-label="Service"><option value="">All services</option><?php foreach (mk_services() as $k => $c): ?><option value="<?= $k ?>"<?= $svc === $k ? ' selected' : '' ?>><?= e($c['label']) ?></option><?php endforeach; ?></select>
         <select name="st" data-autosubmit aria-label="Status"><option value="">Any status</option><?php foreach (['active' => 'Live', 'pending' => 'To review', 'paused' => 'Paused', 'rejected' => 'Not approved'] as $k => $lab): ?><option value="<?= $k ?>"<?= $st === $k ? ' selected' : '' ?>><?= $lab ?></option><?php endforeach; ?></select>
         <input type="search" name="q" value="<?= e(q('q')) ?>" placeholder="Search name or merchant">
-        <?php if ($canManage): ?><span class="spacer"></span><a class="btn small primary" href="?view=listings&amp;new=ugo">+ UGo activity</a><a class="btn small primary" href="?view=listings&amp;new=ulocal">+ ULocal service</a><a class="btn small primary" href="?view=listings&amp;new=ueat">+ UEat dish</a><?php endif; ?>
+        <?php if ($canManage): ?><span class="spacer"></span><a class="btn small primary" href="?view=listings&amp;new=upass">+ UPass</a><a class="btn small primary" href="?view=listings&amp;new=ugo">+ UGo activity</a><a class="btn small primary" href="?view=listings&amp;new=ulocal">+ ULocal service</a><a class="btn small primary" href="?view=listings&amp;new=ueat">+ UEat dish</a><?php endif; ?>
     </form>
     <div class="grid two">
         <section class="card"><h2>Listings <small><?= count($rows) ?></small></h2><div class="mk-rows">
@@ -188,7 +188,7 @@ elseif ($view === 'bookings'):
     <div class="table-wrap"><table><thead><tr><th>Booking</th><th>Customer</th><th>Run by</th><th>When</th><th class="num">Total</th><th>Status</th><th></th></tr></thead><tbody>
     <?php if (!$rows): ?><tr><td colspan="7" class="muted">No bookings.</td></tr><?php endif; ?>
     <?php foreach ($rows as $b): ?><tr>
-        <td><b><?= e($b['title']) ?></b><small><?= e($b['reference']) ?> · <?= $b['service'] === 'ugo' ? 'UGo' : 'ULocal' ?> · <?= (int) $b['quantity'] ?>×</small></td>
+        <td><b><?= e($b['title']) ?></b><small><?= e($b['reference']) ?> · <?= e(mk_services()[$b['service']]['label']) ?> · <?= (int) $b['quantity'] ?>×</small></td>
         <td><a class="row-link" href="customer.php?id=<?= (int) $b['user_id'] ?>"><?= e($b['full_name']) ?></a><small><?= e((string) $b['contact_mobile']) ?></small></td>
         <td><?= e($b['business_name'] ?: 'Ultimate App') ?></td>
         <td><?= e(date('M j, Y', strtotime($b['booking_date']))) ?><small><?= $b['booking_time'] ? e(date('g:i A', strtotime($b['booking_time']))) : '' ?></small></td>

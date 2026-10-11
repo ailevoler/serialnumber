@@ -49,6 +49,21 @@ try {
     $pdo->prepare("INSERT INTO users (full_name, mobile, email, password_hash, qr_code, credits) VALUES ('Self Drive Test', ?, ?, 'x', ?, 10000)")->execute(['0918' . random_int(1000000, 9999999), 'sd' . bin2hex(random_bytes(4)) . '@test.local', 'UA-' . strtoupper(bin2hex(random_bytes(5)))]);
     $users[] = $u = (int) $pdo->lastInsertId();
     $credits = static fn(): int => (int) round((float) $pdo->query("SELECT credits FROM users WHERE id = $u")->fetchColumn() * 100);
+    // ---------- owners
+    $mk = static function (bool $selfOk) use ($pdo, &$drivers): int {
+        $code = uride_driver_new_code($pdo);
+        $pdo->prepare("INSERT INTO uride_drivers (code, full_name, email, mobile, password_hash, birthdate, address, barangay, license_no, license_expiry, vehicle_type, plate_no, vehicle_model, vehicle_color, status, self_drive_ok)
+            VALUES (?, 'Owner Test', ?, ?, 'x', '1990-01-01', 'Station 2', 'Balabag', ?, '2030-01-01', 'e_trike', ?, 'Bemac', 'Green', 'approved', ?)")
+            ->execute([$code, strtolower($code) . '@test.local', '0917' . random_int(1000000, 9999999), 'N01-' . random_int(10000, 99999), 'T' . random_int(10000, 99999), $selfOk ? 1 : 0]);
+        $id = (int) $pdo->lastInsertId();
+        $drivers[] = $id;
+        uride_tx($pdo, fn() => uride_wallet_change($pdo, $id, 100000, 'adjustment', 'TEST-' . $id, null, 'test float'));
+        uride_set_online($pdo, $id, true);
+        uride_heartbeat($pdo, $id, 11.9660, 121.9250);
+        if ($selfOk) $pdo->prepare("INSERT INTO uride_fleet (driver_id, vehicle_type, units) VALUES (?, 'e_trike', 1)")->execute([$id]);
+        return $id;
+    };
+    $plain = $mk(false); $owner = $mk(true);
     $set('uride.self_drive_kyc', '1');
     $throws(fn() => uride_book_rental($pdo, $u, $base, $key()), 'Verify your ID', 'Admin KYC rule on: unverified customer cannot self-drive');
     $set('uride.self_drive_kyc', '0');
@@ -74,20 +89,6 @@ try {
     $r = $pdo->query('SELECT * FROM uride_requests WHERE id = ' . (int) $r['id'])->fetch();
     $check($credits() === 1000000 && $r['deposit_status'] === 'refunded', 'cancel returns the price and the deposit');
 
-    // ---------- owners
-    $mk = static function (bool $selfOk) use ($pdo, &$drivers): int {
-        $code = uride_driver_new_code($pdo);
-        $pdo->prepare("INSERT INTO uride_drivers (code, full_name, email, mobile, password_hash, birthdate, address, barangay, license_no, license_expiry, vehicle_type, plate_no, vehicle_model, vehicle_color, status, self_drive_ok)
-            VALUES (?, 'Owner Test', ?, ?, 'x', '1990-01-01', 'Station 2', 'Balabag', ?, '2030-01-01', 'e_trike', ?, 'Bemac', 'Green', 'approved', ?)")
-            ->execute([$code, strtolower($code) . '@test.local', '0917' . random_int(1000000, 9999999), 'N01-' . random_int(10000, 99999), 'T' . random_int(10000, 99999), $selfOk ? 1 : 0]);
-        $id = (int) $pdo->lastInsertId();
-        $drivers[] = $id;
-        uride_tx($pdo, fn() => uride_wallet_change($pdo, $id, 100000, 'adjustment', 'TEST-' . $id, null, 'test float'));
-        uride_set_online($pdo, $id, true);
-        uride_heartbeat($pdo, $id, 11.9660, 121.9250);
-        return $id;
-    };
-    $plain = $mk(false); $owner = $mk(true);
     $row = static fn(int $id): array => $pdo->query("SELECT * FROM uride_drivers WHERE id = $id")->fetch();
     $ride = static fn(string $c): array => $pdo->query('SELECT * FROM uride_requests WHERE code = ' . $pdo->quote($c))->fetch();
 
@@ -146,6 +147,7 @@ try {
     $throws(fn() => uride_book_rental($pdo, $u, $base, $key()), 'not accepted', 'a rejected license blocks self-drive until a new one is added');
     echo "\nAll self-drive tests passed.\n";
 } finally {
+    foreach ($drivers as $d) $pdo->exec("DELETE FROM uride_fleet WHERE driver_id = $d");
     foreach ($drivers as $d) $pdo->exec("UPDATE uride_drivers SET is_online = 0, status = 'rejected', self_drive_ok = 0, review_note = 'Automated test driver' WHERE id = $d");
     if ($users) {
         $ids = implode(',', $users);

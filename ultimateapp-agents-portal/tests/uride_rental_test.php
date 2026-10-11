@@ -45,6 +45,20 @@ try {
     $check(!isset(uride_rental_packages()['8']) && isset(uride_rental_packages()['6'], uride_rental_packages()['day']), 'Admin maximum hides longer hourly packages');
     $set('uride.rental_max_hours', '12');
 
+    // An E-Trike driver online nearby: rentals "now" need at least one free driver.
+    $mk = static function () use ($pdo, &$drivers): int {
+        $code = uride_driver_new_code($pdo);
+        $pdo->prepare("INSERT INTO uride_drivers (code, full_name, email, mobile, password_hash, birthdate, address, barangay, license_no, license_expiry, vehicle_type, plate_no, vehicle_model, vehicle_color, status)
+            VALUES (?, 'Rental Driver', ?, ?, 'x', '1990-01-01', 'Station 2', 'Balabag', ?, '2030-01-01', 'e_trike', ?, 'Bemac', 'Green', 'approved')")
+            ->execute([$code, strtolower($code) . '@test.local', '0917' . random_int(1000000, 9999999), 'N01-' . random_int(10000, 99999), 'T' . random_int(10000, 99999)]);
+        $id = (int) $pdo->lastInsertId();
+        $drivers[] = $id;
+        uride_tx($pdo, fn() => uride_wallet_change($pdo, $id, 100000, 'adjustment', 'TEST-' . $id, null, 'test float'));
+        uride_set_online($pdo, $id, true);
+        uride_heartbeat($pdo, $id, 11.9660, 121.9250);
+        return $id;
+    };
+    $early = $mk();
     // ---------- booking
     $pdo->prepare("INSERT INTO users (full_name, mobile, email, password_hash, qr_code, credits) VALUES ('Rental Test', ?, ?, 'x', ?, 5000)")->execute(['0918' . random_int(1000000, 9999999), 'rt' . bin2hex(random_bytes(4)) . '@test.local', 'UA-' . strtoupper(bin2hex(random_bytes(5)))]);
     $users[] = $u = (int) $pdo->lastInsertId();
@@ -76,18 +90,6 @@ try {
     uride_cancel_by_passenger($pdo, $u, (int) $ride, 'test');
 
     // ---------- drivers
-    $mk = static function () use ($pdo, &$drivers): int {
-        $code = uride_driver_new_code($pdo);
-        $pdo->prepare("INSERT INTO uride_drivers (code, full_name, email, mobile, password_hash, birthdate, address, barangay, license_no, license_expiry, vehicle_type, plate_no, vehicle_model, vehicle_color, status)
-            VALUES (?, 'Rental Driver', ?, ?, 'x', '1990-01-01', 'Station 2', 'Balabag', ?, '2030-01-01', 'e_trike', ?, 'Bemac', 'Green', 'approved')")
-            ->execute([$code, strtolower($code) . '@test.local', '0917' . random_int(1000000, 9999999), 'N01-' . random_int(10000, 99999), 'T' . random_int(10000, 99999)]);
-        $id = (int) $pdo->lastInsertId();
-        $drivers[] = $id;
-        uride_tx($pdo, fn() => uride_wallet_change($pdo, $id, 100000, 'adjustment', 'TEST-' . $id, null, 'test float'));
-        uride_set_online($pdo, $id, true);
-        uride_heartbeat($pdo, $id, 11.9660, 121.9250);
-        return $id;
-    };
     $d = $mk();
     $driver = $pdo->query("SELECT * FROM uride_drivers WHERE id = $d")->fetch();
     $feedCodes = static fn(): array => array_column(uride_feed($pdo, $pdo->query("SELECT * FROM uride_drivers WHERE id = $d")->fetch()), 'code');

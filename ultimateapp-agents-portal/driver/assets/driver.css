@@ -201,3 +201,11 @@ details.d-card summary{font-size:13.5px}
 .d-check input{margin-top:2px;flex:none}
 .d-list{margin:6px 0 10px;padding-left:18px;font-size:12.5px;line-height:1.5;color:#3b4046}
 .d-self .kv b small{font-weight:500;color:#6b7178}
+/* Self-drive rental fleet */
+.d-fleet{display:grid;gap:8px;margin:12px 0}
+.d-fleet-row{display:grid;grid-template-columns:1fr 1fr 72px;gap:8px;align-items:center;padding:10px 0;border-top:1px solid #e6eaed}
+.d-fleet-row b{display:block}.d-fleet-row small{color:#6b7680;font-size:11.5px}.d-fleet-row small strong{color:#b25e00}
+.d-fleet-row input{width:100%;height:40px;padding:0 10px;border:1px solid #cfd6dc;border-radius:10px;font:inherit;font-size:14px}
+.d-fleet-row input[type=number]{text-align:center;font-weight:700}
+@media(max-width:420px){.d-fleet-row{grid-template-columns:1fr 72px}.d-fleet-row input[type=text]{grid-column:1/-1;grid-row:2}}
+.d-out{display:grid;gap:6px;margin:10px 0}.d-out a{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:#fff8e6;color:inherit;text-decoration:none;font-size:13px}

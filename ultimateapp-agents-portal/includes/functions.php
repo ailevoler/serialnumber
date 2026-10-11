@@ -147,7 +147,7 @@ function service_catalog(): array
     // Active services only. UStay, UFly and UMart were retired on 2026-09-28.
     $services = [
         ['code' => 'URide', 'label' => 'URide', 'image' => 'uride.png', 'href' => 'uride.php'],
-        ['code' => 'UPass', 'label' => 'UPass', 'image' => 'upass.png', 'href' => 'service.php?service=UPass'],
+        ['code' => 'UPass', 'label' => 'UPass', 'image' => 'upass.png', 'href' => 'upass.php'],
         ['code' => 'UGo', 'label' => 'UGo', 'image' => 'ugo.png', 'href' => 'ugo.php'],
         ['code' => 'ULocal', 'label' => 'ULocal', 'image' => 'ulocal.png', 'href' => 'ulocal.php'],
         ['code' => 'UEat', 'label' => 'UEat', 'image' => 'ueat.png', 'href' => 'ueat.php'],
@@ -160,6 +160,24 @@ function service_catalog(): array
         foreach (suniway_services() as $svc) $services[] = ['code' => $svc['code'], 'label' => $svc['label'], 'image' => $svc['image'], 'href' => $svc['page']];
     }
     return $services;
+}
+
+/**
+ * Where customers can spend Credits: every live product and service (the service tiles, minus UBarangay which has
+ * its own fees) plus paying merchants by QR and sending to friends.
+ */
+function credits_uses(): array
+{
+    $uses = [];
+    foreach (service_catalog() as $s) {
+        if ($s['code'] === 'UBarangay') continue;
+        $uses[] = ['label' => $s['label'], 'image' => $s['image'], 'href' => $s['href'], 'what' => [
+            'URide' => 'Rides & rentals', 'UPass' => 'Passes & transfers', 'UGo' => 'Activities & tours', 'ULocal' => 'Local services',
+            'UEat' => 'Food delivery', 'UBills' => 'Pay bills', 'ULoad' => 'Mobile load', 'UCash In' => 'E-wallet cash-in',
+        ][$s['code']] ?? ''];
+    }
+    $uses[] = ['label' => 'Pay merchants', 'image' => null, 'icon' => 'qr-code', 'href' => 'qr.php', 'what' => 'Scan any Ultimate App QR'];
+    return $uses;
 }
 
 /** Home screen tiles: URide, UPass, UGo, ULocal, UEat, (UBarangay), (UBills, ULoad, UCash In), UMap, UHelp, UNews, UMore. */

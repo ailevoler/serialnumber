@@ -139,3 +139,7 @@
 .uride-license-form fieldset{display:grid;gap:8px;margin:0;padding:10px 12px;border:1px solid #dfe2e6;border-radius:10px}
 .uride-license-form legend{font-size:12px;font-weight:600;color:#3b4046;padding:0 4px}
 .uride-license-form label.check{display:flex;gap:8px;align-items:center;font-weight:500}
+/* Rental units available per vehicle */
+.uride-avail{display:block;font-style:normal;font-size:10.5px;font-weight:700;color:#0b7d71;min-height:14px}.uride-avail:empty{display:none}
+.uride-avail.none{color:#b42318}.uride-vehicle:has(input:checked) .uride-avail{color:#bff5df}.uride-vehicle:has(input:checked) .uride-avail.none{color:#ffb4ab}
+.uride-vehicle.off{opacity:.45;cursor:not-allowed}

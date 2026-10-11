@@ -53,7 +53,7 @@ $btn = static function (string $kind, string $ref, string $to, string $label, bo
 portal_header('Orders & bookings', 'orders');
 ?>
 <link rel="stylesheet" href="../assets/css/market-admin.css?v=1">
-<div class="tabs"><a class="<?= $tab === 'food' ? 'active' : '' ?>" href="?tab=food">UEat food orders<span><?= $waiting['orders'] ?></span></a><a class="<?= $tab === 'bookings' ? 'active' : '' ?>" href="?tab=bookings">UGo / ULocal bookings<span><?= $waiting['bookings'] ?></span></a><a class="<?= $tab === 'history' ? 'active' : '' ?>" href="?tab=history">History</a></div>
+<div class="tabs"><a class="<?= $tab === 'food' ? 'active' : '' ?>" href="?tab=food">UEat food orders<span><?= $waiting['orders'] ?></span></a><a class="<?= $tab === 'bookings' ? 'active' : '' ?>" href="?tab=bookings">UPass / UGo / ULocal bookings<span><?= $waiting['bookings'] ?></span></a><a class="<?= $tab === 'history' ? 'active' : '' ?>" href="?tab=history">History</a></div>
 
 <?php if ($tab === 'food'): ?>
     <p class="muted" data-mk-refresh="30">New orders appear here automatically. Accept quickly: customers can cancel until you accept. Declining refunds the customer in full.</p>
@@ -77,7 +77,7 @@ portal_header('Orders & bookings', 'orders');
     <div class="table-wrap"><table><thead><tr><th>When</th><th>Booking</th><th>Customer</th><th class="num">Total</th><th>Status</th><th></th></tr></thead><tbody>
     <?php foreach ($bookings as $b): ?>
         <tr><td><b><?= e(date('D, M j', strtotime($b['booking_date']))) ?></b><small><?= $b['booking_time'] ? e(date('g:i A', strtotime($b['booking_time']))) : '' ?></small></td>
-            <td><b><?= e($b['title']) ?></b><small><?= e($b['reference']) ?> · <?= (int) $b['quantity'] ?> <?= $b['service'] === 'ugo' ? 'guest(s)' : '×' ?><?= $b['address'] ? ' · ' . e($b['address']) : '' ?></small><?php if ($b['notes']): ?><small>“<?= e($b['notes']) ?>”</small><?php endif; ?></td>
+            <td><b><?= e($b['title']) ?></b><small><?= e($b['reference']) ?> · <?= (int) $b['quantity'] ?> <?= mk_services()[$b['service']]['guests'] ? 'guest(s)' : '×' ?><?= $b['address'] ? ' · ' . e($b['address']) : '' ?></small><?php if ($b['notes']): ?><small>“<?= e($b['notes']) ?>”</small><?php endif; ?></td>
             <td><?= e($b['full_name']) ?><small><a href="tel:<?= e((string) $b['contact_mobile']) ?>"><?= e((string) $b['contact_mobile']) ?></a></small></td>
             <td class="num">₱<?= e(number_format((int) $b['total_centavos'] / 100, 2)) ?><small><?= $b['pay_method'] === 'credits' ? 'Paid · Credits' : 'Collect on the day' ?></small></td>
             <td><span class="badge <?= $b['status'] === 'pending' ? 'warn' : 'info' ?>"><?= e(mk_booking_statuses()[$b['status']]) ?></span></td>

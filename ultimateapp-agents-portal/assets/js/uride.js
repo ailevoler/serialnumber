@@ -339,7 +339,27 @@
   /* ---------- Book a Ride / Rent a Ride */
   const rentPrices = JSON.parse(form.dataset.rental || '{}');
   const selfPrices = JSON.parse(form.dataset.self || '{}');
+  const units = JSON.parse(form.dataset.units || '{}');
   const isSelf = () => isRental() && form.dataset.rmode === 'self';
+  const isLater = () => form.querySelector('input[name="start_mode"]:checked')?.value === 'later';
+  /* Which vehicles can be chosen in this mode, and how many units are free (rentals). */
+  function refreshVehicles() {
+    const rental = isRental(), self = isSelf(), later = isLater();
+    let checkedOk = false;
+    form.querySelectorAll('input[name="vehicle_type"]').forEach(r => {
+      const v = r.value, label = r.closest('label');
+      const ok = rental ? !!(self ? selfPrices : rentPrices)[v]?.enabled : label.dataset.rideOk === '1';
+      r.disabled = !ok; label.classList.toggle('off', !ok);
+      const av = label.querySelector('[data-avail]');
+      if (av) {
+        const u = units[v] || {}, n = self ? u.self : u.driver;
+        av.textContent = !rental || !ok ? '' : later ? (self && u.fleet ? u.fleet + ' in fleet' : '') : (n > 0 ? n + ' available' : 'None free now');
+        av.classList.toggle('none', rental && ok && !later && !(n > 0));
+      }
+      if (ok && r.checked) checkedOk = true;
+    });
+    if (!checkedOk) { const first = form.querySelector('input[name="vehicle_type"]:not(:disabled)'); if (first) first.checked = true; }
+  }
   const dayHours = Number(form.dataset.dayHours) || 8;
   const peso = c => '₱' + (Math.ceil(c / 100)).toLocaleString('en-PH');
   function isRental() { return form.dataset.mode === 'rental'; }
@@ -354,8 +374,10 @@
     if (pkg === 'day') { hours = dayHours; billed = hours; fare = r.day; }
     else { hours = Number(pkg); billed = Math.max(hours, r.min); fare = billed * r.hour; if (r.day > 0 && hours <= dayHours && fare > r.day) { fare = r.day; capped = true; } }
     if (!(fare > 0)) return {ok: false, why: 'This duration is not available for this vehicle.'};
+    const u = units[v] || {};
+    if (!isLater() && !((self ? u.self : u.driver) > 0)) return {ok: false, why: self ? 'No unit is free for self-drive right now. Choose "Later" or another vehicle.' : 'No driver with this vehicle is free right now. Choose "Later" or another vehicle.'};
     if (self) {
-      const lic = r.class === 'car' ? form.dataset.licCar === '1' : form.dataset.licMoto === '1';
+      const lic = r.class === 'none' ? true : r.class === 'car' ? form.dataset.licCar === '1' : form.dataset.licMoto === '1';
       if (form.dataset.kycOk !== '1') return {ok: false, why: 'Verify your ID first (link above) to drive yourself.', fare: Math.ceil(fare / 100) * 100, deposit: r.deposit, hours, billed, capped, pkg, soft: true};
       if (!lic) return {ok: false, why: r.class === 'car' ? 'Self-drive car needs a license with code B on file (link above).' : 'Self-drive e-trike or motorcycle needs a license with code A or A1 on file (link above).', fare: Math.ceil(fare / 100) * 100, deposit: r.deposit, hours, billed, capped, pkg, soft: true};
     }
@@ -400,8 +422,9 @@
     if (next === 'rental') {
       setMode('pickup');
       if (markers.dropoff) safe(() => { markers.dropoff.map = null; });
-      showRent();
+      refreshVehicles(); showRent();
     } else {
+      refreshVehicles();
       if (points.dropoff && map && AdvancedMarkerElement) { const p = points.dropoff, label2 = inputs.dropoff.value; place('dropoff', p, label2); }
       showQuote(quote);
     }
@@ -421,14 +444,16 @@
     const url = new URL(location.href);
     if (selfNow) url.searchParams.set('drive', 'self'); else url.searchParams.delete('drive');
     history.replaceState(null, '', url);
-    showRent();
+    refreshVehicles(); showRent();
   }
+  form.querySelectorAll('input[name="start_mode"]').forEach(r => r.addEventListener('change', refreshVehicles));
   form.querySelectorAll('input[name="rental_mode"]').forEach(r => r.addEventListener('change', () => setDrive(r.value)));
   form.querySelectorAll('input[name="rental_hours"], input[name="start_mode"], input[name="vehicle_type"]').forEach(r => r.addEventListener('change', showRent));
   const sched = document.getElementById('uride-scheduled');
   if (sched) sched.addEventListener('focus', () => { const later = form.querySelector('input[name="start_mode"][value="later"]'); if (later) { later.checked = true; showRent(); } });
   if (isRental()) setTrip('rental');
   if (form.querySelector('input[name="rental_mode"]')) setDrive(form.dataset.rmode || 'driver');
+  refreshVehicles();
 
   /* ---------- Map */
   document.querySelectorAll('[data-map-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mapMode)));

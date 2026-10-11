@@ -32,7 +32,9 @@ function uride_user_license(PDO $pdo, int $userId): ?array
 
 function uride_license_allows(array $license, string $vehicle): bool
 {
-    return uride_license_class($vehicle) === 'car' ? (int) $license['can_car'] === 1 : (int) $license['can_motorcycle'] === 1;
+    $class = uride_license_class($vehicle);
+    if ($class === 'none') return true;
+    return $class === 'car' ? (int) $license['can_car'] === 1 : (int) $license['can_motorcycle'] === 1;
 }
 
 function uride_license_label(array $license): string

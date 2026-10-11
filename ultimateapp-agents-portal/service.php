@@ -6,7 +6,7 @@ $service = is_string($_GET['service'] ?? null) ? $_GET['service'] : '';
 if ($service === 'URide') {
     redirect('uride.php');
 }
-if ($service === 'UGo' || $service === 'ULocal') {
+if (in_array($service, ['UPass', 'UGo', 'ULocal'], true)) {
     redirect(strtolower($service) . '.php');
 }
 if ($service === 'UEat') {

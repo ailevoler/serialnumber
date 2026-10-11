@@ -49,7 +49,7 @@ $headline = [
 $pageTitle = 'UEat order';
 require __DIR__ . '/includes/header.php';
 ?>
-<link rel="stylesheet" href="assets/css/market.css?v=1">
+<link rel="stylesheet" href="assets/css/market.css?v=2">
 <section class="screen ue-screen">
     <header class="page-head"><a href="ueat.php?view=orders" aria-label="Back to orders"><span data-icon="arrow-left"></span></a><h1>Order</h1><span></span></header>
     <?php if ($error): ?><p class="alert" role="alert"><?= e($error) ?></p><?php endif; ?>

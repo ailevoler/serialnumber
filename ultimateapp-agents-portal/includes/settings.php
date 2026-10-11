@@ -45,7 +45,7 @@ function settings_schema(): array
         $schema["brgy.$slug.contact"] = ['type' => 'text', 'max' => 80, 'label' => "$label contact number"];
     }
     // URide fare matrix and driver commission (Admin > Settings > URide).
-    foreach (['e_trike' => 'E-Trike', 'motorcycle' => 'Motorcycle', 'car' => 'Car'] as $v => $label) {
+    foreach (['e_bike' => 'E-Bike', 'motorcycle' => 'Motorcycle', 'e_trike' => 'E-Trike', 'car' => 'Car', 'van' => 'Van'] as $v => $label) {
         $schema["uride.$v.enabled"] = ['type' => 'bool', 'label' => "$label rides enabled"];
         $schema["uride.$v.base_centavos"] = ['type' => 'int', 'min' => 0, 'max' => 10000000, 'label' => "$label base fare"];
         $schema["uride.$v.included_km"] = ['type' => 'decimal', 'min' => 0, 'max' => 50, 'label' => "$label km included in base fare"];
@@ -66,6 +66,7 @@ function settings_schema(): array
         'uride.rental_enabled' => ['type' => 'bool', 'label' => 'Rent a Ride enabled'],
         'uride.self_drive_enabled' => ['type' => 'bool', 'label' => 'Self-drive rentals enabled'],
         'uride.self_drive_kyc' => ['type' => 'bool', 'label' => 'Self-drive needs a verified ID (KYC)'],
+        'uride.e_bike_license' => ['type' => 'bool', 'label' => "E-Bike self-drive needs a driver's license (A/A1)"],
         'uride.self_drive_grace_min' => ['type' => 'int', 'min' => 0, 'max' => 120, 'label' => 'Late return grace (minutes)'],
         'uride.rental_day_hours' => ['type' => 'int', 'min' => 4, 'max' => 24, 'label' => 'Hours in a whole-day rental'],
         'uride.rental_max_hours' => ['type' => 'int', 'min' => 1, 'max' => 24, 'label' => 'Longest hourly rental'],

@@ -17,18 +17,24 @@ require_once __DIR__ . '/ledger.php';
 require_once __DIR__ . '/p2m.php';
 require_once __DIR__ . '/agents.php';
 
-const MK_SERVICES = ['ugo', 'ulocal', 'ueat'];
+const MK_SERVICES = ['upass', 'ugo', 'ulocal', 'ueat'];
 
 function mk_services(): array
 {
     return [
-        'ugo' => ['code' => 'UGo', 'label' => 'UGo', 'title' => 'Activities & tours', 'noun' => 'activity', 'page' => 'ugo.php',
+        'upass' => ['code' => 'UPass', 'label' => 'UPass', 'title' => 'Island passes', 'noun' => 'pass', 'page' => 'upass.php',
+            'categories' => ['Airport Transfer', 'Island Pass', 'Day Pass', 'Activity Bundle', 'Event Pass', 'Entrance Fee'],
+            'units' => ['person', 'group'], 'default_unit' => 'person', 'guests' => true,
+            'hero' => ['Island passes & transfers', 'Airport transfers, island and day passes, activity bundles and entrance fees. Book ahead and pay with Credits.'], 'plural' => 'passes'],
+        'ugo' => ['code' => 'UGo', 'label' => 'UGo', 'title' => 'Activities & tours', 'noun' => 'activity', 'page' => 'ugo.php', 'guests' => true, 'plural' => 'activities',
+            'hero' => ['Things to do on the island', 'Land tours, island hopping, water sports and more, run by local partners. Book in seconds and pay with Credits.'],
             'categories' => ['Land Tour', 'Island Hopping', 'Water Sports', 'Diving & Snorkeling', 'Sunset Sail', 'Adventure', 'Food Tour', 'Packages'],
             'units' => ['person', 'group'], 'default_unit' => 'person'],
-        'ulocal' => ['code' => 'ULocal', 'label' => 'ULocal', 'title' => 'Local services', 'noun' => 'service', 'page' => 'ulocal.php',
+        'ulocal' => ['code' => 'ULocal', 'label' => 'ULocal', 'title' => 'Local services', 'noun' => 'service', 'page' => 'ulocal.php', 'guests' => false, 'plural' => 'services',
+            'hero' => ['Book trusted local services', 'Massage, laundry, photographers, guides and more, at your hotel or anywhere in Boracay.'],
             'categories' => ['Massage & Spa', 'Hair & Beauty', 'Photography', 'Laundry', 'Tour Guide', 'Cleaning', 'Repairs', 'Babysitting', 'Errands & Delivery', 'Other services'],
             'units' => ['session', 'hour', 'person', 'load', 'day', 'item'], 'default_unit' => 'session'],
-        'ueat' => ['code' => 'UEat', 'label' => 'UEat', 'title' => 'Food delivery', 'noun' => 'menu item', 'page' => 'ueat.php',
+        'ueat' => ['code' => 'UEat', 'label' => 'UEat', 'title' => 'Food delivery', 'noun' => 'menu item', 'page' => 'ueat.php', 'guests' => false, 'plural' => 'dishes', 'hero' => ['', ''],
             'categories' => [], 'units' => ['item'], 'default_unit' => 'item'],
     ];
 }
@@ -163,7 +169,7 @@ function mk_validate_listing(array $in, string $service): array
         return (int) $v;
     };
     $slots = null;
-    if ($service === 'ugo' && trim((string) ($in['time_slots'] ?? '')) !== '') {
+    if (in_array($service, ['ugo', 'upass'], true) && trim((string) ($in['time_slots'] ?? '')) !== '') {
         $parts = array_unique(array_filter(array_map('trim', preg_split('/[,;\s]+/', (string) $in['time_slots']) ?: [])));
         foreach ($parts as $t) if (!preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/D', $t)) throw new InvalidArgumentException('Start times must look like 08:00, 13:30.');
         $parts = array_map(static fn($t) => str_pad($t, 5, '0', STR_PAD_LEFT), $parts);
@@ -184,10 +190,10 @@ function mk_validate_listing(array $in, string $service): array
         'price_centavos' => (int) round((float) $price * 100), 'price_unit' => $unit,
         'duration_minutes' => $service === 'ueat' ? null : $int('duration_minutes', 5, 1440, null),
         'time_slots' => $slots,
-        'capacity' => $service === 'ugo' ? $int('capacity', 1, 500, null) : null,
+        'capacity' => in_array($service, ['ugo', 'upass'], true) ? $int('capacity', 1, 500, null) : null,
         'min_qty' => $minQty, 'max_qty' => $maxQty,
         'location' => $service === 'ueat' ? null : ($str('location', 160) ?: null),
-        'meeting_point' => $service === 'ugo' ? ($str('meeting_point', 200) ?: null) : null,
+        'meeting_point' => in_array($service, ['ugo', 'upass'], true) ? ($str('meeting_point', 200) ?: null) : null,
         'latitude' => $hasPin ? round((float) $lat, 7) : null, 'longitude' => $hasPin ? round((float) $lng, 7) : null,
         'cancel_hours' => $service === 'ueat' ? 0 : $int('cancel_hours', 0, 168, 24),
         'instant_confirm' => !empty($in['instant_confirm']) && $service !== 'ueat' ? 1 : 0,
@@ -403,17 +409,36 @@ function mk_slot_taken(PDO $pdo, int $listingId, string $date, ?string $time): i
 function mk_booking_quote(array $l, int $qty, string $payMethod): array
 {
     $amount = (int) $l['price_centavos'] * ($l['price_unit'] === 'group' ? 1 : $qty);
-    if ($payMethod === 'credits') {
+    if ($payMethod === 'credits' && $l['merchant_id'] !== null) {
         $q = p2m_quote($amount, 'credits');
         return ['amount' => $amount, 'fee' => $q['bearer'] === 'customer' ? $q['fee'] : 0, 'total' => $q['customer_debit']];
     }
     return ['amount' => $amount, 'fee' => 0, 'total' => $amount];
 }
 
-/** Can this listing be paid with Credits now (merchant listing, approved merchant, Credits checkout on)? */
+/** Can this listing be paid with Credits now? Merchant listings pay the merchant; Ultimate App listings pay Ultimate App. */
 function mk_can_pay_credits(array $l): bool
 {
-    return mk_credits_checkout() && $l['merchant_id'] !== null && ($l['merchant_status'] ?? '') === 'approved';
+    return mk_credits_checkout() && ($l['merchant_id'] === null || ($l['merchant_status'] ?? '') === 'approved');
+}
+
+/** Credits paid to Ultimate App itself (listings run by Ultimate App). Inside the caller's transaction. Returns the payment reference. */
+function mk_platform_charge_tx(PDO $pdo, int $userId, int $amount, string $service, string $title): string
+{
+    $s = $pdo->prepare('UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ? AND status = ?');
+    $s->execute([centavos_to_decimal($amount), $userId, centavos_to_decimal($amount), 'active']);
+    if ($s->rowCount() !== 1) throw new InvalidArgumentException('Not enough Credits. You need ' . mk_money($amount) . ' Credits. Buy Credits or choose Pay on the day.');
+    $ref = 'PL-' . strtoupper(bin2hex(random_bytes(6)));
+    $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")->execute([$userId, mb_substr($title . ' ' . $ref, 0, 120), '-' . centavos_to_decimal($amount)]);
+    ledger_post($pdo, $ref, 'platform_sale', [['user_credits:' . $userId, $amount, 0, mb_substr($title, 0, 150)], ['platform_sales:' . $service, 0, $amount, 'Sold by Ultimate App']]);
+    return $ref;
+}
+
+function mk_platform_refund_tx(PDO $pdo, int $userId, int $amount, string $service, string $payRef, string $title): void
+{
+    $pdo->prepare('UPDATE users SET credits = credits + ? WHERE id = ?')->execute([centavos_to_decimal($amount), $userId]);
+    $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")->execute([$userId, mb_substr('Refund ' . $title . ' ' . $payRef, 0, 120), centavos_to_decimal($amount)]);
+    ledger_post($pdo, 'RF-' . substr($payRef, 3), 'platform_refund', [['platform_sales:' . $service, $amount, 0, 'Refund ' . $payRef], ['user_credits:' . $userId, 0, $amount, 'Refund to customer']]);
 }
 
 /**
@@ -442,7 +467,7 @@ function mk_book(PDO $pdo, int $userId, int $listingId, array $in, string $reque
     $start = new DateTimeImmutable($date . ' ' . $time . ':00');
     if ($start < $now->modify('+1 hour')) throw new InvalidArgumentException('Book at least 1 hour ahead. Choose a later time.');
     $qty = filter_var($in['quantity'] ?? null, FILTER_VALIDATE_INT);
-    if ($qty === false || $qty < (int) $l['min_qty'] || $qty > (int) $l['max_qty']) throw new InvalidArgumentException('Choose ' . $l['min_qty'] . ' to ' . $l['max_qty'] . ($l['service'] === 'ugo' ? ' guests.' : '.'));
+    if ($qty === false || $qty < (int) $l['min_qty'] || $qty > (int) $l['max_qty']) throw new InvalidArgumentException('Choose ' . $l['min_qty'] . ' to ' . $l['max_qty'] . (mk_services()[$l['service']]['guests'] ? ' guests.' : '.'));
     $pay = (string) ($in['pay_method'] ?? 'credits');
     if (!in_array($pay, ['credits', 'on_site'], true)) $pay = 'credits';
     if ($pay === 'credits' && !mk_can_pay_credits($l)) $pay = 'on_site';
@@ -463,18 +488,20 @@ function mk_book(PDO $pdo, int $userId, int $listingId, array $in, string $reque
             $left = (int) $l['capacity'] - mk_slot_taken($pdo, $listingId, $date, $time . ':00');
             if ($qty > $left) throw new InvalidArgumentException($left > 0 ? 'Only ' . $left . ' slot(s) left at ' . $time . ' on that day.' : 'That time is fully booked. Choose another time or date.');
         }
-        $reference = ($l['service'] === 'ugo' ? 'UG-' : 'UL-') . strtoupper(bin2hex(random_bytes(6)));
+        $reference = ['ugo' => 'UG-', 'ulocal' => 'UL-', 'upass' => 'UP-'][$l['service']] . strtoupper(bin2hex(random_bytes(6)));
         $status = (int) $l['instant_confirm'] ? 'confirmed' : 'pending';
         $payRef = null;
-        if ($pay === 'credits') {
-            $payRef = p2m_pay_tx($pdo, $userId, (int) $l['merchant_id'], 'credits', $quote['amount'], hash('sha256', 'mk-booking:' . $requestKey), mb_substr(strtoupper($l['service'] === 'ugo' ? 'UGo' : 'ULocal') . ' ' . $reference . ' ' . $l['title'], 0, 140));
+        $code = mk_services()[$l['service']]['code'];
+        if ($pay === 'credits' && $l['merchant_id'] === null) {
+            $payRef = mk_platform_charge_tx($pdo, $userId, $quote['total'], $l['service'], $code . ' ' . $l['title']);
+        } elseif ($pay === 'credits') {
+            $payRef = p2m_pay_tx($pdo, $userId, (int) $l['merchant_id'], 'credits', $quote['amount'], hash('sha256', 'mk-booking:' . $requestKey), mb_substr($code . ' ' . $reference . ' ' . $l['title'], 0, 140));
         }
         $pdo->prepare('INSERT INTO mk_bookings (reference, request_key, user_id, listing_id, merchant_id, service, title, booking_date, booking_time, quantity, unit_centavos, total_centavos, contact_mobile, address, notes, pay_method, payment_status, payment_ref, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$reference, $requestKey, $userId, $listingId, $l['merchant_id'], $l['service'], $l['title'], $date, $time . ':00', $qty, $l['price_centavos'], $quote['total'],
                 $mobile, $address ?: null, $notes ?: null, $pay, $pay === 'credits' ? 'paid' : 'unpaid', $payRef, $status]);
         $bookingId = (int) $pdo->lastInsertId();
-        $code = $l['service'] === 'ugo' ? 'UGo' : 'ULocal';
         agent_record_commission($pdo, $userId, $code, 'mk_booking', $bookingId, $reference, $quote['amount'], false);
         $pdo->commit();
         return $reference;
@@ -539,8 +566,12 @@ function mk_booking_update(PDO $pdo, string $reference, string $action, string $
         }
         if ($action === 'decline' && $by !== 'admin' && mb_strlen(trim($note)) < 3) throw new InvalidArgumentException('Tell the customer why (e.g. fully booked, weather).');
         if (in_array($to, ['declined', 'cancelled'], true) && $b['payment_status'] === 'paid' && $b['payment_ref']) {
-            $p = $pdo->prepare('SELECT id FROM merchant_payments WHERE reference = ?'); $p->execute([$b['payment_ref']]);
-            p2m_refund_tx($pdo, (int) $p->fetchColumn(), $by === 'admin' ? $actorId : null);
+            if (str_starts_with((string) $b['payment_ref'], 'PL-')) {
+                mk_platform_refund_tx($pdo, (int) $b['user_id'], (int) $b['total_centavos'], $b['service'], $b['payment_ref'], mk_services()[$b['service']]['code'] . ' ' . $b['title']);
+            } else {
+                $p = $pdo->prepare('SELECT id FROM merchant_payments WHERE reference = ?'); $p->execute([$b['payment_ref']]);
+                p2m_refund_tx($pdo, (int) $p->fetchColumn(), $by === 'admin' ? $actorId : null);
+            }
             $pdo->prepare("UPDATE mk_bookings SET payment_status = 'refunded' WHERE id = ?")->execute([$b['id']]);
         }
         if ($to === 'completed' && $b['pay_method'] === 'on_site') $pdo->prepare("UPDATE mk_bookings SET payment_status = 'paid' WHERE id = ?")->execute([$b['id']]);
@@ -726,9 +757,10 @@ function mk_fallback_index(string $service, string $category): int
     $map = [
         'Land Tour' => 5, 'Island Hopping' => 15, 'Water Sports' => 16, 'Diving & Snorkeling' => 18, 'Sunset Sail' => 17, 'Adventure' => 16, 'Food Tour' => 11, 'Packages' => 0,
         'Massage & Spa' => 6, 'Hair & Beauty' => 9, 'Photography' => 7, 'Laundry' => 8, 'Tour Guide' => 5, 'Cleaning' => 2, 'Repairs' => 3, 'Babysitting' => 0, 'Errands & Delivery' => 19, 'Other services' => 1,
+        'Airport Transfer' => 15, 'Island Pass' => 0, 'Day Pass' => 17, 'Activity Bundle' => 18, 'Event Pass' => 19, 'Entrance Fee' => 5,
         'Filipino' => 10, 'Seafood' => 11, 'Cafe & Breakfast' => 4, 'Burgers & Fast Food' => 13, 'Pizza & Pasta' => 13, 'Asian' => 10, 'Grill & BBQ' => 11, 'Desserts & Drinks' => 14, 'Healthy' => 12, 'Bar & Pub' => 13,
     ];
-    return $map[$category] ?? ['ugo' => 15, 'ulocal' => 5, 'ueat' => 10][$service] ?? 0;
+    return $map[$category] ?? ['upass' => 0, 'ugo' => 15, 'ulocal' => 5, 'ueat' => 10][$service] ?? 0;
 }
 
 /** Inline style for a picture box: the uploaded photo, or the built-in picture for the category. */

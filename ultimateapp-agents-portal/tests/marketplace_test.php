@@ -113,15 +113,30 @@ try {
     mk_booking_update($pdo, $r2, 'complete', 'merchant', $tours, '', new DateTimeImmutable('2026-10-14 18:00:00'));
     $check(mk_booking($pdo, $r2)['payment_status'] === 'paid', 'pay-on-the-day booking marked paid when completed');
 
-    // Ultimate App listing (no merchant): request only
+    // Ultimate App listing (no merchant): Credits are paid to Ultimate App, refunded if cancelled
     $listings[] = $ua = mk_listing_save($pdo, null, mk_validate_listing(['title' => 'Island Massage', 'category' => 'Massage & Spa', 'price' => '1200', 'price_unit' => 'hour'], 'ulocal'), null, 1, null, 'active');
     $throws(fn() => mk_book($pdo, $u, $ua, ['date' => '2026-10-12', 'time' => '15:00', 'quantity' => 1, 'contact_mobile' => '09171234567'], $key(), $now), 'where the service', 'ULocal needs the address');
+    $c6 = $credits($u);
+    $check(mk_booking_quote(mk_listing($pdo, $ua), 1, 'credits')['fee'] === 0, 'no merchant charge on Ultimate App listings');
     $r5 = mk_book($pdo, $u, $ua, ['date' => '2026-10-12', 'time' => '15:00', 'quantity' => 1, 'contact_mobile' => '09171234567', 'address' => 'Hotel Sea Breeze room 12', 'pay_method' => 'credits'], $key(), $now); $refs[] = $r5;
     $b5 = mk_booking($pdo, $r5);
-    $check($b5['pay_method'] === 'on_site' && str_starts_with($r5, 'UL-'), 'Ultimate App listing: pay on the day (no merchant to pay)');
+    $check($b5['pay_method'] === 'credits' && $b5['payment_status'] === 'paid' && str_starts_with((string) $b5['payment_ref'], 'PL-') && abs($c6 - $credits($u) - 1200) < 0.001, 'Ultimate App listing paid with Credits (₱1,200 to Ultimate App)');
+    $check((int) $pdo->query("SELECT credit_centavos FROM ledger_entries WHERE entry_group = " . $pdo->quote($b5['payment_ref']) . " AND account = 'platform_sales:ulocal'")->fetchColumn() === 120000, 'booked in the ledger as Ultimate App sales');
     $throws(fn() => mk_booking_update($pdo, $r5, 'confirm', 'merchant', $tours), 'not found', 'merchants cannot manage Ultimate App bookings');
     mk_booking_update($pdo, $r5, 'confirm', 'admin', 1);
     $check(mk_booking($pdo, $r5)['status'] === 'confirmed', 'Admin confirms Ultimate App bookings');
+    mk_booking_update($pdo, $r5, 'cancel', 'admin', 1, 'Therapist sick');
+    $check(abs($credits($u) - $c6) < 0.001 && mk_booking($pdo, $r5)['payment_status'] === 'refunded', 'Admin cancel: Credits returned from Ultimate App');
+    $pdo->exec("DELETE FROM ledger_entries WHERE entry_group IN (" . $pdo->quote($b5['payment_ref']) . ", " . $pdo->quote('RF-' . substr($b5['payment_ref'], 3)) . ")");
+
+    // UPass: island passes
+    $listings[] = $pass = mk_listing_save($pdo, null, mk_validate_listing(['title' => 'Island Arrival Pass', 'category' => 'Airport Transfer', 'price' => '950', 'price_unit' => 'person', 'time_slots' => '10:00, 14:00', 'capacity' => '20'], 'upass'), null, 1, null, 'active');
+    $r7 = mk_book($pdo, $u, $pass, ['date' => '2026-10-13', 'time' => '14:00', 'quantity' => 2, 'contact_mobile' => '09171234567', 'pay_method' => 'credits'], $key(), $now); $refs[] = $r7;
+    $b7 = mk_booking($pdo, $r7);
+    $check(str_starts_with($r7, 'UP-') && (int) $b7['total_centavos'] === 190000 && $b7['payment_status'] === 'paid', 'UPass: 2 × ₱950 paid with Credits');
+    $check(in_array($pass, array_column(mk_browse($pdo, 'upass', 'Airport Transfer'), 'id')), 'UPass listed under Airport Transfer');
+    mk_booking_update($pdo, $r7, 'cancel', 'customer', $u, '', $now);
+    $pdo->exec("DELETE FROM ledger_entries WHERE entry_group IN (" . $pdo->quote($b7['payment_ref']) . ", " . $pdo->quote('RF-' . substr($b7['payment_ref'], 3)) . ")");
 
     // ---------- UEat
     $kitchen = $mkMerchant('Test Kitchen');

@@ -62,7 +62,7 @@ function user_notifications(PDO $pdo, int $userId): array
         foreach ($stmt->fetchAll() as $row) {
             $items[] = [
                 'key' => 'mk:' . $row['reference'] . ':' . $row['status'],
-                'title' => ($row['service'] === 'ugo' ? 'UGo' : 'ULocal') . ' booking ' . $row['status'],
+                'title' => (['ugo' => 'UGo', 'ulocal' => 'ULocal', 'upass' => 'UPass'][$row['service']] ?? 'Booking') . ' booking ' . $row['status'],
                 'detail' => $row['title'] . ' · ' . $row['reference'],
                 'date' => $row['updated_at'],
                 'url' => 'mk-booking.php?ref=' . rawurlencode($row['reference']),

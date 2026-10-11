@@ -1,0 +1,20 @@
+/* Marketplace screens in the Merchant Portal and Admin */
+.mk-form h2 small{font-weight:500;color:#6b7680;font-size:13px}
+.mk-photo-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.mk-photo-prev{display:inline-block;width:64px;height:64px;border-radius:10px;background-color:#e9eef0;background-repeat:no-repeat;flex:none}.mk-photo-prev.wide{width:128px}
+.mk-rows{display:grid}.mk-rowi{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid #e6eaee}
+.mk-rowi b{display:block}.mk-rowi small{display:block;color:#6b7680;font-size:12px}.bad-text{color:#b42318!important}
+.mk-rowi-act{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}.mk-rowi-act form{display:inline}
+.mk-open-card{display:flex;justify-content:space-between;align-items:center;gap:14px;border-left:4px solid #b42318}.mk-open-card.on{border-left-color:#0f8a4f}.mk-open-card h2{margin:0 0 4px}.mk-open-card p{margin:0}
+.mk-tips{margin:0;padding-left:18px;line-height:1.7}
+.mk-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.mk-ticket-card{display:grid;gap:8px;border-top:4px solid #2f80ed}.mk-ticket-card.s-pending{border-top-color:#f2a100;box-shadow:0 0 0 2px #f2a10033}
+.mk-ticket-card header{display:flex;justify-content:space-between;align-items:center}.mk-when{margin:0;color:#56616c;font-size:13px}
+.mk-items{margin:0;padding:0;list-style:none;font-size:15px;line-height:1.6}.mk-cust-note{margin:0;padding:6px 10px;background:#fff8e6;border-radius:8px;font-size:13px}
+.mk-kv{margin:0;display:grid;gap:4px;font-size:13px}.mk-kv div{display:flex;justify-content:space-between;gap:10px}.mk-kv dt{color:#6b7680}.mk-kv dd{margin:0;text-align:right}
+.mk-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.mk-decline{display:inline-flex;gap:6px}.mk-decline input{height:30px;padding:0 8px;border:1px solid #cfd6dc;border-radius:8px;font:inherit;font-size:12.5px;width:150px}
+.mk-kpi-row{display:flex;gap:10px;flex-wrap:wrap}.mk-kpi-row a{flex:1;min-width:140px;padding:12px 14px;border:1px solid #e3e8ec;border-radius:12px;text-decoration:none;color:inherit;background:#fff}.mk-kpi-row b{display:block;font-size:22px}.mk-kpi-row small{color:#6b7680}
+.mk-form .field input:not([type=checkbox]):not([type=file]):not([type=radio]),.mk-form .field textarea{width:100%;min-height:40px;padding:8px 10px;border:1px solid #cfd6dc;border-radius:8px;background:#fff;font:inherit;font-size:14px;color:inherit}
+.mk-form .field .inline input{width:auto}
+.mk-form .field label:has(input[type=checkbox]){display:flex;align-items:center;gap:8px;font-weight:500}
+.mk-checks{display:flex;gap:16px;flex-wrap:wrap}

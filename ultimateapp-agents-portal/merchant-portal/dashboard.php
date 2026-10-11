@@ -57,6 +57,13 @@ portal_header('Hello, ' . explode(' ', $m['owner_name'])[0], 'dashboard');
         <?php foreach ($recent as $r): ?><tr><td><b><?= e($r['reference']) ?></b><small><?= e(date('M j, g:i A', strtotime($r['created_at']))) ?></small></td><td><?= e(explode(' ', $r['full_name'])[0]) ?></td><td><?= $r['source'] === 'credits' ? 'Credits' : 'BCash' ?></td><td class="num">₱<?= peso((int) $r['amount_centavos']) ?></td><td class="num"><?= $r['status'] === 'refunded' ? portal_badge('refunded') : '₱' . peso((int) $r['merchant_net_centavos']) ?></td></tr><?php endforeach; ?>
         </tbody></table></div>
     </section>
+    <?php require_once __DIR__ . '/../includes/marketplace.php'; if (mk_ready()): $w = mk_merchant_waiting($pdo, $id); $lc = $pdo->prepare("SELECT service, SUM(status = 'active') live, COUNT(*) n FROM mk_listings WHERE merchant_id = ? GROUP BY service"); $lc->execute([$id]); $lc = $lc->fetchAll(PDO::FETCH_UNIQUE); ?>
+    <section class="card"><h2>Sell on Ultimate App</h2><p class="muted">Customers find you in UGo (activities), ULocal (services) and UEat (food) and pay with Credits.</p>
+        <link rel="stylesheet" href="../assets/css/market-admin.css?v=1">
+        <div class="mk-kpi-row"><a href="orders.php?tab=food"><b><?= $w['orders'] ?></b><small>Open food orders</small></a><a href="orders.php?tab=bookings"><b><?= $w['bookings'] ?></b><small>Bookings to confirm</small></a></div>
+        <div class="mk-kpi-row mt"><?php foreach (mk_services() as $k => $c): ?><a href="listings.php?s=<?= $k ?>"><b><?= (int) ($lc[$k]['live'] ?? 0) ?></b><small><?= e($c['label']) ?> live<?= isset($lc[$k]) && $lc[$k]['n'] > $lc[$k]['live'] ? ' · ' . ($lc[$k]['n'] - $lc[$k]['live']) . ' other' : '' ?></small></a><?php endforeach; ?></div>
+    </section>
+    <?php endif; ?>
     <section class="card"><h2>Your payment QR</h2><p class="muted">Customers scan it with Ultimate App, choose Credits or BCash, and you see the payment here instantly.</p><a class="btn grad" href="qr.php">Show / print my QR</a></section>
 </div>
 <?php else: ?>

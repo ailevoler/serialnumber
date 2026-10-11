@@ -81,7 +81,7 @@ try {
     $throws(fn() => face_login_enroll($pdo, $uid, ['descriptor' => json_encode($me), 'log' => $log(['center', 'right', 'left', 'blink'])]), 'order', 'set up with steps in the wrong order: refused');
     $throws(fn() => face_login_enroll($pdo, $uid, ['descriptor' => json_encode($me), 'log' => $log($enroll, 400, true)]), 'automatic', 'set up with manual photos: refused');
     $check(face_login_device($pdo) === null, 'no device key before set up');
-    $dev = face_login_enroll($pdo, $uid, ['descriptor' => json_encode($like($me, 0.04)), 'log' => $log($enroll)]);
+    $dev = face_login_enroll($pdo, $uid, ['descriptor' => json_encode($like($me, 0.02)), 'log' => $log($enroll)]);
     $cookie = $_COOKIE[FACE_COOKIE] ?? '';
     $row = $pdo->query("SELECT * FROM face_login_devices WHERE id = $dev")->fetch();
     $check(preg_match('/^[a-f0-9]{64}$/', $cookie) === 1 && $row['token_hash'] === hash('sha256', $cookie) && $row['label'] === 'Android · Chrome', 'device key saved on the phone; only its SHA-256 stored');
@@ -104,7 +104,7 @@ try {
     $throws(fn() => face_login_verify($pdo, ['nonce' => $ch['nonce'], 'descriptor' => json_encode($stranger), 'log' => $log($ch['steps'])]), 'tries left', 'another face: refused, tries left shown');
     $check((int) $pdo->query("SELECT fails FROM face_login_devices WHERE id = $dev")->fetchColumn() === 3, 'three failed tries counted (wrong order, too fast, other face)');
     $ch = face_login_challenge($pdo);
-    $u = face_login_verify($pdo, ['nonce' => $ch['nonce'], 'descriptor' => json_encode($like($me, 0.05)), 'log' => $log($ch['steps'])]);
+    $u = face_login_verify($pdo, ['nonce' => $ch['nonce'], 'descriptor' => json_encode($like($me, 0.02)), 'log' => $log($ch['steps'])]);
     $row = $pdo->query("SELECT * FROM face_login_devices WHERE id = $dev")->fetch();
     $check((int) $u['id'] === $uid && (int) $row['fails'] === 0 && $row['last_used_at'] !== null, 'same face + right steps: logged in, tries reset');
     $check((int) $pdo->query("SELECT COUNT(*) FROM face_login_attempts WHERE device_id = $dev AND purpose = 'login' AND ok = 1")->fetchColumn() === 1, 'login attempt recorded');

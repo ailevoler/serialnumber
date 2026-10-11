@@ -19,7 +19,7 @@ require_once __DIR__ . '/ledger.php';
  * Approved commissions add to agents.balance_centavos; the agent requests a payout from the portal.
  */
 
-const AGENT_SOURCE_TYPES = ['uride', 'service_request', 'ueat'];
+const AGENT_SOURCE_TYPES = ['uride', 'service_request', 'ueat', 'mk_booking'];
 
 function agent_services(): array
 {

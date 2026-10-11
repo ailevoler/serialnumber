@@ -51,13 +51,19 @@ function portal_badge(string $status): string
 function portal_header(string $title, string $active = ''): void
 {
     $m = merchant_current();
-    $nav = ['dashboard' => 'Dashboard', 'qr' => 'My QR', 'payments' => 'Payments', 'settlements' => 'Payouts', 'profile' => 'Business', 'kyc' => 'Verify ID', 'support' => 'Support'];
-    if ($m && merchant_is_mctc($m)) $nav = array_slice($nav, 0, 3, true) + ['mctc' => 'MCTC Top-up'] + array_slice($nav, 3, null, true);
+    $nav = ['dashboard' => 'Dashboard', 'orders' => 'Orders', 'listings' => 'Listings', 'qr' => 'My QR', 'payments' => 'Payments', 'settlements' => 'Payouts', 'profile' => 'Business', 'kyc' => 'Verify ID', 'support' => 'Support'];
+    $badges = [];
+    if ($m) {
+        require_once __DIR__ . '/../includes/marketplace.php';
+        $w = mk_merchant_waiting($GLOBALS['pdo'], (int) $m['id']);
+        $badges['orders'] = $w['bookings'] + $w['orders'];
+    }
+    if ($m && merchant_is_mctc($m)) { $at = array_search('payments', array_keys($nav), true) + 1; $nav = array_slice($nav, 0, $at, true) + ['mctc' => 'MCTC Top-up'] + array_slice($nav, $at, null, true); }
     ?><!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($title) ?> · Ultimate App Merchant Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/base.css?v=5"><link rel="stylesheet" href="assets/portal.css?v=2">
+<link rel="stylesheet" href="assets/base.css?v=5"><link rel="stylesheet" href="assets/portal.css?v=3">
 <link rel="icon" href="../assets/images/pwa/merchant-192.png"><meta name="theme-color" content="#0b1015">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="../assets/images/pwa/merchant-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="UA Merchant"><meta name="apple-mobile-web-app-status-bar-style" content="black">
 <script defer src="../assets/js/pwa.js?v=1"></script>
@@ -69,7 +75,7 @@ function portal_header(string $title, string $active = ''): void
         <div class="p-me"><span><b><?= e($m['business_name']) ?></b><small><?= e($m['code']) ?></small></span>
             <form method="post" action="logout.php"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><button class="btn small" type="submit">Log out</button></form></div>
     </div>
-    <nav class="p-nav" aria-label="Merchant Portal"><?php foreach ($nav as $k => $label): ?><a href="<?= $k ?>.php" class="<?= $active === $k ? 'active' : '' ?>"<?= $active === $k ? ' aria-current="page"' : '' ?>><?= e($label) ?></a><?php endforeach; ?></nav>
+    <nav class="p-nav" aria-label="Merchant Portal"><?php foreach ($nav as $k => $label): ?><a href="<?= $k ?>.php" class="<?= $active === $k ? 'active' : '' ?>"<?= $active === $k ? ' aria-current="page"' : '' ?>><?= e($label) ?><?php if (!empty($badges[$k])): ?> <em class="nav-count"><?= (int) $badges[$k] ?></em><?php endif; ?></a><?php endforeach; ?></nav>
 </header>
 <main class="p-main">
 <h1 class="p-title"><?= e($title) ?></h1>

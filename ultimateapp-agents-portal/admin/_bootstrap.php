@@ -25,10 +25,10 @@ function admin_permissions(): array
     return [
         'finance' => ['dashboard', 'customers.view', 'customers.adjust', 'merchants.view', 'payments.view', 'payments.refund',
             'finance.view', 'settlements.manage', 'reports.view', 'crm.notes', 'drivers.view', 'drivers.wallet', 'rides.view', 'driver_payouts.manage',
-            'agents.view', 'agents.commissions', 'agent_payouts.manage', 'service_requests.view', 'kyc.view'],
+            'agents.view', 'agents.commissions', 'agent_payouts.manage', 'service_requests.view', 'kyc.view', 'marketplace.view'],
         'support' => ['dashboard', 'customers.view', 'customers.suspend', 'merchants.view', 'merchants.review', 'payments.view',
             'tickets.manage', 'crm.notes', 'drivers.view', 'drivers.review', 'rides.view', 'rides.cancel',
-            'agents.view', 'agents.review', 'service_requests.view', 'service_requests.manage', 'kyc.view', 'kyc.review'],
+            'agents.view', 'agents.review', 'service_requests.view', 'service_requests.manage', 'kyc.view', 'kyc.review', 'marketplace.view', 'marketplace.manage'],
         'barangay_officer' => ['barangay.manage'],
     ];
 }
@@ -201,6 +201,7 @@ function admin_nav(): array
         'CRM' => [
             ['customers.php', 'users', 'Customers', 'customers.view'],
             ['merchants.php', 'store', 'Merchants', 'merchants.view'],
+            ['marketplace.php', 'store', 'UGo · ULocal · UEat', 'marketplace.view'],
             ['tickets.php', 'ticket', 'Support tickets', 'tickets.manage'],
             ['kyc.php', 'shield', 'KYC verification', 'kyc.view'],
         ],
@@ -263,6 +264,7 @@ function admin_header(string $title, string $active): void
             $counts['suniway'] = (int) $pdo->query("SELECT COUNT(*) FROM suniway_transactions WHERE status IN ('unknown','submitting')")->fetchColumn();
             $counts['service-requests'] = (int) $pdo->query("SELECT COUNT(*) FROM service_requests WHERE status = 'pending' AND service_code IN ('UPass','UGo','ULocal')")->fetchColumn();
         } catch (Throwable $e) {}
+        try { $counts['marketplace'] = (int) $pdo->query("SELECT (SELECT COUNT(*) FROM mk_listings WHERE status = 'pending') + (SELECT COUNT(*) FROM mk_stores WHERE status = 'pending') + (SELECT COUNT(*) FROM mk_bookings WHERE status = 'pending' AND merchant_id IS NULL)")->fetchColumn(); } catch (Throwable $e) {}
         try { $counts['kyc'] = (int) $pdo->query("SELECT COUNT(*) FROM kyc_submissions WHERE status = 'pending'")->fetchColumn(); } catch (Throwable $e) {}
     }
     ?><!doctype html>

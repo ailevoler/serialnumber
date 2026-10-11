@@ -148,8 +148,8 @@ function service_catalog(): array
     $services = [
         ['code' => 'URide', 'label' => 'URide', 'image' => 'uride.png', 'href' => 'uride.php'],
         ['code' => 'UPass', 'label' => 'UPass', 'image' => 'upass.png', 'href' => 'service.php?service=UPass'],
-        ['code' => 'UGo', 'label' => 'UGo', 'image' => 'ugo.png', 'href' => 'service.php?service=UGo'],
-        ['code' => 'ULocal', 'label' => 'ULocal', 'image' => 'ulocal.png', 'href' => 'service.php?service=ULocal'],
+        ['code' => 'UGo', 'label' => 'UGo', 'image' => 'ugo.png', 'href' => 'ugo.php'],
+        ['code' => 'ULocal', 'label' => 'ULocal', 'image' => 'ulocal.png', 'href' => 'ulocal.php'],
         ['code' => 'UEat', 'label' => 'UEat', 'image' => 'ueat.png', 'href' => 'ueat.php'],
         ['code' => 'UBarangay', 'label' => 'UBarangay', 'image' => 'ubarangay.png', 'href' => 'ubarangay.php'],
     ];

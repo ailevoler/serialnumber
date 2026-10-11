@@ -44,49 +44,9 @@ function p2m_amount(string $input): int
 
 function p2m_pay(PDO $pdo, int $userId, int $merchantId, string $source, int $amountCentavos, string $requestKey, ?string $note): string
 {
-    if (!preg_match('/^[a-f0-9]{64}$/D', $requestKey)) throw new InvalidArgumentException('Invalid payment request.');
-    $quote = p2m_quote($amountCentavos, $source);
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('SELECT id, full_name, credits, status FROM users WHERE id = ? FOR UPDATE');
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch();
-        if (!$user || ($user['status'] ?? 'active') !== 'active') throw new InvalidArgumentException('Your account cannot make payments right now.');
-
-        $stmt = $pdo->prepare('SELECT reference FROM merchant_payments WHERE user_id = ? AND request_key = ?');
-        $stmt->execute([$userId, $requestKey]);
-        if ($existing = $stmt->fetch()) { $pdo->commit(); return $existing['reference']; }
-
-        $stmt = $pdo->prepare('SELECT id, business_name, status FROM merchants WHERE id = ? FOR UPDATE');
-        $stmt->execute([$merchantId]);
-        $merchant = $stmt->fetch();
-        if (!$merchant || $merchant['status'] !== 'approved') throw new InvalidArgumentException('This merchant cannot accept payments right now.');
-
-        $debit = $quote['customer_debit'];
-        if ($source === 'credits') {
-            $stmt = $pdo->prepare('UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?');
-            $stmt->execute([centavos_to_decimal($debit), $userId, centavos_to_decimal($debit)]);
-            if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Insufficient Credits for this payment.');
-        } else {
-            $stmt = $pdo->prepare('UPDATE boracay_cash_wallets SET balance_centavos = balance_centavos - ? WHERE user_id = ? AND balance_centavos >= ?');
-            $stmt->execute([$debit, $userId, $debit]);
-            if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Insufficient BCash for this payment.');
-        }
-        $pdo->prepare('UPDATE merchants SET balance_centavos = balance_centavos + ? WHERE id = ?')->execute([$quote['merchant_net'], $merchantId]);
-
-        $reference = 'MP-' . strtoupper(bin2hex(random_bytes(8)));
-        $stmt = $pdo->prepare('INSERT INTO merchant_payments (reference, request_key, user_id, merchant_id, source, amount_centavos, fee_centavos, fee_bearer, customer_debit_centavos, merchant_net_centavos, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$reference, $requestKey, $userId, $merchantId, $source, $quote['amount'], $quote['fee'], $quote['bearer'], $debit, $quote['merchant_net'], $note]);
-        if ($source === 'credits') {
-            $stmt = $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')");
-            $stmt->execute([$userId, 'Paid ' . mb_substr($merchant['business_name'], 0, 80) . ' ' . $reference, '-' . centavos_to_decimal($debit)]);
-        }
-        $userAccount = ($source === 'credits' ? 'user_credits:' : 'user_cash:') . $userId;
-        ledger_post($pdo, $reference, 'p2m_payment', [
-            [$userAccount, $debit, 0, 'Customer paid merchant #' . $merchantId],
-            ['merchant_payable:' . $merchantId, 0, $quote['merchant_net'], 'Net to merchant'],
-            ['fee_revenue:p2m_' . ($source === 'credits' ? 'credits' : 'cash'), 0, $quote['fee'], 'P2M charge (' . $quote['bearer'] . ')'],
-        ]);
+        $reference = p2m_pay_tx($pdo, $userId, $merchantId, $source, $amountCentavos, $requestKey, $note);
         $pdo->commit();
         return $reference;
     } catch (Throwable $error) {
@@ -95,41 +55,95 @@ function p2m_pay(PDO $pdo, int $userId, int $merchantId, string $source, int $am
     }
 }
 
+/** Same as p2m_pay, inside a transaction the caller already opened (marketplace bookings and UEat orders). */
+function p2m_pay_tx(PDO $pdo, int $userId, int $merchantId, string $source, int $amountCentavos, string $requestKey, ?string $note): string
+{
+    if (!preg_match('/^[a-f0-9]{64}$/D', $requestKey)) throw new InvalidArgumentException('Invalid payment request.');
+    $quote = p2m_quote($amountCentavos, $source);
+    $stmt = $pdo->prepare('SELECT id, full_name, credits, status FROM users WHERE id = ? FOR UPDATE');
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+    if (!$user || ($user['status'] ?? 'active') !== 'active') throw new InvalidArgumentException('Your account cannot make payments right now.');
+
+    $stmt = $pdo->prepare('SELECT reference FROM merchant_payments WHERE user_id = ? AND request_key = ?');
+    $stmt->execute([$userId, $requestKey]);
+    if ($existing = $stmt->fetch()) return $existing['reference'];
+
+    $stmt = $pdo->prepare('SELECT id, business_name, status FROM merchants WHERE id = ? FOR UPDATE');
+    $stmt->execute([$merchantId]);
+    $merchant = $stmt->fetch();
+    if (!$merchant || $merchant['status'] !== 'approved') throw new InvalidArgumentException('This merchant cannot accept payments right now.');
+
+    $debit = $quote['customer_debit'];
+    if ($source === 'credits') {
+        $stmt = $pdo->prepare('UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?');
+        $stmt->execute([centavos_to_decimal($debit), $userId, centavos_to_decimal($debit)]);
+        if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Insufficient Credits for this payment.');
+    } else {
+        $stmt = $pdo->prepare('UPDATE boracay_cash_wallets SET balance_centavos = balance_centavos - ? WHERE user_id = ? AND balance_centavos >= ?');
+        $stmt->execute([$debit, $userId, $debit]);
+        if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Insufficient BCash for this payment.');
+    }
+    $pdo->prepare('UPDATE merchants SET balance_centavos = balance_centavos + ? WHERE id = ?')->execute([$quote['merchant_net'], $merchantId]);
+
+    $reference = 'MP-' . strtoupper(bin2hex(random_bytes(8)));
+    $stmt = $pdo->prepare('INSERT INTO merchant_payments (reference, request_key, user_id, merchant_id, source, amount_centavos, fee_centavos, fee_bearer, customer_debit_centavos, merchant_net_centavos, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$reference, $requestKey, $userId, $merchantId, $source, $quote['amount'], $quote['fee'], $quote['bearer'], $debit, $quote['merchant_net'], $note]);
+    if ($source === 'credits') {
+        $stmt = $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')");
+        $stmt->execute([$userId, 'Paid ' . mb_substr($merchant['business_name'], 0, 80) . ' ' . $reference, '-' . centavos_to_decimal($debit)]);
+    }
+    $userAccount = ($source === 'credits' ? 'user_credits:' : 'user_cash:') . $userId;
+    ledger_post($pdo, $reference, 'p2m_payment', [
+        [$userAccount, $debit, 0, 'Customer paid merchant #' . $merchantId],
+        ['merchant_payable:' . $merchantId, 0, $quote['merchant_net'], 'Net to merchant'],
+        ['fee_revenue:p2m_' . ($source === 'credits' ? 'credits' : 'cash'), 0, $quote['fee'], 'P2M charge (' . $quote['bearer'] . ')'],
+    ]);
+    return $reference;
+}
+
 /** Full refund of an unsettled payment: the customer gets back everything they paid, including the charge. */
 function p2m_refund(PDO $pdo, int $paymentId, int $adminId): string
 {
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('SELECT * FROM merchant_payments WHERE id = ? FOR UPDATE');
-        $stmt->execute([$paymentId]);
-        $p = $stmt->fetch();
-        if (!$p) throw new InvalidArgumentException('Payment not found.');
-        if ($p['status'] !== 'completed') throw new InvalidArgumentException('This payment was already refunded.');
-        $stmt = $pdo->prepare('UPDATE merchants SET balance_centavos = balance_centavos - ? WHERE id = ? AND balance_centavos >= ?');
-        $stmt->execute([$p['merchant_net_centavos'], $p['merchant_id'], $p['merchant_net_centavos']]);
-        if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Merchant balance is lower than this payment (it may already be settled). Recover funds from the merchant first.');
-        $debit = (int) $p['customer_debit_centavos'];
-        if ($p['source'] === 'credits') {
-            $pdo->prepare('UPDATE users SET credits = credits + ? WHERE id = ?')->execute([centavos_to_decimal($debit), $p['user_id']]);
-            $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
-                ->execute([$p['user_id'], 'Refund ' . $p['reference'], centavos_to_decimal($debit)]);
-        } else {
-            $pdo->prepare('INSERT IGNORE INTO boracay_cash_wallets (user_id) VALUES (?)')->execute([$p['user_id']]);
-            $pdo->prepare('UPDATE boracay_cash_wallets SET balance_centavos = balance_centavos + ? WHERE user_id = ?')->execute([$debit, $p['user_id']]);
-        }
-        $pdo->prepare("UPDATE merchant_payments SET status = 'refunded', refunded_at = NOW(), refunded_by = ? WHERE id = ?")->execute([$adminId, $paymentId]);
-        $userAccount = ($p['source'] === 'credits' ? 'user_credits:' : 'user_cash:') . $p['user_id'];
-        ledger_post($pdo, 'RF-' . substr($p['reference'], 3), 'p2m_refund', [
-            ['merchant_payable:' . $p['merchant_id'], (int) $p['merchant_net_centavos'], 0, 'Refund ' . $p['reference']],
-            ['fee_revenue:p2m_' . ($p['source'] === 'credits' ? 'credits' : 'cash'), (int) $p['fee_centavos'], 0, 'Charge reversed'],
-            [$userAccount, 0, $debit, 'Refund to customer'],
-        ]);
+        $reference = p2m_refund_tx($pdo, $paymentId, $adminId ?: null);
         $pdo->commit();
-        return $p['reference'];
+        return $reference;
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $error;
     }
+}
+
+/** Same as p2m_refund, inside the caller's transaction. $adminId null = refunded by the merchant or the system. */
+function p2m_refund_tx(PDO $pdo, int $paymentId, ?int $adminId): string
+{
+    $stmt = $pdo->prepare('SELECT * FROM merchant_payments WHERE id = ? FOR UPDATE');
+    $stmt->execute([$paymentId]);
+    $p = $stmt->fetch();
+    if (!$p) throw new InvalidArgumentException('Payment not found.');
+    if ($p['status'] !== 'completed') throw new InvalidArgumentException('This payment was already refunded.');
+    $stmt = $pdo->prepare('UPDATE merchants SET balance_centavos = balance_centavos - ? WHERE id = ? AND balance_centavos >= ?');
+    $stmt->execute([$p['merchant_net_centavos'], $p['merchant_id'], $p['merchant_net_centavos']]);
+    if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Merchant balance is lower than this payment (it may already be settled). Recover funds from the merchant first.');
+    $debit = (int) $p['customer_debit_centavos'];
+    if ($p['source'] === 'credits') {
+        $pdo->prepare('UPDATE users SET credits = credits + ? WHERE id = ?')->execute([centavos_to_decimal($debit), $p['user_id']]);
+        $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
+            ->execute([$p['user_id'], 'Refund ' . $p['reference'], centavos_to_decimal($debit)]);
+    } else {
+        $pdo->prepare('INSERT IGNORE INTO boracay_cash_wallets (user_id) VALUES (?)')->execute([$p['user_id']]);
+        $pdo->prepare('UPDATE boracay_cash_wallets SET balance_centavos = balance_centavos + ? WHERE user_id = ?')->execute([$debit, $p['user_id']]);
+    }
+    $pdo->prepare("UPDATE merchant_payments SET status = 'refunded', refunded_at = NOW(), refunded_by = ? WHERE id = ?")->execute([$adminId, $paymentId]);
+    $userAccount = ($p['source'] === 'credits' ? 'user_credits:' : 'user_cash:') . $p['user_id'];
+    ledger_post($pdo, 'RF-' . substr($p['reference'], 3), 'p2m_refund', [
+        ['merchant_payable:' . $p['merchant_id'], (int) $p['merchant_net_centavos'], 0, 'Refund ' . $p['reference']],
+        ['fee_revenue:p2m_' . ($p['source'] === 'credits' ? 'credits' : 'cash'), (int) $p['fee_centavos'], 0, 'Charge reversed'],
+        [$userAccount, 0, $debit, 'Refund to customer'],
+    ]);
+    return $p['reference'];
 }
 
 /** Moves a merchant's whole available balance into a pending payout. */

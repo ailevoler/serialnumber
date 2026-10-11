@@ -348,17 +348,25 @@
     let checkedOk = false;
     form.querySelectorAll('input[name="vehicle_type"]').forEach(r => {
       const v = r.value, label = r.closest('label');
-      const ok = rental ? !!(self ? selfPrices : rentPrices)[v]?.enabled : label.dataset.rideOk === '1';
+      // Self-drive-only vehicles (E-Bike) stay selectable in "With driver": choosing one switches to Self-drive.
+      const ok = rental ? !!(self ? selfPrices : rentPrices)[v]?.enabled || (!self && label.dataset.selfOnly === '1') : label.dataset.rideOk === '1';
       r.disabled = !ok; label.classList.toggle('off', !ok);
       const av = label.querySelector('[data-avail]');
       if (av) {
-        const u = units[v] || {}, n = self ? u.self : u.driver;
+        const u = units[v] || {}, n = self || label.dataset.selfOnly === '1' ? u.self : u.driver;
         av.textContent = !rental || !ok ? '' : later ? (self && u.fleet ? u.fleet + ' in fleet' : '') : (n > 0 ? n + ' available' : 'None free now');
         av.classList.toggle('none', rental && ok && !later && !(n > 0));
       }
       if (ok && r.checked) checkedOk = true;
     });
-    if (!checkedOk) { const first = form.querySelector('input[name="vehicle_type"]:not(:disabled)'); if (first) first.checked = true; }
+    // Default pick: in "With driver" prefer a vehicle that comes with a driver (not a self-drive-only one).
+    const cur = form.querySelector('input[name="vehicle_type"]:checked');
+    if (rental && !self && cur && cur.closest('label').dataset.selfOnly === '1' && !cur.dataset.userPicked) checkedOk = false;
+    if (!checkedOk) {
+      const all = [...form.querySelectorAll('input[name="vehicle_type"]:not(:disabled)')];
+      const first = (rental && !self ? all.find(x => x.closest('label').dataset.selfOnly !== '1') : null) || all[0];
+      if (first) first.checked = true;
+    }
   }
   const dayHours = Number(form.dataset.dayHours) || 8;
   const peso = c => '₱' + (Math.ceil(c / 100)).toLocaleString('en-PH');
@@ -405,7 +413,7 @@
   }
   const texts = {
     ride: ['Book a ride', 'Choose your pick-up, destination, and vehicle.', 'Request ride', 'e.g. near the blue gate, 2 bags'],
-    rental: ['Rent a ride', 'Hire a vehicle with its driver, or drive it yourself, by the hour or for the whole day.', 'Rent this ride', 'Your plan, e.g. Puka Beach, Mt. Luho, then D\'Mall']
+    rental: ['Rent a ride', 'Rent an E-Bike, Motorcycle, E-Trike, Car or Van (10–12 seats), with a driver or self-drive, by the hour or for the whole day.', 'Rent this ride', 'Your plan, e.g. Puka Beach, Mt. Luho, then D\'Mall']
   };
   function setTrip(next) {
     form.dataset.mode = next;
@@ -448,6 +456,14 @@
   }
   form.querySelectorAll('input[name="start_mode"]').forEach(r => r.addEventListener('change', refreshVehicles));
   form.querySelectorAll('input[name="rental_mode"]').forEach(r => r.addEventListener('change', () => setDrive(r.value)));
+  form.querySelectorAll('input[name="vehicle_type"]').forEach(r => r.addEventListener('change', () => {
+    form.querySelectorAll('input[name="vehicle_type"]').forEach(x => { delete x.dataset.userPicked; }); r.dataset.userPicked = '1';
+    const selfRadio = form.querySelector('input[name="rental_mode"][value="self"]');
+    if (isRental() && !isSelf() && r.checked && r.closest('label').dataset.selfOnly === '1' && selfRadio) {
+      selfRadio.checked = true; setDrive('self');
+      say(r.closest('label').querySelector('strong').textContent + ' rentals are self-drive: you ride it yourself.');
+    }
+  }));
   form.querySelectorAll('input[name="rental_hours"], input[name="start_mode"], input[name="vehicle_type"]').forEach(r => r.addEventListener('change', showRent));
   const sched = document.getElementById('uride-scheduled');
   if (sched) sched.addEventListener('focus', () => { const later = form.querySelector('input[name="start_mode"][value="later"]'); if (later) { later.checked = true; showRent(); } });

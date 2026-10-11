@@ -346,6 +346,8 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
     }
     if (!$s[$payment . '_enabled']) throw new InvalidArgumentException(($payment === 'credits' ? 'Credits' : 'Cash') . ' payment is turned off right now.');
     [$lat, $lng] = uride_coordinates($in, 'pickup');
+    // Self-drive-only vehicles (E-Bike unless Admin allows a driver): a "with driver" request becomes self-drive.
+    if ($mode === 'driver' && !uride_rental_rule($vehicle)['enabled'] && uride_self_rule($vehicle)['enabled']) $mode = 'self';
     $quote = uride_rental_quote($vehicle, $package, $mode);
     if (!$quote['enabled']) throw new InvalidArgumentException(uride_vehicles()[$vehicle]['label'] . ($mode === 'self' ? ' self-drive' : '') . ' rentals are not available right now.');
     $scheduled = null;

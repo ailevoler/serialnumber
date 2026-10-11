@@ -98,6 +98,10 @@ try {
     $check(uride_rental_available($pdo, 'e_bike', 'self', date('Y-m-d H:i:00', strtotime($later)), 2) === max(0, $before['e_bike']['fleet'] + 2 - 1), 'later: fleet units minus the overlapping booking');
     $check(count(uride_driver_rentals_out($pdo, $owner)) === 1, 'dashboard lists the E-Bike that is out');
 
+    // E-Bike chosen under "With driver" is booked as self-drive.
+    $c4 = uride_book_rental($pdo, $u2, ['rental_mode' => 'driver', 'start_mode' => 'later', 'scheduled_at' => date('Y-m-d\\TH:i', time() + 8 * 3600)] + $base + ['rental_hours' => '2'], $key());
+    $check($pdo->query('SELECT rental_mode FROM uride_requests WHERE code = ' . $pdo->quote($c4))->fetchColumn() === 'self', 'E-Bike rental with "With driver" selected becomes self-drive');
+    uride_cancel_by_passenger($pdo, $u2, (int) $pdo->query('SELECT id FROM uride_requests WHERE code = ' . $pdo->quote($c4))->fetchColumn(), 'test');
     // Van self-drive needs a car license (code B).
     $base2 = ['vehicle_type' => 'van', 'rental_hours' => '4'] + $base;
     $throws(fn() => uride_book_rental($pdo, $u3, $base2, $key()), 'license', 'Van self-drive needs a driver\'s license');

@@ -30,7 +30,7 @@
 
 | Vehicle | Rides | Rental with driver | Self-drive |
 |---|---|---|---|
-| E-Bike (1 rider) | – | off by default | yes. Valid ID (KYC) only; Admin can require a driver's license |
+| E-Bike (1 rider) | – | shown in Rent a Ride; choosing it switches to Self-drive (Admin can turn on rentals with a driver) | yes. Valid ID (KYC) only; Admin can require a driver's license |
 | Motorcycle | yes | yes | yes. License A/A1 |
 | E-Trike | yes | yes | yes. License A/A1 |
 | Car (4 seats) | yes | yes | yes. License B |

@@ -18,6 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (p('action') === 'settings') {
             if (!admin_can('settings')) throw new InvalidArgumentException('Only a Super Admin can change KYC rules.');
             foreach (array_keys($types) as $t) setting_save($pdo, 'kyc.required_' . $t, p('req_' . $t) === '1' ? '1' : '0', (int) $admin['id']);
+            if (kyc_face_ready()) {
+                setting_save($pdo, 'face.kyc_max_distance', p('kyc_max_distance', '0.60'), (int) $admin['id']);
+                setting_save($pdo, 'face.login_max_distance', p('login_max_distance', '0.45'), (int) $admin['id']);
+                setting_save($pdo, 'face.login_enabled', p('login_enabled') === '1' ? '1' : '0', (int) $admin['id']);
+            }
             admin_audit('kyc_settings', 'settings', 'kyc', array_diff_key($_POST, ['csrf' => 1]));
             flash('success', 'KYC rules saved.');
             redirect('kyc.php?view=settings');
@@ -64,6 +69,10 @@ if (q('id')) {
                     <figcaption style="font-size:12px;text-align:center"><b><?= e(kyc_step_labels()[$step]) ?></b><br><small><?= isset($m['t']) ? e(number_format($m['t'] / 1000, 1)) . 's' : '' ?><?= isset($m['yaw']) && $m['yaw'] !== null ? ' · y ' . e((string) $m['yaw']) . ' p ' . e((string) $m['pitch']) : '' ?></small></figcaption></figure>
             <?php endforeach; ?>
             </div>
+            <?php if (array_key_exists('face_match_distance', $k)): $fd = $k['face_match_distance']; ?>
+            <h2 class="mt">Face match with ID <small><?php if ($fd === null): ?>Not measured on the phone: compare the selfie with the ID photo yourself<?php else: $fs = face_score((float) $fd); ?><?= (float) $fd <= kyc_face_max_distance() ? '<span class="badge good">Match ' . $fs . '%</span>' : '<span class="badge bad">Low match ' . $fs . '%</span>' ?> distance <?= e(number_format((float) $fd, 3)) ?> (limit <?= e(number_format(kyc_face_max_distance(), 2)) ?>, lower is closer)<?php endif; ?></small></h2>
+            <?php endif; ?>
+            <?php if (isset($log['wrong_turns']) && $log['wrong_turns'] !== null): ?><p class="table-meta">Wrong turns during the check: <?= (int) $log['wrong_turns'] ?></p><?php endif; ?>
             <p class="table-meta">Check: same person in every photo and on the ID, a real head turning (not a printed photo or screen), eyes closed in the Blink photo.</p>
         </section>
         <div class="stack">
@@ -106,6 +115,18 @@ if (q('view') === 'settings') {
         <label><input type="checkbox" name="req_agent" value="1"<?= kyc_required('agent') ? ' checked' : '' ?><?= $ro ?>> <b>Agents</b>: before approval and before cashing out</label><br>
         <label><input type="checkbox" name="req_user" value="1"<?= kyc_required('user') ? ' checked' : '' ?><?= $ro ?>> <b>Customers</b>: before sending Credits to another person and before UCash In</label>
         <p class="table-meta">Everyone can verify at any time from their Profile / Verify ID page, whether or not it is required.</p>
+        <?php if (kyc_face_ready()): require_once __DIR__ . '/../includes/face_login.php'; ?>
+        <h2 class="mt">Face match and Face Login</h2>
+        <p class="table-meta">The phone turns each face into 128 numbers (face-api, open source). The <b>distance</b> between two faces is lower when they are more alike: the same person is usually below 0.45, different people are usually above 0.55.</p>
+        <div class="form-grid">
+            <div class="field"><label for="kyc_max_distance">KYC: selfie vs ID photo (max distance)</label><input id="kyc_max_distance" name="kyc_max_distance" type="number" step="0.01" min="0.4" max="0.7" value="<?= e(number_format(kyc_face_max_distance(), 2)) ?>"<?= $ro ?>><small>0.60 recommended. ID photos are small and old, so this is looser. Admin still reviews every KYC.</small></div>
+            <div class="field"><label for="login_max_distance">Face Login (max distance)</label><input id="login_max_distance" name="login_max_distance" type="number" step="0.01" min="0.3" max="0.6" value="<?= e(number_format(face_login_max_distance(), 2)) ?>"<?= $ro ?>><small>0.45 recommended. Lower = stricter (more "try again"), higher = easier but less safe.</small></div>
+        </div>
+        <label><input type="checkbox" name="login_enabled" value="1"<?= (string) setting('face.login_enabled', '1') === '1' ? ' checked' : '' ?><?= $ro ?>> <b>Face Login</b>: customers with an approved KYC can log in with their face on their own phone</label>
+        <?php if (face_login_ready()): $fl = $pdo->query("SELECT COUNT(*) devices, COUNT(locked_at) locked FROM face_login_devices WHERE revoked_at IS NULL")->fetch(); $fa = $pdo->query("SELECT SUM(ok) ok, SUM(1 - ok) bad FROM face_login_attempts WHERE purpose = 'login' AND created_at >= NOW() - INTERVAL 7 DAY")->fetch(); ?>
+        <p class="table-meta">Phones with Face Login: <?= (int) $fl['devices'] ?> (locked: <?= (int) $fl['locked'] ?>) · Face logins last 7 days: <?= (int) $fa['ok'] ?> OK, <?= (int) $fa['bad'] ?> failed</p>
+        <?php endif; ?>
+        <?php endif; ?>
         <?php if (!$ro): ?><div class="form-actions"><button class="btn primary" type="submit">Save rules</button></div><?php endif; ?>
     </form>
     <?php admin_footer(); exit;
@@ -127,9 +148,9 @@ admin_header('KYC verification', 'kyc');
 <div class="tabs mt"><?php foreach (['pending' => 'To review', 'needs_info' => 'Asked to resubmit', 'approved' => 'Verified', 'rejected' => 'Rejected'] as $k => $l): ?><a class="<?= $status === $k ? 'active' : '' ?>" href="?<?= e(http_build_query(array_filter(['status' => $k, 'type' => $type]))) ?>"><?= $l ?><span><?= (int) ($counts[$k] ?? 0) ?></span></a><?php endforeach; ?></div>
 <form class="toolbar" method="get"><input type="hidden" name="status" value="<?= e($status) ?>"><select name="type" data-autosubmit aria-label="Account type"><option value="">All account types</option><?php foreach ($types as $k => $l): ?><option value="<?= e($k) ?>"<?= $type === $k ? ' selected' : '' ?>><?= e($l) ?></option><?php endforeach; ?></select></form>
 <div class="table-wrap"><table>
-    <thead><tr><th>Reference</th><th>Account</th><th>Name on ID</th><th>ID</th><th>Selfie</th><th>Liveness</th><th>Status</th></tr></thead>
+    <thead><tr><th>Reference</th><th>Account</th><th>Name on ID</th><th>ID</th><th>Selfie</th><th>Liveness</th><th>Face match</th><th>Status</th></tr></thead>
     <tbody>
-    <?php if (!$rows): ?><tr><td colspan="7" class="muted">Nothing here.</td></tr><?php endif; ?>
+    <?php if (!$rows): ?><tr><td colspan="8" class="muted">Nothing here.</td></tr><?php endif; ?>
     <?php foreach ($rows as $r): $who = kyc_subject_info($pdo, $r['subject_type'], (int) $r['subject_id']); ?>
         <tr><td><a class="row-link" href="?id=<?= (int) $r['id'] ?>"><?= e($r['reference']) ?></a><small><?= e(date('M j, Y g:i A', strtotime($r['created_at']))) ?></small></td>
             <td><?= e($types[$r['subject_type']]) ?><small><?= e($who['name']) ?></small></td>
@@ -137,6 +158,7 @@ admin_header('KYC verification', 'kyc');
             <td><?= e(kyc_id_types()[$r['id_type']] ?? $r['id_type']) ?></td>
             <td><img src="<?= e($img($r['selfie'])) ?>" alt="" style="width:44px;height:58px;object-fit:cover;border-radius:6px;transform:scaleX(-1)"></td>
             <td><?= $r['liveness_mode'] === 'auto' ? status_badge('active') : '<span class="badge warn">Manual</span>' ?></td>
+            <td><?= isset($r['face_match_distance']) && $r['face_match_distance'] !== null ? face_score((float) $r['face_match_distance']) . '%' : '—' ?></td>
             <td><?= kyc_badge($r['status']) ?></td></tr>
     <?php endforeach; ?>
     </tbody></table></div>

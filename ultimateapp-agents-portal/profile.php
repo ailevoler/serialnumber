@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/includes/kyc.php';
+require_once __DIR__ . '/includes/face_login.php';
 $user = require_auth();
 $active = 'profile';
 $pageTitle = 'Profile';
@@ -17,6 +17,7 @@ require __DIR__ . '/includes/header.php';
     <div class="method-list">
         <?php if (($user['role'] ?? 'customer') === 'mctc'): ?><a href="merchant.php"><span data-icon="wallet"></span> Merchant Portal <span data-icon="chevron-right"></span></a><a href="mctc.php"><span data-icon="qr-code"></span> MCTC Scanner <span data-icon="chevron-right"></span></a><?php endif; ?><a href="install.php"><span data-icon="smartphone"></span> Install Ultimate App <span data-icon="chevron-right"></span></a>
         <?php $kycState = kyc_status($pdo, 'user', (int) $user['id']); ?><a href="kyc.php"><span data-icon="user"></span> Verify my identity · <?= e(kyc_statuses()[$kycState]) ?> <span data-icon="chevron-right"></span></a>
+        <?php if (face_login_enabled()): ?><a href="face-login-setup.php"><span data-icon="smartphone"></span> Face Login<?= face_login_devices($pdo, (int) $user['id']) ? ' · On' : '' ?> <span data-icon="chevron-right"></span></a><?php endif; ?>
         <a href="transactions.php"><span data-icon="receipt"></span> Transaction History <span data-icon="chevron-right"></span></a>
         <a href="qr.php"><span data-icon="qr-code"></span> My QR Code <span data-icon="chevron-right"></span></a>
         <a href="rewards.php"><span data-icon="gift"></span> Rewards <span data-icon="chevron-right"></span></a>

@@ -41,3 +41,22 @@
 .kyc-review figcaption{font-size:11px;color:var(--k-muted);text-align:center}
 .kyc-agree{display:flex!important;grid-template-columns:none;align-items:flex-start;gap:10px!important;font-weight:400!important;font-size:13px!important;line-height:1.5}
 @media (max-width:520px){.kyc-row,.kyc-ids{grid-template-columns:1fr}.kyc-checks{grid-template-columns:repeat(3,1fr)}.kyc-review{grid-template-columns:repeat(2,1fr)}}
+/* Guided liveness: coloured frame drawn on the canvas */
+.kyc-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.kyc-say.tone-error{background:#b42318}.kyc-say.tone-ok{background:#0f7b4a}.kyc-say.tone-warn{background:#8a5a00}
+.kyc-red{color:#d0342c}.kyc-green{color:#0f8a4f}
+.kyc-match{margin:12px auto 0;max-width:420px;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45}
+.kyc-match.ok{background:#ecfbf2;border:1px solid #9fd7b9;color:#0f5132}
+.kyc-match.bad{background:#fff3f2;border:1px solid #f3b4ae;color:#7a1d16}
+.kyc-match.wait{background:#f2f6fb;border:1px solid #cfdcec;color:#24405f}
+.kyc-match b{display:block;font-size:15px}
+.kyc-match .kyc-btn{margin-top:8px}
+/* Face Login */
+.face-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;list-style:none;margin:12px auto 0;padding:0;max-width:420px}
+.face-steps li{padding:6px 10px;border-radius:999px;border:1px solid var(--k-line);font-size:12px;font-weight:600;color:var(--k-muted)}
+.face-steps li.done{border-color:#9fd7b9;background:#ecfbf2;color:var(--k-ok)}
+.face-steps li.done::before{content:'✓ '}
+.face-devices{list-style:none;margin:10px 0;padding:0;display:grid;gap:10px}
+.face-devices li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--k-line);font-size:14px}
+.face-devices small{color:var(--k-muted)}
+.face-login-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin-top:10px;border:1px solid #c7cfd6;border-radius:12px;background:#fff;color:#121619;font-weight:700;text-decoration:none}

@@ -133,11 +133,56 @@ function kyc_validate_liveness_log(string $json, string $mode): array
         $prev = (float) $t;
     }
     if ($prev > 300000) throw new InvalidArgumentException('The liveness check took too long. Please do it again.');
-    $clean = ['mode' => $mode, 'model' => mb_substr((string) ($log['model'] ?? ''), 0, 60), 'steps' => []];
+    $clean = ['mode' => $mode, 'model' => mb_substr((string) ($log['model'] ?? ''), 0, 60), 'steps' => [], 'wrong_turns' => is_numeric($log['wrong'] ?? null) ? (int) $log['wrong'] : null];
     foreach (KYC_STEPS as $step) {
         $clean['steps'][$step] = array_map(static fn($v) => is_numeric($v) ? round((float) $v, 3) : null, array_intersect_key((array) $log['steps'][$step], array_flip(['t', 'yaw', 'pitch', 'blink'])));
     }
     return $clean;
+}
+
+/* ---------------------------------------------------------------- face match (selfie vs ID) */
+
+/** Max face distance accepted between the selfie and the ID photo (Admin › KYC › Rules). */
+function kyc_face_max_distance(): float
+{
+    $v = setting('face.kyc_max_distance', '0.60');
+    return is_numeric($v) ? max(0.4, min(0.7, (float) $v)) : 0.6;
+}
+
+/** A face descriptor from the phone: JSON list of 128 numbers. Returns null when empty. */
+function kyc_parse_descriptor(string $json): ?array
+{
+    if (trim($json) === '') return null;
+    $v = json_decode($json, true);
+    if (!is_array($v) || count($v) !== 128 || array_keys($v) !== range(0, 127)) throw new InvalidArgumentException('The face check data is invalid. Please do the selfie again.');
+    $out = [];
+    foreach ($v as $x) {
+        if (!is_int($x) && !is_float($x) || !is_finite((float) $x) || abs((float) $x) > 2) throw new InvalidArgumentException('The face check data is invalid. Please do the selfie again.');
+        $out[] = round((float) $x, 6);
+    }
+    return $out;
+}
+
+function face_distance(array $a, array $b): float
+{
+    $s = 0.0;
+    foreach ($a as $i => $x) $s += ($x - $b[$i]) ** 2;
+    return sqrt($s);
+}
+
+/** 0-100 match score shown to people: 100 at distance <= 0.3, 50 at 0.6, 0 at >= 0.9 (same as the phone). */
+function face_score(float $distance): int
+{
+    return (int) round(100 * max(0, min(1, (0.9 - $distance) / 0.6)));
+}
+
+function kyc_face_ready(): bool
+{
+    static $ready = null;
+    if ($ready === null) {
+        try { $GLOBALS['pdo']->query('SELECT face_descriptor FROM kyc_submissions LIMIT 0'); $ready = true; } catch (Throwable) { $ready = false; }
+    }
+    return $ready;
 }
 
 /**
@@ -164,6 +209,16 @@ function kyc_submit(PDO $pdo, string $type, int $subjectId, array $in): string
     }
     $mode = $str('liveness_mode') === 'manual' ? 'manual' : 'auto';
     $log = kyc_validate_liveness_log($str('liveness_log'), $mode);
+    // Face match: the phone compares the "look straight" selfie with the face on the ID. Checked again here.
+    $faceDesc = kyc_parse_descriptor($str('face_descriptor'));
+    $idDesc = kyc_parse_descriptor($str('id_face_descriptor'));
+    $faceDistance = null;
+    if ($faceDesc !== null && $idDesc !== null) {
+        $faceDistance = round(face_distance($faceDesc, $idDesc), 4);
+        if ($faceDistance > kyc_face_max_distance()) throw new InvalidArgumentException('Your selfie does not match the photo on your ID (match ' . face_score($faceDistance) . '%). Retake the ID photo or the selfie.');
+    } elseif (($faceDesc === null) !== ($idDesc === null)) {
+        throw new InvalidArgumentException('The face check did not finish. Please do the selfie again.');
+    }
     $saved = [];
     try {
         $saved['id_front'] = kyc_store_image($str('id_front'), 'The front of your ID', 400);
@@ -175,6 +230,10 @@ function kyc_submit(PDO $pdo, string $type, int $subjectId, array $in): string
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$reference, $type, $subjectId, $name, $birth ?: null, $idType, $idNumber ?: null, $saved['id_front'], $saved['id_back'], $frames['center'],
                 json_encode($frames), json_encode($log), $mode, function_exists('rate_limit_client_ip') ? rate_limit_client_ip() : null, mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255)]);
+        if ($faceDesc !== null && kyc_face_ready()) {
+            $pdo->prepare("UPDATE kyc_submissions SET face_descriptor = ?, id_face_descriptor = ?, face_match_distance = ?, face_model = 'face-api-1.7.15' WHERE reference = ?")
+                ->execute([json_encode($faceDesc), json_encode($idDesc), $faceDistance, $reference]);
+        }
         return $reference;
     } catch (Throwable $e) {
         foreach ($saved as $file) @unlink(kyc_storage_dir() . '/' . $file);

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/agents.php';
+require_once __DIR__ . '/includes/face_login.php';
 agent_capture_referral($pdo);
 if (current_user()) {
     redirect('dashboard.php');
@@ -34,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($user && password_verify($password, $user['password_hash'])) {
         session_regenerate_id(true);
         $_SESSION['user_id'] = $user['id'];
+        face_login_unlock_after_password($pdo, (int) $user['id']);
         $return = $_SESSION['mctc_return'] ?? '';
         unset($_SESSION['mctc_return']);
         redirect(is_string($return) && preg_match('/^(mctc-approve|convert-approve|driver-topup-pay)[.]php[?]token=[a-f0-9]{64}$/D', $return) ? $return : 'dashboard.php');
@@ -60,6 +62,7 @@ require __DIR__ . '/includes/header.php';
         <a class="forgot" href="#">Forgot Password?</a>
         <button class="btn dark" type="submit">Log In</button>
     </form>
+    <?php if (face_login_enabled() && face_login_device($pdo, true)): ?><a class="face-login-btn" href="face-login.php"><span data-icon="user"></span> Log in with Face</a><?php endif; ?>
     <div class="divider"><span>OR</span></div>
     <div class="social-stack">
         <a href="oauth.php?provider=google">G&nbsp;&nbsp; Continue with Google</a>

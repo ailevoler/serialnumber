@@ -36,7 +36,7 @@ function kyc_render(PDO $pdo, string $type, int $subjectId, string $defaultName,
         'driver' => 'Needed before you can accept rides. It protects passengers and you.',
         'agent' => 'Needed before your account is approved and before you can cash out.',
     ][$type];
-    echo '<link rel="stylesheet" href="' . $e($assetBase) . 'assets/css/kyc.css?v=1">';
+    echo '<link rel="stylesheet" href="' . $e($assetBase) . 'assets/css/kyc.css?v=3">';
     echo '<section class="kyc">';
     echo '<div class="kyc-status kyc-' . $e($status) . '"><div><h2>Identity verification ' . kyc_badge($status) . '</h2>';
     if ($status === 'approved') {
@@ -52,7 +52,7 @@ function kyc_render(PDO $pdo, string $type, int $subjectId, string $defaultName,
     if ($error !== '') echo '<p class="kyc-alert" role="alert">' . $e($error) . '</p>';
     $vendor = $assetBase . 'assets/vendor/mediapipe/';
     ?>
-<form method="post" class="kyc-form" data-kyc data-vendor="<?= $e($vendor) ?>" novalidate>
+<form method="post" class="kyc-form" data-kyc data-vendor="<?= $e($vendor) ?>" data-max-distance="<?= $e((string) kyc_face_max_distance()) ?>" novalidate>
     <input type="hidden" name="csrf" value="<?= $e(csrf_token()) ?>"><input type="hidden" name="kyc_action" value="submit">
     <ol class="kyc-steps" aria-label="Steps"><li class="on" data-step-dot="1">Your ID</li><li data-step-dot="2">Selfie check</li><li data-step-dot="3">Send</li></ol>
 
@@ -76,15 +76,17 @@ function kyc_render(PDO $pdo, string $type, int $subjectId, string $defaultName,
 
     <fieldset class="kyc-pane" data-pane="2" hidden>
         <legend>2 · Selfie liveness check</legend>
-        <p class="kyc-hint">We will ask you to look straight, turn left, turn right, look up, look down, then blink. Photos are taken automatically. Good light, no cap or sunglasses.</p>
+        <p class="kyc-hint">Look straight, then turn LEFT, RIGHT, look UP, DOWN and BLINK. The side of the frame you need to turn to <b class="kyc-red">flashes red</b>. It turns <b class="kyc-green">green</b> when you do it right, and the photo is taken by itself. Then we check that your face matches your ID. Good light, no cap or sunglasses.</p>
         <div class="kyc-cam">
             <video playsinline muted autoplay data-video></video>
-            <div class="kyc-oval" aria-hidden="true"></div>
+            <canvas class="kyc-overlay" aria-hidden="true" data-overlay></canvas>
             <p class="kyc-say" data-say role="status" aria-live="polite">Tap Start to turn on the front camera.</p>
         </div>
         <ol class="kyc-checks"><?php foreach (kyc_step_labels() as $k => $l): ?><li data-check="<?= $e($k) ?>"><img alt="" hidden data-thumb><span><?= $e($l) ?></span></li><?php endforeach; ?></ol>
         <?php foreach (KYC_STEPS as $s): ?><input type="hidden" name="frame_<?= $e($s) ?>" data-frame="<?= $e($s) ?>"><?php endforeach; ?>
         <input type="hidden" name="liveness_log" data-log><input type="hidden" name="liveness_mode" value="auto" data-mode>
+        <input type="hidden" name="face_descriptor" data-face-desc><input type="hidden" name="id_face_descriptor" data-id-face-desc>
+        <div class="kyc-match" data-match role="status" aria-live="polite" hidden></div>
         <div class="kyc-actions">
             <button type="button" class="kyc-btn primary" data-start>Start</button>
             <button type="button" class="kyc-btn" data-manual hidden>Having trouble? Take this photo</button>
@@ -104,5 +106,6 @@ function kyc_render(PDO $pdo, string $type, int $subjectId, string $defaultName,
 </form>
 <?php
     echo '</section>';
-    echo '<script src="' . $e($assetBase) . 'assets/js/kyc.js?v=1" defer></script>';
+    echo '<script src="' . $e($assetBase) . 'assets/js/face-engine.js?v=2" data-vendor="' . $e($assetBase) . 'assets/vendor/" defer></script>';
+    echo '<script src="' . $e($assetBase) . 'assets/js/kyc.js?v=2" defer></script>';
 }

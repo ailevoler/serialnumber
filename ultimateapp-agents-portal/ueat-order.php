@@ -42,8 +42,8 @@ $headline = [
     'on_the_way' => ['On the way!', 'Your food is on the way to you.'],
     'ready' => ['Ready for pick-up', 'Your order is waiting at ' . $name . '.'],
     'completed' => ['Enjoy your meal!', 'Order completed. Thank you for ordering with UEat.'],
-    'declined' => ['Order declined', 'The restaurant could not take this order. Your Credits were returned.'],
-    'cancelled' => ['Order cancelled', 'Your Credits were returned to your wallet.'],
+    'declined' => ['Order declined', 'The restaurant could not take this order. Your payment was returned.'],
+    'cancelled' => ['Order cancelled', 'Your payment was returned to your wallet.'],
     'sample' => ['Sample order', 'This was a sample order.'],
 ][$order['status']] ?? [ucfirst($order['status']), ''];
 $pageTitle = 'UEat order';
@@ -76,11 +76,11 @@ require __DIR__ . '/includes/header.php';
         <div><dt>Reference</dt><dd><?= e($order['reference']) ?></dd></div>
         <div><dt><?= $order['fulfillment'] === 'delivery' ? 'Deliver to' : 'Pick up at' ?></dt><dd><?= e($order['fulfillment'] === 'delivery' ? (string) $order['delivery_address'] : ($store ? $store['display_name'] . ($store['address'] ? ', ' . $store['address'] : '') : $name)) ?></dd></div>
         <div><dt>Placed</dt><dd><?= e(date('M j, Y g:i A', strtotime($order['created_at']))) ?></dd></div>
-        <div><dt>Payment</dt><dd>Credits · <?= e(ucfirst($order['payment_status'])) ?></dd></div>
+        <div><dt>Payment</dt><dd><?= e(wallet_label((string) ($order['pay_source'] ?? 'credits'))) ?> · <?= e(ucfirst($order['payment_status'])) ?></dd></div>
         <?php if ($order['notes']): ?><div><dt>Note</dt><dd><?= e($order['notes']) ?></dd></div><?php endif; ?>
     </dl>
-    <?php if ($order['status'] === 'pending'): ?><form method="post" data-confirm="Cancel this order? Your Credits will be returned."><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="cancel"><button class="mk-ghost" type="submit">Cancel order</button></form><?php endif; ?>
+    <?php if ($order['status'] === 'pending'): ?><form method="post" data-confirm="Cancel this order? Your payment will be returned."><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="cancel"><button class="mk-ghost" type="submit">Cancel order</button></form><?php endif; ?>
     <a class="mk-cta" href="<?= $live && $store ? 'ueat.php?r=' . (int) $order['merchant_id'] : 'ueat.php' ?>"><?= $order['status'] === 'completed' ? 'Order again' : 'Back to UEat' ?></a>
 </section>
-<script defer src="assets/js/market.js?v=1"></script>
+<script defer src="assets/js/market.js?v=2"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

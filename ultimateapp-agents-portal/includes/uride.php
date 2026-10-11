@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/ledger.php';
+require_once __DIR__ . '/wallet.php';
 require_once __DIR__ . '/agents.php';
 require_once __DIR__ . '/uride_selfdrive.php';
 
@@ -52,7 +53,8 @@ function uride_settings(): array
     return [
         'enabled' => setting('uride.enabled', '1') === '1',
         'credits_enabled' => setting('uride.credits_enabled', '1') === '1',
-        'cash_enabled' => setting('uride.cash_enabled', '1') === '1',
+        'cash_enabled' => setting('uride.cash_enabled', '1') === '1' && pay_cash_enabled(),
+        'bcash_enabled' => setting('uride.bcash_enabled', '1') === '1' && pay_bcash_enabled(),
         'road_factor' => $f('uride.road_factor', 1.3),
         'night_bp' => setting_int('uride.night_surcharge_bp', 0),
         'night_start' => setting_int('uride.night_start', 22),
@@ -341,10 +343,10 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
     $mode = ($in['rental_mode'] ?? 'driver') === 'self' ? 'self' : 'driver';
     $pickup = mb_substr(trim((string) ($in['pickup_address'] ?? '')), 0, 255);
     $note = mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($in['passenger_note'] ?? '')) ?? ''), 0, 200);
-    if (!isset(uride_vehicles()[$vehicle]) || !in_array($payment, ['credits', 'cash'], true) || mb_strlen($pickup) < 3) {
+    if (!isset(uride_vehicles()[$vehicle]) || !in_array($payment, ['credits', 'cash', 'bcash'], true) || mb_strlen($pickup) < 3) {
         throw new InvalidArgumentException('Choose the pick-up location, vehicle, duration and payment method.');
     }
-    if (!$s[$payment . '_enabled']) throw new InvalidArgumentException(($payment === 'credits' ? 'Credits' : 'Cash') . ' payment is turned off right now.');
+    if (!$s[$payment . '_enabled']) throw new InvalidArgumentException(wallet_label($payment) . ' payment is turned off right now.');
     [$lat, $lng] = uride_coordinates($in, 'pickup');
     // Self-drive-only vehicles (E-Bike unless Admin allows a driver): a "with driver" request becomes self-drive.
     if ($mode === 'driver' && !uride_rental_rule($vehicle)['enabled'] && uride_self_rule($vehicle)['enabled']) $mode = 'self';
@@ -363,7 +365,7 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
     $deposit = $quote['deposit'];
     $licenseId = null;
     if ($mode === 'self') {
-        if ($payment !== 'credits') throw new InvalidArgumentException('Self-drive rentals are paid with Credits (the price and the refundable deposit are held in the app).');
+        if ($payment === 'cash') throw new InvalidArgumentException('Self-drive rentals are paid in the app with Credits or BCash (the price and the refundable deposit are held in the app).');
         if (($in['self_terms'] ?? '') !== '1') throw new InvalidArgumentException('Please agree to the self-drive rules.');
         require_once __DIR__ . '/kyc.php';
         if (setting('uride.self_drive_kyc', '1') === '1' && !kyc_is_verified($pdo, 'user', $userId)) throw new InvalidArgumentException('Verify your ID first (Profile › Verify my identity) to rent a vehicle without a driver.');
@@ -406,11 +408,14 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
         }
         $code = 'UR-' . strtoupper(bin2hex(random_bytes(6)));
         $held = 0;
-        if ($payment === 'credits') {
+        if ($payment !== 'cash') {
             $need = $fare + $deposit;
-            $stmt = $pdo->prepare('UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?');
-            $stmt->execute([centavos_to_decimal($need), $userId, centavos_to_decimal($need)]);
-            if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Not enough Credits for this rental (PHP ' . peso($need) . ($deposit ? ' including the PHP ' . peso($deposit) . ' refundable deposit' : '') . '). Buy Credits' . ($mode === 'self' ? '.' : ' or choose cash.'));
+            try {
+                wallet_debit_tx($pdo, $userId, $payment, $fare, 'URide rental on hold ' . $code);
+                if ($deposit > 0) wallet_debit_tx($pdo, $userId, $payment, $deposit, 'Self-drive deposit on hold ' . $code . ' (refundable)');
+            } catch (InvalidArgumentException) {
+                throw new InvalidArgumentException('Not enough ' . wallet_label($payment) . ' for this rental (PHP ' . peso($need) . ($deposit ? ' including the PHP ' . peso($deposit) . ' refundable deposit' : '') . '). ' . ($payment === 'bcash' ? 'Top up BCash or pay with Credits.' : 'Buy Credits' . (uride_settings()['bcash_enabled'] ? ', pay with BCash' : '') . ($mode === 'self' || !uride_settings()['cash_enabled'] ? '.' : ' or choose cash.')));
+            }
             $held = $fare;
         }
         $expires = $scheduled !== null ? date('Y-m-d H:i:s', strtotime($scheduled) + 15 * 60) : date('Y-m-d H:i:s', time() + 60 * max(10, 2 * $s['timeout_min']));
@@ -418,18 +423,14 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
         $pdo->prepare("INSERT INTO uride_requests (user_id, request_key, code, trip_type, rental_hours, rental_package, rental_mode, scheduled_at, vehicle_type, pickup_address, pickup_lat, pickup_lng, dropoff_address, dropoff_lat, dropoff_lng, distance_km, road_km, estimated_fare, fare_centavos, fare_breakdown, payment_method, held_centavos, deposit_centavos, deposit_status, license_id, passenger_note, expires_at) VALUES (?, ?, ?, 'rental', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             ->execute([$userId, $requestKey, $code, $quote['hours'], $package, $mode, $scheduled, $vehicle, $pickup, $lat, $lng, $label . ($mode === 'self' ? ' · return the vehicle to the pick-up' : ' · ends back at pick-up'), $lat, $lng, centavos_to_decimal($fare), $fare, $breakdown, $payment, $held, $deposit, $deposit > 0 ? 'held' : 'none', $licenseId, $note ?: null, $expires]);
         if ($held > 0) {
-            $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
-                ->execute([$userId, 'URide rental on hold ' . $code, '-' . centavos_to_decimal($held)]);
             ledger_post($pdo, $code, 'uride_hold', [
-                ['user_credits:' . $userId, $held, 0, 'Rental held for ' . $code],
+                [wallet_account($payment, $userId), $held, 0, 'Rental held for ' . $code],
                 ['uride_escrow', 0, $held, 'Rental price on hold'],
             ]);
         }
         if ($deposit > 0) {
-            $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
-                ->execute([$userId, 'Self-drive deposit on hold ' . $code . ' (refundable)', '-' . centavos_to_decimal($deposit)]);
             ledger_post($pdo, 'DP-' . substr($code, 3), 'uride_deposit_hold', [
-                ['user_credits:' . $userId, $deposit, 0, 'Deposit held for ' . $code],
+                [wallet_account($payment, $userId), $deposit, 0, 'Deposit held for ' . $code],
                 ['uride_deposit', 0, $deposit, 'Self-drive deposit held'],
             ]);
         }
@@ -740,10 +741,10 @@ function uride_book(PDO $pdo, int $userId, array $in, string $requestKey): strin
     $pickup = mb_substr(trim((string) ($in['pickup_address'] ?? '')), 0, 255);
     $dropoff = mb_substr(trim((string) ($in['dropoff_address'] ?? '')), 0, 255);
     $note = mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($in['passenger_note'] ?? '')) ?? ''), 0, 200);
-    if (!isset(uride_vehicles()[$vehicle]) || !in_array($payment, ['credits', 'cash'], true) || mb_strlen($pickup) < 3 || mb_strlen($dropoff) < 3) {
+    if (!isset(uride_vehicles()[$vehicle]) || !in_array($payment, ['credits', 'cash', 'bcash'], true) || mb_strlen($pickup) < 3 || mb_strlen($dropoff) < 3) {
         throw new InvalidArgumentException('Complete the locations, vehicle, and payment method.');
     }
-    if (!$s[$payment . '_enabled']) throw new InvalidArgumentException(($payment === 'credits' ? 'Credits' : 'Cash') . ' payment for rides is turned off right now.');
+    if (!$s[$payment . '_enabled']) throw new InvalidArgumentException(wallet_label($payment) . ' payment for rides is turned off right now.');
     [$aLat, $aLng] = uride_coordinates($in, 'pickup');
     [$bLat, $bLng] = uride_coordinates($in, 'dropoff');
     $km = uride_distance($aLat, $aLng, $bLat, $bLng);
@@ -765,20 +766,17 @@ function uride_book(PDO $pdo, int $userId, array $in, string $requestKey): strin
         if ($stmt->fetch()) throw new InvalidArgumentException('You already have an active ride. Finish or cancel it before booking another.');
         $code = 'UR-' . strtoupper(bin2hex(random_bytes(6)));
         $held = 0;
-        if ($payment === 'credits') {
-            $stmt = $pdo->prepare('UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?');
-            $stmt->execute([centavos_to_decimal($fare), $userId, centavos_to_decimal($fare)]);
-            if ($stmt->rowCount() !== 1) throw new InvalidArgumentException('Not enough Credits for this ride (PHP ' . peso($fare) . '). Buy Credits or choose cash.');
+        if ($payment !== 'cash') {
+            try { wallet_debit_tx($pdo, $userId, $payment, $fare, 'URide fare on hold ' . $code); }
+            catch (InvalidArgumentException) { throw new InvalidArgumentException('Not enough ' . wallet_label($payment) . ' for this ride (PHP ' . peso($fare) . '). ' . ($payment === 'bcash' ? 'Top up BCash or pay with Credits.' : 'Buy Credits' . ($s['bcash_enabled'] ? ', pay with BCash' : '') . ($s['cash_enabled'] ? ' or choose cash.' : '.'))); }
             $held = $fare;
         }
         $breakdown = json_encode(['base' => $quote['base'], 'distance' => $quote['distance'], 'night' => $quote['night'], 'minimum' => $quote['minimum'], 'road_km' => $quote['road_km']]);
         $pdo->prepare("INSERT INTO uride_requests (user_id, request_key, code, vehicle_type, pickup_address, pickup_lat, pickup_lng, dropoff_address, dropoff_lat, dropoff_lng, distance_km, road_km, estimated_fare, fare_centavos, fare_breakdown, payment_method, held_centavos, passenger_note, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             ->execute([$userId, $requestKey, $code, $vehicle, $pickup, $aLat, $aLng, $dropoff, $bLat, $bLng, $km, $quote['road_km'], centavos_to_decimal($fare), $fare, $breakdown, $payment, $held, $note ?: null, date('Y-m-d H:i:s', time() + 60 * $s['timeout_min'])]);
         if ($held > 0) {
-            $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
-                ->execute([$userId, 'URide fare on hold ' . $code, '-' . centavos_to_decimal($held)]);
             ledger_post($pdo, $code, 'uride_hold', [
-                ['user_credits:' . $userId, $held, 0, 'Fare held for ' . $code],
+                [wallet_account($payment, $userId), $held, 0, 'Fare held for ' . $code],
                 ['uride_escrow', 0, $held, 'Ride fare on hold'],
             ]);
         }
@@ -792,13 +790,11 @@ function uride_release_hold(PDO $pdo, array $ride, string $why): void
     if (($ride['deposit_status'] ?? 'none') === 'held' && (int) ($ride['deposit_centavos'] ?? 0) > 0) uride_deposit_refund($pdo, $ride, (int) $ride['deposit_centavos'], $why);
     $held = (int) $ride['held_centavos'];
     if ($held <= 0) return;
-    $pdo->prepare('UPDATE users SET credits = credits + ? WHERE id = ?')->execute([centavos_to_decimal($held), $ride['user_id']]);
+    wallet_credit_tx($pdo, (int) $ride['user_id'], (string) $ride['payment_method'], $held, 'URide refund ' . $ride['code'] . ' (' . $why . ')');
     $pdo->prepare('UPDATE uride_requests SET held_centavos = 0 WHERE id = ?')->execute([$ride['id']]);
-    $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
-        ->execute([$ride['user_id'], 'URide refund ' . $ride['code'] . ' (' . $why . ')', centavos_to_decimal($held)]);
     ledger_post($pdo, 'RF-' . substr($ride['code'], 3), 'uride_release', [
         ['uride_escrow', $held, 0, 'Released: ' . $why],
-        ['user_credits:' . $ride['user_id'], 0, $held, 'Fare returned'],
+        [wallet_account((string) $ride['payment_method'], (int) $ride['user_id']), 0, $held, 'Fare returned'],
     ]);
 }
 
@@ -1016,10 +1012,10 @@ function uride_settle_completed(PDO $pdo, array $driver, array $ride): void
     $fare = (int) $ride['fare_centavos'];
     $commission = (int) ($ride['commission_centavos'] ?? uride_commission_for($fare));
     $lines = [];
-    if ($ride['payment_method'] === 'credits') {
+    if ($ride['payment_method'] !== 'cash') {
         $held = (int) $ride['held_centavos'];
-        if ($held !== $fare) throw new RuntimeException('Held Credits do not match the fare for ' . $ride['code'] . '.');
-        uride_wallet_change($pdo, $driverId, $fare, 'ride_fare', $ride['code'], (int) $ride['id'], 'Credits fare from passenger');
+        if ($held !== $fare) throw new RuntimeException('Held ' . wallet_label((string) $ride['payment_method']) . ' do not match the fare for ' . $ride['code'] . '.');
+        uride_wallet_change($pdo, $driverId, $fare, 'ride_fare', $ride['code'], (int) $ride['id'], wallet_label((string) $ride['payment_method']) . ' fare from passenger');
         $pdo->prepare('UPDATE uride_requests SET held_centavos = 0 WHERE id = ?')->execute([$ride['id']]);
         $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, 0, 'Completed')")
             ->execute([$ride['user_id'], 'URide trip completed ' . $ride['code'] . ' · PHP ' . peso($fare) . ' paid']);
@@ -1034,7 +1030,7 @@ function uride_settle_completed(PDO $pdo, array $driver, array $ride): void
         uride_wallet_change($pdo, $driverId, -$commission, 'commission', $ride['code'], (int) $ride['id'], 'Commission ' . uride_commission_label());
         $lines[] = ['fee_revenue:uride', 0, $commission, 'URide commission'];
         ledger_post($pdo, $ride['code'], 'uride_trip', $lines);
-    } elseif ($ride['payment_method'] === 'credits') {
+    } elseif ($ride['payment_method'] !== 'cash') {
         ledger_post($pdo, $ride['code'], 'uride_trip', $lines);
     }
     $pdo->prepare("UPDATE uride_requests SET status = 'completed', completed_at = NOW(), commission_centavos = ? WHERE id = ?")->execute([$commission, $ride['id']]);
@@ -1381,4 +1377,10 @@ function uride_review_driver(PDO $pdo, int $driverId, string $status, string $no
         $pdo->prepare('UPDATE uride_drivers SET status = ?, review_note = ?, reviewed_by = ?, reviewed_at = NOW(), is_online = ? WHERE id = ?')
             ->execute([$status, trim($note) ?: null, $adminId, $online, $driverId]);
     });
+}
+
+/** How the passenger pays, for labels. */
+function uride_pay_label(string $method): string
+{
+    return ['credits' => 'Credits', 'bcash' => 'BCash', 'cash' => 'Cash'][$method] ?? ucfirst($method);
 }

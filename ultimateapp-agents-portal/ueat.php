@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($action === 'clear') { unset($_SESSION['mk_cart'][$uid]); redirect('ueat.php?view=cart'); }
         if ($action === 'place') {
-            $_SESSION['ueat_checkout'] = ['fulfillment' => (string) ($_POST['fulfillment'] ?? 'delivery'), 'address' => mb_substr((string) ($_POST['address'] ?? ''), 0, 500), 'contact_mobile' => mb_substr((string) ($_POST['contact_mobile'] ?? ''), 0, 20)];
+            $_SESSION['ueat_checkout'] = ['pay_source' => ($_POST['pay_source'] ?? '') === 'bcash' ? 'bcash' : 'credits', 'fulfillment' => (string) ($_POST['fulfillment'] ?? 'delivery'), 'address' => mb_substr((string) ($_POST['address'] ?? ''), 0, 500), 'contact_mobile' => mb_substr((string) ($_POST['contact_mobile'] ?? ''), 0, 20)];
             $ref = mk_place_order($pdo, $uid, mk_cart($pdo, $uid), $_POST, (string) ($_POST['request_key'] ?? ''));
             unset($_SESSION['ueat_order_key']);
             redirect('ueat-order.php?reference=' . rawurlencode($ref) . '&new=1');
@@ -53,10 +53,12 @@ if (empty($_SESSION['ueat_order_key'])) $_SESSION['ueat_order_key'] = bin2hex(ra
 $cart = mk_cart($pdo, $uid);
 $co = $_SESSION['ueat_checkout'] ?? [];
 $fulfillment = in_array($_GET['f'] ?? ($co['fulfillment'] ?? ''), ['delivery', 'pickup'], true) ? (string) ($_GET['f'] ?? $co['fulfillment']) : 'delivery';
-$sum = mk_cart_summary($pdo, $cart, $fulfillment);
+$wallet = in_array($_GET['p'] ?? ($co['pay_source'] ?? ''), ['credits', 'bcash'], true) ? (string) ($_GET['p'] ?? $co['pay_source']) : 'credits';
+if (!pay_bcash_enabled()) $wallet = 'credits';
+$sum = mk_cart_summary($pdo, $cart, $fulfillment, $wallet);
 if ($sum['store'] && !(int) $sum['store']['offers_' . ($fulfillment === 'delivery' ? 'delivery' : 'pickup')]) {
     $fulfillment = $fulfillment === 'delivery' ? 'pickup' : 'delivery';
-    $sum = mk_cart_summary($pdo, $cart, $fulfillment);
+    $sum = mk_cart_summary($pdo, $cart, $fulfillment, $wallet);
 }
 $store = $rid ? mk_store($pdo, $rid) : null;
 if ($rid && (!$store || $store['status'] !== 'active' || $store['merchant_status'] !== 'approved')) { http_response_code(404); $store = null; $rid = 0; $error = $error ?: 'This restaurant is not available.'; }
@@ -131,10 +133,10 @@ require __DIR__ . '/includes/header.php';
         <form method="post" class="ue-checkout" data-ue-checkout>
             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="place"><input type="hidden" name="request_key" value="<?= e($_SESSION['ueat_order_key']) ?>">
             <div class="ue-seg" role="radiogroup" aria-label="Delivery or pick-up">
-                <?php if ((int) $st['offers_delivery']): ?><a href="ueat.php?view=cart&amp;f=delivery" class="<?= $fulfillment === 'delivery' ? 'on' : '' ?>" role="radio" aria-checked="<?= $fulfillment === 'delivery' ? 'true' : 'false' ?>">Delivery</a><?php endif; ?>
-                <?php if ((int) $st['offers_pickup']): ?><a href="ueat.php?view=cart&amp;f=pickup" class="<?= $fulfillment === 'pickup' ? 'on' : '' ?>" role="radio" aria-checked="<?= $fulfillment === 'pickup' ? 'true' : 'false' ?>">Pick-up</a><?php endif; ?>
+                <?php if ((int) $st['offers_delivery']): ?><a href="ueat.php?view=cart&amp;f=delivery&amp;p=<?= e($wallet) ?>" class="<?= $fulfillment === 'delivery' ? 'on' : '' ?>" role="radio" aria-checked="<?= $fulfillment === 'delivery' ? 'true' : 'false' ?>">Delivery</a><?php endif; ?>
+                <?php if ((int) $st['offers_pickup']): ?><a href="ueat.php?view=cart&amp;f=pickup&amp;p=<?= e($wallet) ?>" class="<?= $fulfillment === 'pickup' ? 'on' : '' ?>" role="radio" aria-checked="<?= $fulfillment === 'pickup' ? 'true' : 'false' ?>">Pick-up</a><?php endif; ?>
             </div>
-            <input type="hidden" name="fulfillment" value="<?= e($fulfillment) ?>">
+            <input type="hidden" name="fulfillment" value="<?= e($fulfillment) ?>"><input type="hidden" name="pay_source" value="<?= e($wallet) ?>">
             <?php if ($fulfillment === 'delivery'): ?>
                 <label><span><span data-icon="map-pin"></span> Deliver to</span><input name="address" required maxlength="500" placeholder="Hotel and room, street or landmark" autocomplete="street-address" value="<?= e((string) ($co['address'] ?? '')) ?>"></label>
             <?php else: ?>
@@ -142,16 +144,17 @@ require __DIR__ . '/includes/header.php';
             <?php endif; ?>
             <label>Mobile number<input type="tel" name="contact_mobile" required maxlength="13" placeholder="09XXXXXXXXX" autocomplete="tel" value="<?= e((string) ($co['contact_mobile'] ?? ($user['mobile'] ?? ''))) ?>"></label>
             <label>Note to restaurant <small>(optional)</small><textarea name="notes" rows="2" maxlength="500" placeholder="No onions, extra rice, gate code…"></textarea></label>
+            <?php if (pay_bcash_enabled()): ?><div class="ue-seg ue-pay" role="radiogroup" aria-label="Pay with"><a href="ueat.php?view=cart&amp;f=<?= e($fulfillment) ?>&amp;p=credits" class="<?= $wallet === 'credits' ? 'on' : '' ?>" role="radio" aria-checked="<?= $wallet === 'credits' ? 'true' : 'false' ?>">Credits</a><a href="ueat.php?view=cart&amp;f=<?= e($fulfillment) ?>&amp;p=bcash" class="<?= $wallet === 'bcash' ? 'on' : '' ?>" role="radio" aria-checked="<?= $wallet === 'bcash' ? 'true' : 'false' ?>">BCash</a></div><?php endif; ?>
             <div class="ue-sum">
                 <div><span>Subtotal</span><span><?= e(mk_money($sum['subtotal'])) ?></span></div>
                 <?php if ($fulfillment === 'delivery'): ?><div><span>Delivery fee</span><span><?= $sum['delivery_fee'] ? e(mk_money($sum['delivery_fee'])) : 'Free' ?></span></div><?php endif; ?>
                 <?php if ($sum['fee']): ?><div><span>Payment charge</span><span><?= e(mk_money($sum['fee'])) ?></span></div><?php endif; ?>
                 <div class="tot"><span>Total</span><span><?= e(mk_money($sum['total'])) ?></span></div>
-                <div class="muted"><span>Pay with Credits · balance</span><span><?= format_credits((float) $user['credits']) ?></span></div>
+                <div class="muted"><span>Pay with <?= e(wallet_label($wallet)) ?> · balance</span><span>₱<?= peso(wallet_balance($pdo, $uid, $wallet)) ?></span></div>
             </div>
             <?php if ((int) $st['min_order_centavos'] > $sum['subtotal']): ?><p class="mk-note">Minimum order is <?= e(mk_money((int) $st['min_order_centavos'])) ?>. Add <?= e(mk_money((int) $st['min_order_centavos'] - $sum['subtotal'])) ?> more.</p><?php endif; ?>
             <button class="mk-cta" type="submit"<?= $open && mk_credits_checkout() ? '' : ' disabled' ?>><?= !$open ? 'Restaurant is closed' : (!mk_credits_checkout() ? 'Ordering is paused' : 'Place order · ' . e(mk_money($sum['total']))) ?></button>
-            <p class="mk-fine">The restaurant gets your order right away. If they decline, or you cancel before they accept, your Credits come back in full.</p>
+            <p class="mk-fine">The restaurant gets your order right away. If they decline, or you cancel before they accept, your <?= e(wallet_label($wallet)) ?> comes back in full.</p>
         </form>
         <form method="post" class="ue-clear"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="clear"><button type="submit">Clear basket</button></form>
     <?php endif; ?>
@@ -216,5 +219,5 @@ require __DIR__ . '/includes/header.php';
     <?php require __DIR__ . '/includes/nav.php'; ?>
 </section>
 <?php endif; ?>
-<script defer src="assets/js/market.js?v=1"></script>
+<script defer src="assets/js/market.js?v=2"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -30,7 +30,7 @@ driver_header('Trips & earnings', 'trips');
         <a class="d-trip" href="ride.php?id=<?= (int) $r['id'] ?>">
             <div class="d-trip-top"><b><?= e($r['code']) ?></b><?= driver_badge($r['status']) ?></div>
             <p><?= e($r['pickup_address']) ?> <span aria-hidden="true">→</span> <?= e($r['dropoff_address']) ?></p>
-            <div class="d-trip-meta"><span><?= e(date('M j, g:i A', strtotime((string) ($r['completed_at'] ?? $r['accepted_at'] ?? $r['created_at'])))) ?> · <?= e(uride_short_name($r['passenger_name'])) ?> · <?= $r['payment_method'] === 'cash' ? 'Cash' : 'Credits' ?></span>
+            <div class="d-trip-meta"><span><?= e(date('M j, g:i A', strtotime((string) ($r['completed_at'] ?? $r['accepted_at'] ?? $r['created_at'])))) ?> · <?= e(uride_short_name($r['passenger_name'])) ?> · <?= e(uride_pay_label((string) $r['payment_method'])) ?></span>
                 <b><?= $r['status'] === 'completed' ? '₱' . peso($fare - (int) $r['commission_centavos']) : '—' ?></b></div>
             <?php if ($r['rating'] !== null): ?><small class="d-stars"><?= str_repeat('★', (int) $r['rating']) . str_repeat('☆', 5 - (int) $r['rating']) ?><?= $r['rating_comment'] ? ' “' . e($r['rating_comment']) . '”' : '' ?></small><?php endif; ?>
         </a>

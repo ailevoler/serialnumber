@@ -15,6 +15,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/ledger.php';
 require_once __DIR__ . '/p2m.php';
+require_once __DIR__ . '/wallet.php';
 require_once __DIR__ . '/agents.php';
 
 const MK_SERVICES = ['upass', 'ugo', 'ulocal', 'ueat'];
@@ -405,12 +406,30 @@ function mk_slot_taken(PDO $pdo, int $listingId, string $date, ?string $time): i
     return (int) $s->fetchColumn();
 }
 
-/** Price breakdown shown before booking and charged when paying with Credits (QR payment charges apply). */
+/** P2M source name for a customer wallet. */
+function mk_p2m_source(string $wallet): string
+{
+    return $wallet === 'bcash' ? 'boracay_cash' : 'credits';
+}
+
+/** Payment methods a customer can choose for a listing now: credits, bcash, on_site. */
+function mk_pay_methods(array $l): array
+{
+    $out = [];
+    if (mk_can_pay_credits($l)) {
+        $out[] = 'credits';
+        if (pay_bcash_enabled() && ($l['merchant_id'] === null || p2m_fee_rule('boracay_cash')['enabled'])) $out[] = 'bcash';
+    }
+    if (pay_cash_enabled()) $out[] = 'on_site';
+    return $out;
+}
+
+/** Price breakdown shown before booking and charged when paying in the app (QR payment charges apply to merchants). */
 function mk_booking_quote(array $l, int $qty, string $payMethod): array
 {
     $amount = (int) $l['price_centavos'] * ($l['price_unit'] === 'group' ? 1 : $qty);
-    if ($payMethod === 'credits' && $l['merchant_id'] !== null) {
-        $q = p2m_quote($amount, 'credits');
+    if (in_array($payMethod, ['credits', 'bcash'], true) && $l['merchant_id'] !== null) {
+        $q = p2m_quote($amount, mk_p2m_source($payMethod));
         return ['amount' => $amount, 'fee' => $q['bearer'] === 'customer' ? $q['fee'] : 0, 'total' => $q['customer_debit']];
     }
     return ['amount' => $amount, 'fee' => 0, 'total' => $amount];
@@ -423,22 +442,18 @@ function mk_can_pay_credits(array $l): bool
 }
 
 /** Credits paid to Ultimate App itself (listings run by Ultimate App). Inside the caller's transaction. Returns the payment reference. */
-function mk_platform_charge_tx(PDO $pdo, int $userId, int $amount, string $service, string $title): string
+function mk_platform_charge_tx(PDO $pdo, int $userId, int $amount, string $service, string $title, string $wallet = 'credits'): string
 {
-    $s = $pdo->prepare('UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ? AND status = ?');
-    $s->execute([centavos_to_decimal($amount), $userId, centavos_to_decimal($amount), 'active']);
-    if ($s->rowCount() !== 1) throw new InvalidArgumentException('Not enough Credits. You need ' . mk_money($amount) . ' Credits. Buy Credits or choose Pay on the day.');
     $ref = 'PL-' . strtoupper(bin2hex(random_bytes(6)));
-    $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")->execute([$userId, mb_substr($title . ' ' . $ref, 0, 120), '-' . centavos_to_decimal($amount)]);
-    ledger_post($pdo, $ref, 'platform_sale', [['user_credits:' . $userId, $amount, 0, mb_substr($title, 0, 150)], ['platform_sales:' . $service, 0, $amount, 'Sold by Ultimate App']]);
+    wallet_debit_tx($pdo, $userId, $wallet, $amount, $title . ' ' . $ref);
+    ledger_post($pdo, $ref, 'platform_sale', [[wallet_account($wallet, $userId), $amount, 0, mb_substr($title, 0, 150)], ['platform_sales:' . $service, 0, $amount, 'Sold by Ultimate App']]);
     return $ref;
 }
 
-function mk_platform_refund_tx(PDO $pdo, int $userId, int $amount, string $service, string $payRef, string $title): void
+function mk_platform_refund_tx(PDO $pdo, int $userId, int $amount, string $service, string $payRef, string $title, string $wallet = 'credits'): void
 {
-    $pdo->prepare('UPDATE users SET credits = credits + ? WHERE id = ?')->execute([centavos_to_decimal($amount), $userId]);
-    $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")->execute([$userId, mb_substr('Refund ' . $title . ' ' . $payRef, 0, 120), centavos_to_decimal($amount)]);
-    ledger_post($pdo, 'RF-' . substr($payRef, 3), 'platform_refund', [['platform_sales:' . $service, $amount, 0, 'Refund ' . $payRef], ['user_credits:' . $userId, 0, $amount, 'Refund to customer']]);
+    wallet_credit_tx($pdo, $userId, $wallet, $amount, 'Refund ' . $title . ' ' . $payRef);
+    ledger_post($pdo, 'RF-' . substr($payRef, 3), 'platform_refund', [['platform_sales:' . $service, $amount, 0, 'Refund ' . $payRef], [wallet_account($wallet, $userId), 0, $amount, 'Refund to customer']]);
 }
 
 /**
@@ -469,8 +484,12 @@ function mk_book(PDO $pdo, int $userId, int $listingId, array $in, string $reque
     $qty = filter_var($in['quantity'] ?? null, FILTER_VALIDATE_INT);
     if ($qty === false || $qty < (int) $l['min_qty'] || $qty > (int) $l['max_qty']) throw new InvalidArgumentException('Choose ' . $l['min_qty'] . ' to ' . $l['max_qty'] . (mk_services()[$l['service']]['guests'] ? ' guests.' : '.'));
     $pay = (string) ($in['pay_method'] ?? 'credits');
-    if (!in_array($pay, ['credits', 'on_site'], true)) $pay = 'credits';
-    if ($pay === 'credits' && !mk_can_pay_credits($l)) $pay = 'on_site';
+    $methods = mk_pay_methods($l);
+    if (!$methods) throw new InvalidArgumentException('Booking is paused right now. Please try again later.');
+    if (!in_array($pay, $methods, true)) {
+        if ($pay === 'on_site') throw new InvalidArgumentException('Pay on the day is turned off. Please pay with Credits' . (in_array('bcash', $methods, true) ? ' or BCash.' : '.'));
+        $pay = $methods[0];
+    }
     $mobile = preg_replace('/\D/', '', (string) ($in['contact_mobile'] ?? '')) ?? '';
     if (!preg_match('/^(09\d{9}|639\d{9})$/D', $mobile)) throw new InvalidArgumentException('Enter your mobile number (09XXXXXXXXX) so the provider can reach you.');
     $address = mb_substr(trim((string) ($in['address'] ?? '')), 0, 255);
@@ -492,15 +511,15 @@ function mk_book(PDO $pdo, int $userId, int $listingId, array $in, string $reque
         $status = (int) $l['instant_confirm'] ? 'confirmed' : 'pending';
         $payRef = null;
         $code = mk_services()[$l['service']]['code'];
-        if ($pay === 'credits' && $l['merchant_id'] === null) {
-            $payRef = mk_platform_charge_tx($pdo, $userId, $quote['total'], $l['service'], $code . ' ' . $l['title']);
-        } elseif ($pay === 'credits') {
-            $payRef = p2m_pay_tx($pdo, $userId, (int) $l['merchant_id'], 'credits', $quote['amount'], hash('sha256', 'mk-booking:' . $requestKey), mb_substr($code . ' ' . $reference . ' ' . $l['title'], 0, 140));
+        if ($pay !== 'on_site' && $l['merchant_id'] === null) {
+            $payRef = mk_platform_charge_tx($pdo, $userId, $quote['total'], $l['service'], $code . ' ' . $l['title'], $pay);
+        } elseif ($pay !== 'on_site') {
+            $payRef = p2m_pay_tx($pdo, $userId, (int) $l['merchant_id'], mk_p2m_source($pay), $quote['amount'], hash('sha256', 'mk-booking:' . $requestKey), mb_substr($code . ' ' . $reference . ' ' . $l['title'], 0, 140));
         }
         $pdo->prepare('INSERT INTO mk_bookings (reference, request_key, user_id, listing_id, merchant_id, service, title, booking_date, booking_time, quantity, unit_centavos, total_centavos, contact_mobile, address, notes, pay_method, payment_status, payment_ref, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$reference, $requestKey, $userId, $listingId, $l['merchant_id'], $l['service'], $l['title'], $date, $time . ':00', $qty, $l['price_centavos'], $quote['total'],
-                $mobile, $address ?: null, $notes ?: null, $pay, $pay === 'credits' ? 'paid' : 'unpaid', $payRef, $status]);
+                $mobile, $address ?: null, $notes ?: null, $pay, $pay !== 'on_site' ? 'paid' : 'unpaid', $payRef, $status]);
         $bookingId = (int) $pdo->lastInsertId();
         agent_record_commission($pdo, $userId, $code, 'mk_booking', $bookingId, $reference, $quote['amount'], false);
         $pdo->commit();
@@ -567,7 +586,7 @@ function mk_booking_update(PDO $pdo, string $reference, string $action, string $
         if ($action === 'decline' && $by !== 'admin' && mb_strlen(trim($note)) < 3) throw new InvalidArgumentException('Tell the customer why (e.g. fully booked, weather).');
         if (in_array($to, ['declined', 'cancelled'], true) && $b['payment_status'] === 'paid' && $b['payment_ref']) {
             if (str_starts_with((string) $b['payment_ref'], 'PL-')) {
-                mk_platform_refund_tx($pdo, (int) $b['user_id'], (int) $b['total_centavos'], $b['service'], $b['payment_ref'], mk_services()[$b['service']]['code'] . ' ' . $b['title']);
+                mk_platform_refund_tx($pdo, (int) $b['user_id'], (int) $b['total_centavos'], $b['service'], $b['payment_ref'], mk_services()[$b['service']]['code'] . ' ' . $b['title'], $b['pay_method'] === 'bcash' ? 'bcash' : 'credits');
             } else {
                 $p = $pdo->prepare('SELECT id FROM merchant_payments WHERE reference = ?'); $p->execute([$b['payment_ref']]);
                 p2m_refund_tx($pdo, (int) $p->fetchColumn(), $by === 'admin' ? $actorId : null);
@@ -623,7 +642,7 @@ function mk_cart_set(PDO $pdo, int $userId, int $listingId, int $qty, bool $add,
 }
 
 /** Cart lines and totals. $fulfillment: delivery | pickup. */
-function mk_cart_summary(PDO $pdo, array $cart, string $fulfillment = 'delivery'): array
+function mk_cart_summary(PDO $pdo, array $cart, string $fulfillment = 'delivery', string $wallet = 'credits'): array
 {
     $out = ['store' => null, 'lines' => [], 'count' => 0, 'subtotal' => 0, 'delivery_fee' => 0, 'fee' => 0, 'total' => 0];
     if (!$cart['merchant'] || !$cart['items']) return $out;
@@ -638,7 +657,7 @@ function mk_cart_summary(PDO $pdo, array $cart, string $fulfillment = 'delivery'
     if ($out['store'] && $fulfillment === 'delivery') $out['delivery_fee'] = (int) $out['store']['delivery_fee_centavos'];
     $amount = $out['subtotal'] + $out['delivery_fee'];
     if ($amount > 0) {
-        try { $q = p2m_quote($amount, 'credits'); $out['fee'] = $q['bearer'] === 'customer' ? $q['fee'] : 0; } catch (InvalidArgumentException) { $out['fee'] = 0; }
+        try { $q = p2m_quote($amount, mk_p2m_source($wallet)); $out['fee'] = $q['bearer'] === 'customer' ? $q['fee'] : 0; } catch (InvalidArgumentException) { $out['fee'] = 0; }
     }
     $out['total'] = $amount + $out['fee'];
     return $out;
@@ -654,7 +673,9 @@ function mk_place_order(PDO $pdo, int $userId, array $cart, array $in, string $r
     if ($prior = $s->fetchColumn()) return (string) $prior;
     $fulfillment = (string) ($in['fulfillment'] ?? 'delivery');
     if (!in_array($fulfillment, ['delivery', 'pickup'], true)) $fulfillment = 'delivery';
-    $sum = mk_cart_summary($pdo, $cart, $fulfillment);
+    $wallet = ($in['pay_source'] ?? 'credits') === 'bcash' ? 'bcash' : 'credits';
+    if ($wallet === 'bcash' && !pay_bcash_enabled()) throw new InvalidArgumentException('Paying with BCash is turned off right now. Please use Credits.');
+    $sum = mk_cart_summary($pdo, $cart, $fulfillment, $wallet);
     $store = $sum['store'];
     if (!$store || !$sum['lines']) throw new InvalidArgumentException('Your basket is empty.');
     if ($store['merchant_status'] !== 'approved' || !mk_store_open($store, $now)) throw new InvalidArgumentException($store['display_name'] . ' is closed right now. Please try again later.');
@@ -672,11 +693,11 @@ function mk_place_order(PDO $pdo, int $userId, array $cart, array $in, string $r
     $pdo->beginTransaction();
     try {
         $reference = 'UE-' . strtoupper(bin2hex(random_bytes(6)));
-        $payRef = p2m_pay_tx($pdo, $userId, $merchantId, 'credits', $amount, hash('sha256', 'ueat:' . $requestKey), mb_substr('UEat ' . $reference . ' ' . $store['display_name'], 0, 140));
-        $pdo->prepare("INSERT INTO ueat_orders (reference, request_key, user_id, restaurant_id, merchant_id, fulfillment, delivery_address, contact_mobile, notes, total_credits, subtotal_centavos, delivery_fee_centavos, payment_status, payment_ref, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, 'pending')")
+        $payRef = p2m_pay_tx($pdo, $userId, $merchantId, mk_p2m_source($wallet), $amount, hash('sha256', 'ueat:' . $requestKey), mb_substr('UEat ' . $reference . ' ' . $store['display_name'], 0, 140));
+        $pdo->prepare("INSERT INTO ueat_orders (reference, request_key, user_id, restaurant_id, merchant_id, fulfillment, delivery_address, contact_mobile, notes, total_credits, subtotal_centavos, delivery_fee_centavos, payment_status, pay_source, payment_ref, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, 'pending')")
             ->execute([$reference, $requestKey, $userId, 'm' . $merchantId, $merchantId, $fulfillment, $fulfillment === 'delivery' ? $address : null, $mobile, $notes ?: null,
-                centavos_to_decimal($sum['total']), $sum['subtotal'], $sum['delivery_fee'], $payRef]);
+                centavos_to_decimal($sum['total']), $sum['subtotal'], $sum['delivery_fee'], $wallet, $payRef]);
         $orderId = (int) $pdo->lastInsertId();
         $line = $pdo->prepare('INSERT INTO ueat_order_items (order_id, menu_item_id, item_name, quantity, unit_credits, line_credits) VALUES (?, ?, ?, ?, ?, ?)');
         foreach ($sum['lines'] as $l) $line->execute([$orderId, (string) $l['id'], mb_substr($l['name'], 0, 120), $l['qty'], centavos_to_decimal($l['unit']), centavos_to_decimal($l['total'])]);

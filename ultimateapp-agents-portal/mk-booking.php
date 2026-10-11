@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rate_limit_enforce('mk_cancel', 'user:' . $user['id'], 20, 3600);
     try {
         $r = mk_booking_update($pdo, $ref, 'cancel', 'customer', (int) $user['id']);
-        $_SESSION['flash'][] = ['success', 'Booking cancelled.' . ($r['refunded'] ? ' Your Credits were returned.' : '')];
+        $_SESSION['flash'][] = ['success', 'Booking cancelled.' . ($r['refunded'] ? ' Your payment was returned.' : '')];
         redirect('mk-booking.php?ref=' . rawurlencode($ref));
     } catch (InvalidArgumentException $ex) {
         $error = $ex->getMessage();
@@ -47,16 +47,16 @@ require __DIR__ . '/includes/header.php';
                 <?php if ($b['duration_minutes']): ?><div><dt>Duration</dt><dd><?= e(mk_duration_label((int) $b['duration_minutes'])) ?></dd></div><?php endif; ?>
                 <?php if ($b['meeting_point'] || $b['location']): ?><div><dt>Where</dt><dd><?= e($b['address'] ?: ($b['meeting_point'] ?: $b['location'])) ?></dd></div><?php elseif ($b['address']): ?><div><dt>Where</dt><dd><?= e($b['address']) ?></dd></div><?php endif; ?>
                 <div><dt>Total</dt><dd><b><?= e(mk_money((int) $b['total_centavos'])) ?></b></dd></div>
-                <div><dt>Payment</dt><dd><?= $b['pay_method'] === 'credits' ? 'Credits · ' . e(ucfirst($b['payment_status'])) : 'Pay on the day' . ($b['payment_status'] === 'paid' ? ' · Paid' : '') ?></dd></div>
+                <div><dt>Payment</dt><dd><?= $b['pay_method'] !== 'on_site' ? e(wallet_label($b['pay_method'])) . ' · ' . e(ucfirst($b['payment_status'])) : 'Pay on the day' . ($b['payment_status'] === 'paid' ? ' · Paid' : '') ?></dd></div>
                 <?php if ($b['notes']): ?><div><dt>Your notes</dt><dd><?= e($b['notes']) ?></dd></div><?php endif; ?>
                 <?php if ($b['merchant_mobile'] && in_array($b['status'], ['pending', 'confirmed'], true)): ?><div><dt>Provider</dt><dd><a href="tel:<?= e($b['merchant_mobile']) ?>"><?= e($b['merchant_mobile']) ?></a></dd></div><?php endif; ?>
             </dl>
             <?php if (mk_booking_cancellable($b)): ?>
-            <form method="post" data-confirm="Cancel this booking?<?= $b['payment_status'] === 'paid' ? ' Your Credits will be returned.' : '' ?>"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><button class="mk-ghost" type="submit">Cancel booking<?= $b['payment_status'] === 'paid' ? ' and refund' : '' ?></button></form>
+            <form method="post" data-confirm="Cancel this booking?<?= $b['payment_status'] === 'paid' ? ' Your payment will be returned.' : '' ?>"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><button class="mk-ghost" type="submit">Cancel booking<?= $b['payment_status'] === 'paid' ? ' and refund' : '' ?></button></form>
             <?php elseif ($b['status'] === 'confirmed'): ?><p class="mk-fine">Free cancellation ended <?= (int) $b['cancel_hours'] ?> hours before the start. Contact the provider for changes.</p><?php endif; ?>
         </div>
     </div>
     <a class="mk-cta" href="<?= e($cfg['page']) ?>">Explore more <?= e($cfg['plural']) ?></a>
 </section>
-<script defer src="assets/js/market.js?v=1"></script>
+<script defer src="assets/js/market.js?v=2"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

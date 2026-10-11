@@ -104,12 +104,11 @@ function uride_license_review(PDO $pdo, int $licenseId, string $status, string $
 function uride_deposit_refund(PDO $pdo, array $ride, int $amount, string $why, string $status = 'refunded'): void
 {
     if ($amount > 0) {
-        $pdo->prepare('UPDATE users SET credits = credits + ? WHERE id = ?')->execute([centavos_to_decimal($amount), $ride['user_id']]);
-        $pdo->prepare("INSERT INTO transactions (user_id, type, title, amount, status) VALUES (?, 'payment', ?, ?, 'Completed')")
-            ->execute([$ride['user_id'], 'Self-drive deposit returned ' . $ride['code'] . ' (' . $why . ')', centavos_to_decimal($amount)]);
+        $source = ($ride['payment_method'] ?? 'credits') === 'bcash' ? 'bcash' : 'credits';
+        wallet_credit_tx($pdo, (int) $ride['user_id'], $source, $amount, 'Self-drive deposit returned ' . $ride['code'] . ' (' . $why . ')');
         ledger_post($pdo, 'DR-' . substr((string) $ride['code'], 3), 'uride_deposit_refund', [
             ['uride_deposit', $amount, 0, 'Deposit returned: ' . $why],
-            ['user_credits:' . $ride['user_id'], 0, $amount, 'Deposit returned'],
+            [wallet_account($source, (int) $ride['user_id']), 0, $amount, 'Deposit returned'],
         ]);
     }
     $pdo->prepare('UPDATE uride_requests SET deposit_status = ? WHERE id = ?')->execute([$status, $ride['id']]);

@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $messages = ['arrived' => 'Customer notified that you have arrived.', 'start' => uride_is_self_drive($ride) ? 'Vehicle handed over. The rental has started; you will confirm the return here.' : 'Trip started. Drive safely!', 'release' => 'Ride given back. It was sent to other nearby drivers.'];
         if ($action === 'complete') {
             $fare = (int) $ride['fare_centavos'];
-            dflash('success', 'Trip completed! ' . ($ride['payment_method'] === 'cash' ? 'Collect ₱' . peso($fare) . ' cash from the passenger.' : '₱' . peso($fare) . ' Credits added to your wallet.') . ' Commission ₱' . peso((int) $ride['commission_centavos']) . ' deducted.');
+            dflash('success', 'Trip completed! ' . ($ride['payment_method'] === 'cash' ? 'Collect ₱' . peso($fare) . ' cash from the passenger.' : '₱' . peso($fare) . ' (' . uride_pay_label((string) $ride['payment_method']) . ') added to your wallet.') . ' Commission ₱' . peso((int) $ride['commission_centavos']) . ' deducted.');
             redirect('trips.php?done=' . rawurlencode($ride['code']));
         }
         dflash('success', $messages[$action] ?? 'Updated.');
@@ -60,7 +60,7 @@ driver_header('', 'dashboard', 'ride');
 <section class="d-ride" data-ride-page data-ride="<?= (int) $ride['id'] ?>" data-status="<?= e($status) ?>" data-live="<?= $activeRide ? '1' : '0' ?>" data-csrf="<?= e(csrf_token()) ?>">
     <div class="d-ride-top">
         <a href="dashboard.php" class="d-back" aria-label="Back">&larr;</a>
-        <div><small><?= e($ride['code']) ?> · <?= $ride['payment_method'] === 'cash' ? 'Cash' : 'Credits' ?></small><h1><?= e(uride_ride_statuses()[$status] ?? $status) ?></h1></div>
+        <div><small><?= e($ride['code']) ?> · <?= e(uride_pay_label((string) $ride['payment_method'])) ?></small><h1><?= e(uride_ride_statuses()[$status] ?? $status) ?></h1></div>
     </div>
 
     <?php if ($activeRide): ?>
@@ -98,7 +98,7 @@ driver_header('', 'dashboard', 'ride');
     <?php endif; ?>
     <div class="d-card d-fare">
         <div class="kv"><span><?= $isRental ? e(uride_rental_label($ride)) : 'Fare (' . e(number_format((float) $ride['road_km'], 1)) . ' km)' ?></span><b>₱<?= peso($fare) ?></b></div>
-        <div class="kv"><span>Payment</span><b><?= $ride['payment_method'] === 'cash' ? 'Cash — collect from passenger' : 'Ultimate App Credits — paid in app' ?></b></div>
+        <div class="kv"><span>Payment</span><b><?= $ride['payment_method'] === 'cash' ? 'Cash — collect from passenger' : e(uride_pay_label((string) $ride['payment_method'])) . ' — paid in the app' ?></b></div>
         <div class="kv"><span>URide commission</span><b>− ₱<?= peso($commission) ?></b></div>
         <div class="kv total"><span>Your earnings</span><b>₱<?= peso($fare - $commission) ?></b></div>
     </div>

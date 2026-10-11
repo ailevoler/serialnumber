@@ -446,7 +446,7 @@
   function setDrive(next) {
     form.dataset.rmode = next;
     const selfNow = isSelf();
-    if (cash) { cash.disabled = selfNow; if (selfNow && cash.checked && credits) credits.checked = true; cash.closest('label').classList.toggle('off', selfNow); }
+    if (cash) { cash.disabled = selfNow; if (selfNow && cash.checked) { const alt = credits || form.querySelector('input[name="payment_method"][value="bcash"]'); if (alt) alt.checked = true; } cash.closest('label').classList.toggle('off', selfNow); }
     const label = form.querySelector('[data-submit-label]');
     if (label && isRental() && !form.querySelector('[type="submit"]').disabled) label.textContent = selfNow ? 'Rent and drive myself' : 'Rent this ride';
     const url = new URL(location.href);

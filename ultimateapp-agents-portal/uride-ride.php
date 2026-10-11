@@ -74,8 +74,8 @@ require __DIR__ . '/includes/header.php';
             elseif ($status === 'arrived') echo 'Your driver is at the pick-up point.';
             elseif ($status === 'in_progress') echo 'Enjoy your ride. You are on the way to your drop-off.';
             elseif ($status === 'completed') echo 'You have arrived. Thank you for riding with URide!';
-            elseif ($status === 'expired') echo 'No driver accepted in time.' . ($ride['payment_method'] === 'credits' ? ' Your Credits were returned.' : '');
-            else echo 'This ride was cancelled' . ($ride['cancelled_by'] === 'driver' ? ' by the driver' : ($ride['cancelled_by'] === 'admin' ? ' by Ultimate App' : '')) . '.' . ($ride['payment_method'] === 'credits' ? ' Your Credits were returned.' : '');
+            elseif ($status === 'expired') echo 'No driver accepted in time.' . ($ride['payment_method'] !== 'cash' ? ' Your ' . uride_pay_label((string) $ride['payment_method']) . ' was returned.' : '');
+            else echo 'This ride was cancelled' . ($ride['cancelled_by'] === 'driver' ? ' by the driver' : ($ride['cancelled_by'] === 'admin' ? ' by Ultimate App' : '')) . '.' . ($ride['payment_method'] !== 'cash' ? ' Your ' . uride_pay_label((string) $ride['payment_method']) . ' was returned.' : '');
         ?></p>
         <?php if ($status === 'requested' && !$upcoming): ?><p class="uride-searching"><span></span><span></span><span></span></p><p class="uride-help" data-rs-nearby></p><?php endif; ?>
     </div>
@@ -100,8 +100,8 @@ require __DIR__ . '/includes/header.php';
     <div class="uride-trip-card">
         <p class="uride-pt"><span class="uride-dot pickup"></span><span><small>Pick-up</small><?= e($ride['pickup_address']) ?></span></p>
         <p class="uride-pt"><span class="uride-dot dropoff"></span><span><small><?= $isRental ? 'Rental' : 'Drop-off' ?></small><?= e($ride['dropoff_address']) ?><?= !empty($ride['scheduled_at']) ? ' · starts ' . e(date('M j, g:i A', strtotime((string) $ride['scheduled_at']))) : '' ?></span></p>
-        <div class="uride-fare-row"><span><?= $isRental ? e(uride_rental_label($ride)) . ' · ' : ($ride['road_km'] !== null ? e(number_format((float) $ride['road_km'], 1)) . ' km · ' : '') ?><?= $ride['payment_method'] === 'cash' ? 'Pay cash to driver' : 'Paid with Credits' ?></span><strong><?= $fare ? '₱' . peso($fare) : '—' ?></strong></div>
-        <?php if ($ride['payment_method'] === 'credits' && $active): ?><p class="uride-help">₱<?= peso($fare) ?> is on hold and goes to the <?= $isSelf ? 'owner when the vehicle is returned' : 'driver when the trip is completed' ?>.</p><?php endif; ?>
+        <div class="uride-fare-row"><span><?= $isRental ? e(uride_rental_label($ride)) . ' · ' : ($ride['road_km'] !== null ? e(number_format((float) $ride['road_km'], 1)) . ' km · ' : '') ?><?= $ride['payment_method'] === 'cash' ? 'Pay cash to driver' : 'Paid with ' . e(uride_pay_label((string) $ride['payment_method'])) ?></span><strong><?= $fare ? '₱' . peso($fare) : '—' ?></strong></div>
+        <?php if ($ride['payment_method'] !== 'cash' && $active): ?><p class="uride-help">₱<?= peso($fare) ?> is on hold and goes to the <?= $isSelf ? 'owner when the vehicle is returned' : 'driver when the trip is completed' ?>.</p><?php endif; ?>
         <?php if ($isSelf && (int) $ride['deposit_centavos'] > 0): ?><p class="uride-help uride-deposit"><b>Deposit:</b> <?= e(uride_deposit_status_label($ride)) ?><?= $ride['deposit_status'] === 'held' ? ' (returned when the vehicle comes back on time and undamaged)' : '' ?></p><?php endif; ?>
     </div>
 

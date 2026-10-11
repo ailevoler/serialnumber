@@ -38,7 +38,7 @@ function mk_service_page(PDO $pdo, array $user, string $service): void
     echo '<link rel="stylesheet" href="assets/css/market.css?v=2">';
     if ($listing) { mk_render_detail($pdo, $user, $listing, $cfg, $error); }
     else { mk_render_browse($pdo, $service, $cfg, $category, $q, $error); }
-    echo '<script defer src="assets/js/market.js?v=1"></script>';
+    echo '<script defer src="assets/js/market.js?v=2"></script>';
     require __DIR__ . '/footer.php';
 }
 
@@ -84,14 +84,18 @@ function mk_render_detail(PDO $pdo, array $user, array $l, array $cfg, string $e
 {
     $service = $l['service'];
     $slots = $l['time_slots'] ? explode(',', $l['time_slots']) : [];
-    $credits = mk_can_pay_credits($l);
+    $methods = mk_pay_methods($l);
+    $credits = in_array('credits', $methods, true);
+    $first = $methods[0] ?? 'on_site';
+    $chosen = in_array($old_pm = (string) ($_POST['pay_method'] ?? ''), $methods, true) ? $old_pm : $first;
+    $bcBal = in_array('bcash', $methods, true) ? wallet_balance($GLOBALS['pdo'], (int) $user['id'], 'bcash') : 0;
     $includes = array_filter(array_map('trim', explode("\n", (string) $l['includes_text'])));
     $old = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : [];
     $val = static fn(string $k, string $d = '') => e(is_string($old[$k] ?? null) ? $old[$k] : $d);
     $qty = max((int) $l['min_qty'], (int) ($old['quantity'] ?? $l['min_qty']));
     $unitIsGroup = $l['price_unit'] === 'group';
     $fee = 0;
-    try { $fee = $credits ? mk_booking_quote($l, $qty, 'credits')['fee'] : 0; } catch (InvalidArgumentException) { $credits = false; }
+    try { $fee = in_array($chosen, ['credits', 'bcash'], true) ? mk_booking_quote($l, $qty, $chosen)['fee'] : 0; } catch (InvalidArgumentException) { $fee = 0; }
     ?>
 <section class="screen mk-screen mk-detail">
     <header class="page-head mk-float"><a href="<?= e($cfg['page']) ?>" aria-label="Back"><span data-icon="arrow-left"></span></a><h1 class="sr-only"><?= e($l['title']) ?></h1><span></span></header>
@@ -111,7 +115,7 @@ function mk_render_detail(PDO $pdo, array $user, array $l, array $cfg, string $e
         <?php if ($includes): ?><h3>What's included</h3><ul class="mk-incl"><?php foreach ($includes as $i): ?><li><?= e($i) ?></li><?php endforeach; ?></ul><?php endif; ?>
         <?php if ($l['meeting_point']): ?><h3>Meeting point</h3><p class="mk-desc"><?= e($l['meeting_point']) ?><?php if ($l['latitude']): ?> · <a href="https://www.google.com/maps/search/?api=1&amp;query=<?= e($l['latitude'] . ',' . $l['longitude']) ?>" target="_blank" rel="noopener">Map</a><?php endif; ?></p><?php endif; ?>
 
-        <form method="post" class="mk-book" id="book" data-mk-book data-price="<?= (int) $l['price_centavos'] ?>" data-group="<?= $unitIsGroup ? 1 : 0 ?>" data-fee="<?= e($l['merchant_id'] !== null ? json_encode(p2m_fee_rule('credits')) : '{}') ?>">
+        <form method="post" class="mk-book" id="book" data-mk-book data-price="<?= (int) $l['price_centavos'] ?>" data-group="<?= $unitIsGroup ? 1 : 0 ?>" data-fee="<?= e($l['merchant_id'] !== null ? json_encode(['credits' => p2m_fee_rule('credits'), 'bcash' => p2m_fee_rule('boracay_cash')]) : '{}') ?>">
             <h3>Book this <?= e($cfg['noun']) ?></h3>
             <?php if ($error): ?><p class="alert" role="alert"><?= e($error) ?></p><?php endif; ?>
             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="request_key" value="<?= e($_SESSION['mk_book_key']) ?>"><input type="hidden" name="listing" value="<?= (int) $l['id'] ?>">
@@ -129,13 +133,14 @@ function mk_render_detail(PDO $pdo, array $user, array $l, array $cfg, string $e
             <?php if ($service === 'ulocal'): ?><label>Where?<input name="address" required maxlength="255" placeholder="Hotel and room, or address" value="<?= $val('address') ?>"></label><?php endif; ?>
             <label>Notes <small>(optional)</small><textarea name="notes" rows="2" maxlength="500" placeholder="<?= $cfg['guests'] ? 'Hotel for pick-up, flight number, kids, special needs…' : 'Anything the provider should know' ?>"><?= $val('notes') ?></textarea></label>
             <fieldset class="mk-pay"><legend>Payment</legend>
-                <?php if ($credits): ?><label><input type="radio" name="pay_method" value="credits" <?= ($old['pay_method'] ?? 'credits') === 'credits' ? 'checked' : '' ?>><span><b>Pay now with Credits</b><small>Balance <?= format_credits((float) $user['credits']) ?> · refunded in full if declined or cancelled in time</small></span></label><?php endif; ?>
-                <label><input type="radio" name="pay_method" value="on_site" <?= !$credits || ($old['pay_method'] ?? '') === 'on_site' ? 'checked' : '' ?>><span><b>Pay on the day</b><small>Pay <?= $l['merchant_id'] !== null ? 'the provider' : 'Ultimate App' ?> directly on the day</small></span></label>
+                <?php if (in_array('credits', $methods, true)): ?><label><input type="radio" name="pay_method" value="credits" <?= $chosen === 'credits' ? 'checked' : '' ?>><span><b>Pay now with Credits</b><small>Balance <?= format_credits((float) $user['credits']) ?> · refunded in full if declined or cancelled in time</small></span></label><?php endif; ?>
+                <?php if (in_array('bcash', $methods, true)): ?><label><input type="radio" name="pay_method" value="bcash" <?= $chosen === 'bcash' ? 'checked' : '' ?>><span><b>Pay now with BCash</b><small>Balance ₱<?= peso($bcBal) ?> · refunded in full if declined or cancelled in time<?= $bcBal <= 0 ? ' · <a href="boracay-cash.php">Convert Credits to BCash</a>' : '' ?></small></span></label><?php endif; ?>
+                <?php if (in_array('on_site', $methods, true)): ?><label><input type="radio" name="pay_method" value="on_site" <?= $chosen === 'on_site' ? 'checked' : '' ?>><span><b>Pay cash on the day</b><small>Pay <?= $l['merchant_id'] !== null ? 'the provider' : 'Ultimate App' ?> directly on the day</small></span></label><?php endif; ?>
             </fieldset>
-            <div class="mk-total"><span>Total</span><strong data-total><?= e(mk_money((int) $l['price_centavos'] * ($unitIsGroup ? 1 : $qty) + ($credits ? $fee : 0))) ?></strong></div>
-            <p class="mk-fine" data-fee-note<?= $credits && $fee ? '' : ' hidden' ?>>Includes the Credits payment charge.</p>
-            <button class="mk-cta" type="submit"><?= (int) $l['instant_confirm'] ? 'Book now' : 'Request booking' ?> · <span data-total><?= e(mk_money((int) $l['price_centavos'] * ($unitIsGroup ? 1 : $qty) + ($credits ? $fee : 0))) ?></span></button>
-            <p class="mk-fine"><?= (int) $l['instant_confirm'] ? 'Confirmed right away.' : 'The provider confirms your booking, usually within a few hours. If they decline, Credits are returned right away.' ?></p>
+            <div class="mk-total"><span>Total</span><strong data-total><?= e(mk_money((int) $l['price_centavos'] * ($unitIsGroup ? 1 : $qty) + $fee)) ?></strong></div>
+            <p class="mk-fine" data-fee-note<?= $fee ? '' : ' hidden' ?>>Includes the payment charge.</p>
+            <button class="mk-cta" type="submit"><?= (int) $l['instant_confirm'] ? 'Book now' : 'Request booking' ?> · <span data-total><?= e(mk_money((int) $l['price_centavos'] * ($unitIsGroup ? 1 : $qty) + $fee)) ?></span></button>
+            <p class="mk-fine"><?= (int) $l['instant_confirm'] ? 'Confirmed right away.' : 'The provider confirms your booking, usually within a few hours. If they decline, your Credits or BCash are returned right away.' ?></p>
         </form>
     </div>
     <a class="mk-sticky" href="#book"><span><small>From</small><b><?= e(mk_price_label($l)) ?></b></span><em>Book</em></a>

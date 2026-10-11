@@ -192,7 +192,7 @@ elseif ($view === 'bookings'):
         <td><a class="row-link" href="customer.php?id=<?= (int) $b['user_id'] ?>"><?= e($b['full_name']) ?></a><small><?= e((string) $b['contact_mobile']) ?></small></td>
         <td><?= e($b['business_name'] ?: 'Ultimate App') ?></td>
         <td><?= e(date('M j, Y', strtotime($b['booking_date']))) ?><small><?= $b['booking_time'] ? e(date('g:i A', strtotime($b['booking_time']))) : '' ?></small></td>
-        <td class="num">₱<?= e(number_format((int) $b['total_centavos'] / 100, 2)) ?><small><?= $b['pay_method'] === 'credits' ? 'Credits · ' . e($b['payment_status']) : 'On the day' ?></small></td>
+        <td class="num">₱<?= e(number_format((int) $b['total_centavos'] / 100, 2)) ?><small><?= $b['pay_method'] !== 'on_site' ? e(wallet_label($b['pay_method'])) . ' · ' . e($b['payment_status']) : 'On the day' ?></small></td>
         <td><?= status_badge($b['status']) ?></td>
         <td class="mk-acts"><?php if ($b['status'] === 'pending'): ?><?= $act($b['reference'], 'confirm', 'Confirm', 'primary') ?><?= $act($b['reference'], 'decline', 'Decline') ?><?php elseif ($b['status'] === 'confirmed'): ?><?= $b['booking_date'] <= date('Y-m-d') ? $act($b['reference'], 'complete', 'Complete', 'primary') : '' ?><?= $act($b['reference'], 'cancel', 'Cancel', 'danger') ?><?php endif; ?></td>
     </tr><?php endforeach; ?>

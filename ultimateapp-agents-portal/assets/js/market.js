@@ -10,13 +10,13 @@
   if (book) {
     const qty = book.querySelector('[name=quantity]');
     const price = Number(book.dataset.price), group = book.dataset.group === '1';
-    let rule = {}; try { rule = JSON.parse(book.dataset.fee || '{}'); } catch (e) {}
-    const fee = amount => (!rule.enabled || rule.bearer !== 'customer') ? 0 : Math.floor((amount * rule.percent_bp + 5000) / 10000) + Number(rule.fixed_centavos || 0);
+    let rules = {}; try { rules = JSON.parse(book.dataset.fee || '{}'); } catch (e) {}
+    const fee = (amount, method) => { const rule = rules[method] || {}; return (!rule.enabled || rule.bearer !== 'customer') ? 0 : Math.floor((amount * rule.percent_bp + 5000) / 10000) + Number(rule.fixed_centavos || 0); };
     const update = () => {
       const n = Math.max(Number(qty.min) || 1, Math.min(Number(qty.max) || 99, Number(qty.value) || 1));
       const amount = price * (group ? 1 : n);
-      const credits = (book.querySelector('[name=pay_method]:checked') || {}).value === 'credits';
-      const f = credits ? fee(amount) : 0;
+      const method = (book.querySelector('[name=pay_method]:checked') || {}).value;
+      const f = method === 'credits' || method === 'bcash' ? fee(amount, method) : 0;
       book.querySelectorAll('[data-total]').forEach(el => { el.textContent = peso(amount + f); });
       const note = book.querySelector('[data-fee-note]'); if (note) note.hidden = !f;
     };

@@ -79,7 +79,7 @@ portal_header('Orders & bookings', 'orders');
         <tr><td><b><?= e(date('D, M j', strtotime($b['booking_date']))) ?></b><small><?= $b['booking_time'] ? e(date('g:i A', strtotime($b['booking_time']))) : '' ?></small></td>
             <td><b><?= e($b['title']) ?></b><small><?= e($b['reference']) ?> · <?= (int) $b['quantity'] ?> <?= mk_services()[$b['service']]['guests'] ? 'guest(s)' : '×' ?><?= $b['address'] ? ' · ' . e($b['address']) : '' ?></small><?php if ($b['notes']): ?><small>“<?= e($b['notes']) ?>”</small><?php endif; ?></td>
             <td><?= e($b['full_name']) ?><small><a href="tel:<?= e((string) $b['contact_mobile']) ?>"><?= e((string) $b['contact_mobile']) ?></a></small></td>
-            <td class="num">₱<?= e(number_format((int) $b['total_centavos'] / 100, 2)) ?><small><?= $b['pay_method'] === 'credits' ? 'Paid · Credits' : 'Collect on the day' ?></small></td>
+            <td class="num">₱<?= e(number_format((int) $b['total_centavos'] / 100, 2)) ?><small><?= $b['pay_method'] !== 'on_site' ? 'Paid · ' . e(wallet_label($b['pay_method'])) : 'Collect on the day' ?></small></td>
             <td><span class="badge <?= $b['status'] === 'pending' ? 'warn' : 'info' ?>"><?= e(mk_booking_statuses()[$b['status']]) ?></span></td>
             <td class="mk-acts"><?php if ($b['status'] === 'pending'): ?><?= $btn('booking', $b['reference'], 'confirm', 'Confirm') ?> <?= $btn('booking', $b['reference'], 'decline', 'Decline', false, true) ?><?php elseif ($b['booking_date'] <= date('Y-m-d')): ?><?= $btn('booking', $b['reference'], 'complete', 'Mark completed') ?><?php else: ?><small class="muted">Complete on the day</small><?php endif; ?></td></tr>
     <?php endforeach; ?>

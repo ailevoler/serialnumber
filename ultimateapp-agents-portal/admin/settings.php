@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../includes/wallet.php';
 $admin = admin_require('settings');
 $tab = in_array(q('tab'), ['charges', 'maps', 'uride'], true) ? q('tab') : 'payments';
 require_once __DIR__ . '/../includes/uride.php';
@@ -43,6 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setting_save($pdo, 'maps.default_lng', p('maps_lng', '121.9248'), (int) $admin['id']);
             setting_save($pdo, 'maps.default_zoom', p('maps_zoom', '14'), (int) $admin['id']);
             $changed[] = 'maps';
+        } elseif (p('section') === 'paymethods') {
+            setting_save($pdo, 'pay.cash_enabled', p('pay_cash') === '1' ? '1' : '0', (int) $admin['id']);
+            setting_save($pdo, 'pay.bcash_enabled', p('pay_bcash') === '1' ? '1' : '0', (int) $admin['id']);
+            $changed[] = 'payment methods';
         } elseif (p('section') === 'charges') {
             foreach (['credits' => 'Credits', 'boracay_cash' => 'BCash'] as $src => $label) {
                 setting_save($pdo, "p2m.$src.enabled", p("{$src}_enabled") === '1' ? '1' : '0', (int) $admin['id']);
@@ -67,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setting_save($pdo, "uride.$v.per_km_centavos", $pesoToCentavos(p("{$v}_per_km", '0'), 'Per km rate'), $aid);
                 setting_save($pdo, "uride.$v.minimum_centavos", $pesoToCentavos(p("{$v}_minimum", '0'), 'Minimum fare'), $aid);
             }
-            foreach (['enabled', 'credits_enabled', 'cash_enabled'] as $k) setting_save($pdo, "uride.$k", p($k) === '1' ? '1' : '0', $aid);
+            foreach (['enabled', 'credits_enabled', 'cash_enabled', 'bcash_enabled'] as $k) setting_save($pdo, "uride.$k", p($k) === '1' ? '1' : '0', $aid);
             // Rent a Ride (vehicle with driver by the hour / whole day)
             foreach (array_keys(uride_vehicles()) as $v) {
                 setting_save($pdo, "uride.$v.rental_enabled", p("{$v}_rental_enabled") === '1' ? '1' : '0', $aid);
@@ -90,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setting_save($pdo, 'uride.self_drive_enabled', p('self_drive_enabled') === '1' ? '1' : '0', $aid);
             setting_save($pdo, 'uride.self_drive_kyc', p('self_drive_kyc') === '1' ? '1' : '0', $aid);
             setting_save($pdo, 'uride.self_drive_grace_min', (string) (int) p('self_drive_grace_min', '15'), $aid);
-            if (p('credits_enabled') !== '1' && p('cash_enabled') !== '1') throw new InvalidArgumentException('Allow at least one payment method for rides.');
+            if (p('credits_enabled') !== '1' && p('cash_enabled') !== '1' && p('bcash_enabled') !== '1') throw new InvalidArgumentException('Allow at least one payment method for rides.');
             setting_save($pdo, 'uride.road_factor', trim(p('road_factor', '1.3')), $aid);
             $night = trim(p('night_pct', '0'));
             if (!preg_match('/^\d{1,3}(?:\.\d{1,2})?$/D', $night) || (float) $night > 100) throw new InvalidArgumentException('Night surcharge must be a percentage from 0 to 100.');
@@ -125,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pdo->inTransaction()) $pdo->rollBack();
         flash('error', $ex->getMessage());
     }
-    redirect('settings.php?tab=' . (in_array(p('section'), ['charges', 'maps', 'uride'], true) ? p('section') : 'payments'));
+    redirect('settings.php?tab=' . (p('section') === 'paymethods' ? 'charges' : (in_array(p('section'), ['charges', 'maps', 'uride'], true) ? p('section') : 'payments')));
 }
 
 // Optional connection test: lists webhooks with the active secret key.
@@ -313,7 +318,8 @@ admin_header('Settings', 'settings');
             <div class="field"><label for="radius">Broadcast radius (km)</label><input type="text" id="radius" name="radius" inputmode="decimal" value="<?= e($num($us['radius_km'])) ?>"><small>Online drivers within this distance of the pick-up see the request.</small></div>
             <div class="field"><label for="timeout">Request expires after (minutes)</label><input id="timeout" name="timeout" type="number" min="1" max="60" value="<?= (int) $us['timeout_min'] ?>"><small>Unaccepted requests close and held Credits are returned.</small></div>
             <div class="field"><label for="credits_enabled">Pay with Credits</label><select id="credits_enabled" name="credits_enabled"><option value="1"<?= $us['credits_enabled'] ? ' selected' : '' ?>>Allowed</option><option value="0"<?= !$us['credits_enabled'] ? ' selected' : '' ?>>Off</option></select></div>
-            <div class="field"><label for="cash_enabled">Pay with cash</label><select id="cash_enabled" name="cash_enabled"><option value="1"<?= $us['cash_enabled'] ? ' selected' : '' ?>>Allowed</option><option value="0"<?= !$us['cash_enabled'] ? ' selected' : '' ?>>Off</option></select></div>
+            <div class="field"><label for="cash_enabled">Pay with cash</label><select id="cash_enabled" name="cash_enabled"><option value="1"<?= setting('uride.cash_enabled', '1') === '1' ? ' selected' : '' ?>>Allowed</option><option value="0"<?= setting('uride.cash_enabled', '1') !== '1' ? ' selected' : '' ?>>Off</option></select><?php if (!pay_cash_enabled()): ?><small>Pay Cash is off app-wide (Charges › Payment methods), so cash is hidden.</small><?php endif; ?></div>
+            <div class="field"><label for="bcash_enabled">Pay with BCash</label><select id="bcash_enabled" name="bcash_enabled"><option value="1"<?= setting('uride.bcash_enabled', '1') === '1' ? ' selected' : '' ?>>Allowed</option><option value="0"<?= setting('uride.bcash_enabled', '1') !== '1' ? ' selected' : '' ?>>Off</option></select><?php if (!pay_bcash_enabled()): ?><small>BCash payments are off app-wide (Charges › Payment methods).</small><?php endif; ?></div>
         </div>
     </section>
     <section class="card"><h2>Driver wallet</h2>
@@ -331,6 +337,17 @@ admin_header('Settings', 'settings');
 <div class="form-actions"><button class="btn primary" type="submit">Save URide settings</button><span class="muted">New fares apply to bookings made after saving. Booked rides keep their upfront fare.</span></div>
 </form>
 <?php else: $rules = ['credits' => p2m_fee_rule('credits'), 'boracay_cash' => p2m_fee_rule('boracay_cash')]; ?>
+<form method="post" class="card mb pay-methods-card">
+    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="section" value="paymethods">
+    <h2>Payment methods <small>for URide, UPass, UGo, ULocal and UEat</small></h2>
+    <div class="pm-rows">
+        <label class="pm-row"><span><b>Credits</b><small>Always on. Customers top up with QR Ph, MCTC or BCash.</small></span><span class="badge good">On</span></label>
+        <label class="pm-row"><span><b>BCash</b><small>Pay rides, rentals, passes, bookings and food with BCash. Merchant charges follow "Paying merchants with BCash" below.</small></span><span class="pm-switch"><input type="checkbox" name="pay_bcash" value="1"<?= pay_bcash_enabled() ? ' checked' : '' ?>> Enabled</span></label>
+        <label class="pm-row"><span><b>Pay Cash</b><small>Cash to the URide driver and "pay cash on the day" for UPass, UGo and ULocal. Turn off to make every payment go through Credits or BCash (held in the app and refunded automatically).</small></span><span class="pm-switch"><input type="checkbox" name="pay_cash" value="1"<?= pay_cash_enabled() ? ' checked' : '' ?>> Enabled</span></label>
+    </div>
+    <p class="table-meta">Bookings already made keep the payment method they were made with.</p>
+    <div class="form-actions"><button class="btn primary" type="submit">Save payment methods</button></div>
+</form>
 <form method="post">
 <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="section" value="charges">
 <div class="grid half">

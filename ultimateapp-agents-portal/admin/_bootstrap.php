@@ -274,7 +274,7 @@ function admin_header(string $title, string $active): void
 <meta name="robots" content="noindex, nofollow">
 <title><?= e($title) ?> · Ultimate App Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/admin.css?v=10">
+<link rel="stylesheet" href="assets/admin.css?v=11">
 <link rel="icon" href="../assets/images/pwa/icon-192.png">
 </head>
 <body>

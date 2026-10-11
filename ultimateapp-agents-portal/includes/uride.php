@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/ledger.php';
 require_once __DIR__ . '/wallet.php';
+require_once __DIR__ . '/cancellation.php';
 require_once __DIR__ . '/agents.php';
 require_once __DIR__ . '/uride_selfdrive.php';
 
@@ -490,7 +491,7 @@ function uride_barangays(): array
 
 function uride_wallet_types(): array
 {
-    return ['topup' => 'Top-up', 'ride_fare' => 'Ride fare (Credits)', 'commission' => 'Commission', 'payout' => 'Payout', 'payout_returned' => 'Payout returned', 'adjustment' => 'Adjustment', 'late_fee' => 'Self-drive late fee', 'damage_claim' => 'Self-drive damage claim'];
+    return ['topup' => 'Top-up', 'ride_fare' => 'Ride fare (Credits)', 'commission' => 'Commission', 'payout' => 'Payout', 'payout_returned' => 'Payout returned', 'adjustment' => 'Adjustment', 'late_fee' => 'Self-drive late fee', 'damage_claim' => 'Self-drive damage claim', 'cancel_fee' => 'Cancellation fee'];
 }
 
 function uride_payout_methods(): array
@@ -784,18 +785,26 @@ function uride_book(PDO $pdo, int $userId, array $in, string $requestKey): strin
     });
 }
 
-/** Returns a held Credits fare to the passenger. Caller holds the ride lock. */
-function uride_release_hold(PDO $pdo, array $ride, string $why): void
+/**
+ * Returns a held fare to the passenger (less a cancellation fee, which goes to the assigned driver).
+ * Caller holds the ride lock. The self-drive deposit is always returned in full.
+ */
+function uride_release_hold(PDO $pdo, array $ride, string $why, int $fee = 0): void
 {
     if (($ride['deposit_status'] ?? 'none') === 'held' && (int) ($ride['deposit_centavos'] ?? 0) > 0) uride_deposit_refund($pdo, $ride, (int) $ride['deposit_centavos'], $why);
     $held = (int) $ride['held_centavos'];
     if ($held <= 0) return;
-    wallet_credit_tx($pdo, (int) $ride['user_id'], (string) $ride['payment_method'], $held, 'URide refund ' . $ride['code'] . ' (' . $why . ')');
+    $fee = empty($ride['driver_id']) ? 0 : max(0, min($fee, $held));
+    $back = $held - $fee;
+    if ($back > 0) wallet_credit_tx($pdo, (int) $ride['user_id'], (string) $ride['payment_method'], $back, 'URide refund ' . $ride['code'] . ' (' . $why . ($fee ? ', less ₱' . peso($fee) . ' cancellation fee' : '') . ')');
     $pdo->prepare('UPDATE uride_requests SET held_centavos = 0 WHERE id = ?')->execute([$ride['id']]);
-    ledger_post($pdo, 'RF-' . substr($ride['code'], 3), 'uride_release', [
-        ['uride_escrow', $held, 0, 'Released: ' . $why],
-        [wallet_account((string) $ride['payment_method'], (int) $ride['user_id']), 0, $held, 'Fare returned'],
-    ]);
+    $lines = [['uride_escrow', $held, 0, 'Released: ' . $why]];
+    if ($back > 0) $lines[] = [wallet_account((string) $ride['payment_method'], (int) $ride['user_id']), 0, $back, 'Fare returned'];
+    if ($fee > 0) {
+        uride_wallet_change($pdo, (int) $ride['driver_id'], $fee, 'cancel_fee', $ride['code'], (int) $ride['id'], 'Passenger cancelled after you accepted');
+        $lines[] = ['driver_wallet:' . (int) $ride['driver_id'], 0, $fee, 'Cancellation fee to driver'];
+    }
+    ledger_post($pdo, 'RF-' . substr($ride['code'], 3), 'uride_release', $lines);
 }
 
 /** Marks requests nobody accepted in time as expired and refunds their holds. */
@@ -819,15 +828,31 @@ function uride_expire_stale(PDO $pdo): int
     return $n;
 }
 
-function uride_cancel_by_passenger(PDO $pdo, int $userId, int $rideId, string $reason): void
+/**
+ * Cancellation fee if the passenger cancels now: free before a driver accepts and during the free minutes after;
+ * then a percentage of the fare (Admin setting), only for fares paid in the app. Goes to the driver.
+ */
+function uride_cancel_fee(array $ride, ?int $now = null): int
 {
-    uride_tx($pdo, function () use ($pdo, $userId, $rideId, $reason) {
+    $now ??= time();
+    if (!in_array($ride['status'], ['accepted', 'arrived'], true) || empty($ride['driver_id']) || (int) $ride['held_centavos'] <= 0) return 0;
+    $acceptedAt = !empty($ride['accepted_at']) ? strtotime((string) $ride['accepted_at']) : $now;
+    if ($ride['status'] === 'accepted' && $now < $acceptedAt + 60 * cancel_uride_free_minutes()) return 0;
+    return cancel_fee_amount((int) $ride['held_centavos'], 'uride');
+}
+
+function uride_cancel_by_passenger(PDO $pdo, int $userId, int $rideId, string $reason, string $other = ''): array
+{
+    return uride_tx($pdo, function () use ($pdo, $userId, $rideId, $reason, $other) {
         $ride = uride_lock_ride($pdo, $rideId);
         if ((int) $ride['user_id'] !== $userId) throw new InvalidArgumentException('Ride not found.');
         if (!in_array($ride['status'], ['requested', 'accepted', 'arrived'], true)) throw new InvalidArgumentException('This ride can no longer be cancelled.');
-        $pdo->prepare("UPDATE uride_requests SET status = 'cancelled', cancelled_by = 'passenger', cancelled_at = NOW(), cancel_reason = ? WHERE id = ?")
-            ->execute([mb_substr(trim($reason), 0, 200) ?: null, $rideId]);
-        uride_release_hold($pdo, $ride, 'cancelled');
+        $why = cancel_reason('uride', $reason, $other);
+        $fee = uride_cancel_fee($ride);
+        $pdo->prepare("UPDATE uride_requests SET status = 'cancelled', cancelled_by = 'passenger', cancelled_at = NOW(), cancel_reason = ?, cancel_fee_centavos = ? WHERE id = ?")
+            ->execute([$why, $fee, $rideId]);
+        uride_release_hold($pdo, $ride, 'cancelled', $fee);
+        return ['fee' => $fee, 'refund' => max(0, (int) $ride['held_centavos'] - $fee)];
     });
 }
 

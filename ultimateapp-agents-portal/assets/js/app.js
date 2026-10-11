@@ -68,3 +68,11 @@ if (balanceToggle) {
     balanceToggle.title = hidden ? 'Show balance' : 'Hide balance';
   });
 }
+
+/* Cancel forms: "Other" reason shows a text box. */
+document.querySelectorAll('select[data-reason]').forEach(sel => {
+  const other = sel.form && sel.form.querySelector('[data-reason-other]');
+  if (!other) return;
+  const sync = () => { const on = sel.value === 'Other'; other.hidden = !on; other.required = on; };
+  sel.addEventListener('change', sync); sync();
+});

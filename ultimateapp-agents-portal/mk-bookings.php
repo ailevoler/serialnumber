@@ -14,7 +14,7 @@ $back = $service ? mk_services()[$service]['page'] : 'dashboard.php';
 $pageTitle = 'My bookings';
 require __DIR__ . '/includes/header.php';
 ?>
-<link rel="stylesheet" href="assets/css/market.css?v=2">
+<link rel="stylesheet" href="assets/css/market.css?v=3">
 <section class="screen mk-screen">
     <header class="page-head"><a href="<?= e($back) ?>" aria-label="Back"><span data-icon="arrow-left"></span></a><h1>My bookings</h1><span></span></header>
     <nav class="mk-chips"><a href="mk-bookings.php" class="<?= $service === '' ? 'on' : '' ?>">All</a><a href="mk-bookings.php?s=upass" class="<?= $service === 'upass' ? 'on' : '' ?>">UPass</a><a href="mk-bookings.php?s=ugo" class="<?= $service === 'ugo' ? 'on' : '' ?>">UGo activities</a><a href="mk-bookings.php?s=ulocal" class="<?= $service === 'ulocal' ? 'on' : '' ?>">ULocal services</a></nav>

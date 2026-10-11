@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../includes/wallet.php';
+require_once __DIR__ . '/../includes/cancellation.php';
 $admin = admin_require('settings');
 $tab = in_array(q('tab'), ['charges', 'maps', 'uride'], true) ? q('tab') : 'payments';
 require_once __DIR__ . '/../includes/uride.php';
@@ -48,6 +49,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setting_save($pdo, 'pay.cash_enabled', p('pay_cash') === '1' ? '1' : '0', (int) $admin['id']);
             setting_save($pdo, 'pay.bcash_enabled', p('pay_bcash') === '1' ? '1' : '0', (int) $admin['id']);
             $changed[] = 'payment methods';
+        } elseif (p('section') === 'cancelfees') {
+            foreach (['uride' => 'URide', 'booking' => 'UPass / UGo / ULocal', 'ueat' => 'UEat'] as $area => $label) {
+                $v = trim(p("{$area}_pct", '0'));
+                if (!preg_match('/^\d{1,3}(\.\d{1,2})?$/D', $v) || (float) $v > 100) throw new InvalidArgumentException("$label cancellation fee must be 0 to 100%.");
+                setting_save($pdo, "cancel.{$area}_pct", $v, (int) $admin['id']);
+            }
+            setting_save($pdo, 'cancel.uride_free_min', (string) max(0, min(60, (int) p('uride_free_min', '2'))), (int) $admin['id']);
+            $changed[] = 'cancellation fees';
         } elseif (p('section') === 'charges') {
             foreach (['credits' => 'Credits', 'boracay_cash' => 'BCash'] as $src => $label) {
                 setting_save($pdo, "p2m.$src.enabled", p("{$src}_enabled") === '1' ? '1' : '0', (int) $admin['id']);
@@ -130,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pdo->inTransaction()) $pdo->rollBack();
         flash('error', $ex->getMessage());
     }
-    redirect('settings.php?tab=' . (p('section') === 'paymethods' ? 'charges' : (in_array(p('section'), ['charges', 'maps', 'uride'], true) ? p('section') : 'payments')));
+    redirect('settings.php?tab=' . (in_array(p('section'), ['paymethods', 'cancelfees'], true) ? 'charges' : (in_array(p('section'), ['charges', 'maps', 'uride'], true) ? p('section') : 'payments')));
 }
 
 // Optional connection test: lists webhooks with the active secret key.
@@ -337,6 +346,18 @@ admin_header('Settings', 'settings');
 <div class="form-actions"><button class="btn primary" type="submit">Save URide settings</button><span class="muted">New fares apply to bookings made after saving. Booked rides keep their upfront fare.</span></div>
 </form>
 <?php else: $rules = ['credits' => p2m_fee_rule('credits'), 'boracay_cash' => p2m_fee_rule('boracay_cash')]; ?>
+<form method="post" class="card mb pay-methods-card">
+    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="section" value="cancelfees">
+    <h2>Cancellation fees <small>% of what the customer paid in the app (Credits or BCash)</small></h2>
+    <div class="form-grid">
+        <div class="field"><label for="uride_pct">URide (% of fare)</label><input id="uride_pct" name="uride_pct" inputmode="decimal" value="<?= e((string) cancel_fee_pct('uride')) ?>"><small>Charged when the passenger cancels after the free minutes, or after the driver arrived. Goes to the driver.</small></div>
+        <div class="field"><label for="uride_free_min">URide free minutes after the driver accepts</label><input id="uride_free_min" name="uride_free_min" type="number" min="0" max="60" value="<?= cancel_uride_free_minutes() ?>"><small>Always free before a driver accepts.</small></div>
+        <div class="field"><label for="booking_pct">UPass / UGo / ULocal late cancellation (%)</label><input id="booking_pct" name="booking_pct" inputmode="decimal" value="<?= e((string) cancel_fee_pct('booking')) ?>"><small>After the listing's free-cancellation cut-off, before the start. Goes to the provider (or Ultimate App for its own listings).</small></div>
+        <div class="field"><label for="ueat_pct">UEat after the restaurant accepts (%)</label><input id="ueat_pct" name="ueat_pct" inputmode="decimal" value="<?= e((string) cancel_fee_pct('ueat')) ?>"><small>Free before the restaurant accepts. Cannot cancel once the food is ready or on the way. Goes to the restaurant.</small></div>
+    </div>
+    <p class="table-meta">0% = free. Customers must give a reason every time they cancel. Declines by the driver, merchant or restaurant, and cancellations by Ultimate App, are always refunded in full. Cash and pay-on-the-day bookings have no fee.</p>
+    <div class="form-actions"><button class="btn primary" type="submit">Save cancellation fees</button></div>
+</form>
 <form method="post" class="card mb pay-methods-card">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="section" value="paymethods">
     <h2>Payment methods <small>for URide, UPass, UGo, ULocal and UEat</small></h2>

@@ -16,6 +16,7 @@ require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/ledger.php';
 require_once __DIR__ . '/p2m.php';
 require_once __DIR__ . '/wallet.php';
+require_once __DIR__ . '/cancellation.php';
 require_once __DIR__ . '/agents.php';
 
 const MK_SERVICES = ['upass', 'ugo', 'ulocal', 'ueat'];
@@ -539,12 +540,39 @@ function mk_booking(PDO $pdo, string $reference): ?array
 }
 
 /** Can the customer still cancel for free? */
+/**
+ * Can the customer cancel now, and for what fee? Free while waiting for confirmation and until the listing's
+ * free-cancellation cut-off; after the cut-off and before the start: the late cancellation fee (% set by Admin,
+ * only on payments made in the app). Not possible once it has started.
+ */
+function mk_booking_cancel_terms(array $b, ?DateTimeImmutable $now = null): array
+{
+    $now ??= new DateTimeImmutable();
+    $no = ['allowed' => false, 'fee' => 0, 'late' => false];
+    if ($b['status'] === 'pending') return ['allowed' => true, 'fee' => 0, 'late' => false];
+    if ($b['status'] !== 'confirmed') return $no;
+    $start = mk_booking_starts($b);
+    if ($now <= $start->modify('-' . (int) $b['cancel_hours'] . ' hours')) return ['allowed' => true, 'fee' => 0, 'late' => false];
+    if ($now >= $start) return $no;
+    $paid = $b['payment_status'] === 'paid' && $b['pay_method'] !== 'on_site' ? (int) $b['total_centavos'] : 0;
+    return ['allowed' => true, 'fee' => cancel_fee_amount($paid, 'booking'), 'late' => true];
+}
+
 function mk_booking_cancellable(array $b, ?DateTimeImmutable $now = null): bool
 {
-    if ($b['status'] === 'pending') return true;
-    if ($b['status'] !== 'confirmed') return false;
-    $now ??= new DateTimeImmutable();
-    return $now <= mk_booking_starts($b)->modify('-' . (int) $b['cancel_hours'] . ' hours');
+    return mk_booking_cancel_terms($b, $now)['allowed'];
+}
+
+/** Cancellation fee kept for the merchant after a full refund: taken from the same wallet, added to the merchant balance. */
+function mk_cancel_fee_to_merchant_tx(PDO $pdo, int $userId, string $wallet, int $fee, int $merchantId, string $reference, string $title): void
+{
+    if ($fee <= 0) return;
+    wallet_debit_tx($pdo, $userId, $wallet, $fee, 'Cancellation fee ' . $title, true);
+    $pdo->prepare('UPDATE merchants SET balance_centavos = balance_centavos + ? WHERE id = ?')->execute([$fee, $merchantId]);
+    ledger_post($pdo, 'CF-' . substr($reference, 3), 'cancellation_fee', [
+        [wallet_account($wallet, $userId), $fee, 0, 'Cancellation fee ' . $reference],
+        ['merchant_payable:' . $merchantId, 0, $fee, 'Cancellation fee kept by merchant'],
+    ]);
 }
 
 /**
@@ -579,26 +607,36 @@ function mk_booking_update(PDO $pdo, string $reference, string $action, string $
         if (!$ok) {
             throw new InvalidArgumentException(match ($action) {
                 'complete' => $from === 'confirmed' ? 'You can mark it completed on or after the booking date.' : 'Only a confirmed booking can be completed.',
-                'cancel' => $from === 'confirmed' ? 'Free cancellation ended ' . (int) $b['cancel_hours'] . ' hours before the start. Please contact the provider.' : 'This booking can no longer be cancelled.',
+                'cancel' => $from === 'confirmed' ? 'This booking has already started and can no longer be cancelled. Please contact the provider.' : 'This booking can no longer be cancelled.',
                 default => 'This booking is already ' . mk_booking_statuses()[$from] . '.',
             });
         }
         if ($action === 'decline' && $by !== 'admin' && mb_strlen(trim($note)) < 3) throw new InvalidArgumentException('Tell the customer why (e.g. fully booked, weather).');
+        $fee = 0;
+        if ($by === 'customer') {
+            if (mb_strlen(trim($note)) < 3) throw new InvalidArgumentException('Please choose a reason for cancelling.');
+            $fee = mk_booking_cancel_terms($b, $now)['fee'];
+        }
         if (in_array($to, ['declined', 'cancelled'], true) && $b['payment_status'] === 'paid' && $b['payment_ref']) {
+            $wallet = $b['pay_method'] === 'bcash' ? 'bcash' : 'credits';
+            $title = mk_services()[$b['service']]['code'] . ' ' . $b['title'];
             if (str_starts_with((string) $b['payment_ref'], 'PL-')) {
-                mk_platform_refund_tx($pdo, (int) $b['user_id'], (int) $b['total_centavos'], $b['service'], $b['payment_ref'], mk_services()[$b['service']]['code'] . ' ' . $b['title'], $b['pay_method'] === 'bcash' ? 'bcash' : 'credits');
+                // Ultimate App keeps the fee; the rest goes back.
+                if ((int) $b['total_centavos'] - $fee > 0) mk_platform_refund_tx($pdo, (int) $b['user_id'], (int) $b['total_centavos'] - $fee, $b['service'], $b['payment_ref'], $title, $wallet);
             } else {
                 $p = $pdo->prepare('SELECT id FROM merchant_payments WHERE reference = ?'); $p->execute([$b['payment_ref']]);
                 p2m_refund_tx($pdo, (int) $p->fetchColumn(), $by === 'admin' ? $actorId : null);
+                mk_cancel_fee_to_merchant_tx($pdo, (int) $b['user_id'], $wallet, $fee, (int) $b['merchant_id'], $b['reference'], $title);
             }
             $pdo->prepare("UPDATE mk_bookings SET payment_status = 'refunded' WHERE id = ?")->execute([$b['id']]);
         }
+        if ($to === 'cancelled') $pdo->prepare('UPDATE mk_bookings SET cancel_reason = ?, cancel_fee_centavos = ? WHERE id = ?')->execute([mb_substr(trim($note) ?: ($by === 'admin' ? 'Cancelled by Ultimate App' : ''), 0, 200), $fee, $b['id']]);
         if ($to === 'completed' && $b['pay_method'] === 'on_site') $pdo->prepare("UPDATE mk_bookings SET payment_status = 'paid' WHERE id = ?")->execute([$b['id']]);
         $pdo->prepare('UPDATE mk_bookings SET status = ?, status_note = ? WHERE id = ?')->execute([$to, trim($note) !== '' ? mb_substr(trim($note), 0, 255) : $b['status_note'], $b['id']]);
         if ($to === 'completed') agent_approve_source($pdo, 'mk_booking', (int) $b['id'], 'Booking completed');
         if (in_array($to, ['declined', 'cancelled'], true)) agent_reverse_source($pdo, 'mk_booking', (int) $b['id'], 'Booking ' . $to);
         $pdo->commit();
-        return ['reference' => $reference, 'status' => $to, 'refunded' => in_array($to, ['declined', 'cancelled'], true) && $b['payment_status'] === 'paid'];
+        return ['reference' => $reference, 'status' => $to, 'refunded' => in_array($to, ['declined', 'cancelled'], true) && $b['payment_status'] === 'paid', 'fee' => $fee, 'refund' => $b['payment_status'] === 'paid' ? max(0, (int) $b['total_centavos'] - $fee) : 0];
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;
@@ -711,6 +749,13 @@ function mk_place_order(PDO $pdo, int $userId, array $cart, array $in, string $r
     }
 }
 
+/** Customer cancellation fee for a UEat order: free before the restaurant accepts, then a % of what was paid. */
+function mk_order_cancel_fee(array $o): int
+{
+    if (!in_array($o['status'], ['accepted', 'preparing'], true) || $o['payment_status'] !== 'paid') return 0;
+    return cancel_fee_amount((int) round((float) $o['total_credits'] * 100), 'ueat');
+}
+
 /** Next kitchen steps the restaurant can take from a status. */
 function mk_order_next(array $o): array
 {
@@ -739,22 +784,32 @@ function mk_order_update(PDO $pdo, string $reference, string $to, string $by, in
         if ($by === 'customer' && (int) $o['user_id'] !== $actorId) throw new InvalidArgumentException('Order not found.');
         $ok = match ($by) {
             'merchant' => isset(mk_order_next($o)[$to]),
-            'customer' => $to === 'cancelled' && $o['status'] === 'pending',
+            'customer' => $to === 'cancelled' && in_array($o['status'], ['pending', 'accepted', 'preparing'], true),
             'admin' => in_array($to, ['cancelled', 'completed'], true) && !in_array($o['status'], ['completed', 'cancelled', 'declined'], true),
             default => false,
         };
-        if (!$ok) throw new InvalidArgumentException($by === 'customer' ? 'The restaurant already accepted your order. Please contact them to change it.' : ($by === 'merchant' && mk_order_next($o) ? 'Do the steps in order. Next: ' . implode(' or ', mk_order_next($o)) . '.' : 'This order is already ' . strtolower(mk_order_statuses()[$o['status']] ?? $o['status']) . '.'));
+        if (!$ok) throw new InvalidArgumentException($by === 'customer' ? (in_array($o['status'], ['ready', 'on_the_way'], true) ? 'Your food is already ' . ($o['status'] === 'ready' ? 'ready' : 'on the way') . ' and can no longer be cancelled. Please contact the restaurant.' : 'This order can no longer be cancelled.') : ($by === 'merchant' && mk_order_next($o) ? 'Do the steps in order. Next: ' . implode(' or ', mk_order_next($o)) . '.' : 'This order is already ' . strtolower(mk_order_statuses()[$o['status']] ?? $o['status']) . '.'));
         if ($to === 'declined' && mb_strlen(trim($note)) < 3) throw new InvalidArgumentException('Tell the customer why (e.g. sold out, closing soon).');
+        $fee = 0;
+        if ($by === 'customer') {
+            if (mb_strlen(trim($note)) < 3) throw new InvalidArgumentException('Please choose a reason for cancelling.');
+            $fee = mk_order_cancel_fee($o);
+        }
         if (in_array($to, ['declined', 'cancelled'], true) && $o['payment_status'] === 'paid' && $o['payment_ref']) {
             $p = $pdo->prepare('SELECT id FROM merchant_payments WHERE reference = ?'); $p->execute([$o['payment_ref']]);
             p2m_refund_tx($pdo, (int) $p->fetchColumn(), $by === 'admin' ? $actorId : null);
+            mk_cancel_fee_to_merchant_tx($pdo, (int) $o['user_id'], ($o['pay_source'] ?? 'credits') === 'bcash' ? 'bcash' : 'credits', $fee, (int) $o['merchant_id'], $o['reference'], 'UEat ' . $o['reference']);
             $pdo->prepare("UPDATE ueat_orders SET payment_status = 'refunded' WHERE id = ?")->execute([$o['id']]);
         }
-        $pdo->prepare('UPDATE ueat_orders SET status = ?, status_note = COALESCE(?, status_note) WHERE id = ?')->execute([$to, trim($note) !== '' ? mb_substr(trim($note), 0, 255) : null, $o['id']]);
+        if ($by === 'customer') {
+            $pdo->prepare('UPDATE ueat_orders SET status = ?, cancel_reason = ?, cancel_fee_centavos = ? WHERE id = ?')->execute([$to, mb_substr(trim($note), 0, 200), $fee, $o['id']]);
+        } else {
+            $pdo->prepare('UPDATE ueat_orders SET status = ?, status_note = COALESCE(?, status_note) WHERE id = ?')->execute([$to, trim($note) !== '' ? mb_substr(trim($note), 0, 255) : null, $o['id']]);
+        }
         if ($to === 'completed') agent_approve_source($pdo, 'ueat', (int) $o['id'], 'Order completed');
         if (in_array($to, ['declined', 'cancelled'], true)) agent_reverse_source($pdo, 'ueat', (int) $o['id'], 'Order ' . $to);
         $pdo->commit();
-        return ['reference' => $reference, 'status' => $to];
+        return ['reference' => $reference, 'status' => $to, 'fee' => $fee, 'refund' => $o['payment_status'] === 'paid' ? max(0, (int) round((float) $o['total_credits'] * 100) - $fee) : 0];
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;

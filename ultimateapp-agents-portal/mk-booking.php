@@ -9,8 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     rate_limit_enforce('mk_cancel', 'user:' . $user['id'], 20, 3600);
     try {
-        $r = mk_booking_update($pdo, $ref, 'cancel', 'customer', (int) $user['id']);
-        $_SESSION['flash'][] = ['success', 'Booking cancelled.' . ($r['refunded'] ? ' Your payment was returned.' : '')];
+        $r = mk_booking_update($pdo, $ref, 'cancel', 'customer', (int) $user['id'], cancel_reason('booking', (string) ($_POST['reason'] ?? ''), (string) ($_POST['reason_other'] ?? '')));
+        $_SESSION['flash'][] = ['success', 'Booking cancelled.' . ($r['refund'] > 0 ? ' ' . mk_money($r['refund']) . ' was returned to your wallet.' : '') . ($r['fee'] > 0 ? ' Late cancellation fee: ' . mk_money($r['fee']) . '.' : '')];
         redirect('mk-booking.php?ref=' . rawurlencode($ref));
     } catch (InvalidArgumentException $ex) {
         $error = $ex->getMessage();
@@ -25,7 +25,7 @@ $at = array_search($b['status'], $order, true);
 $pageTitle = 'Booking ' . $b['reference'];
 require __DIR__ . '/includes/header.php';
 ?>
-<link rel="stylesheet" href="assets/css/market.css?v=2">
+<link rel="stylesheet" href="assets/css/market.css?v=3">
 <section class="screen mk-screen">
     <header class="page-head"><a href="mk-bookings.php?s=<?= e($b['service']) ?>" aria-label="Back"><span data-icon="arrow-left"></span></a><h1>Booking</h1><span></span></header>
     <?php foreach ($_SESSION['flash'] ?? [] as [$type, $message]): ?><p class="alert <?= $type === 'success' ? 'ok' : '' ?>" role="status"><?= e($message) ?></p><?php endforeach; unset($_SESSION['flash']); ?>
@@ -51,9 +51,16 @@ require __DIR__ . '/includes/header.php';
                 <?php if ($b['notes']): ?><div><dt>Your notes</dt><dd><?= e($b['notes']) ?></dd></div><?php endif; ?>
                 <?php if ($b['merchant_mobile'] && in_array($b['status'], ['pending', 'confirmed'], true)): ?><div><dt>Provider</dt><dd><a href="tel:<?= e($b['merchant_mobile']) ?>"><?= e($b['merchant_mobile']) ?></a></dd></div><?php endif; ?>
             </dl>
-            <?php if (mk_booking_cancellable($b)): ?>
-            <form method="post" data-confirm="Cancel this booking?<?= $b['payment_status'] === 'paid' ? ' Your payment will be returned.' : '' ?>"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><button class="mk-ghost" type="submit">Cancel booking<?= $b['payment_status'] === 'paid' ? ' and refund' : '' ?></button></form>
-            <?php elseif ($b['status'] === 'confirmed'): ?><p class="mk-fine">Free cancellation ended <?= (int) $b['cancel_hours'] ?> hours before the start. Contact the provider for changes.</p><?php endif; ?>
+            <?php if ($b['status'] === 'cancelled' && $b['cancel_reason']): ?><p class="mk-note"><b>Cancelled:</b> <?= e($b['cancel_reason']) ?><?= (int) $b['cancel_fee_centavos'] ? ' · fee ' . e(mk_money((int) $b['cancel_fee_centavos'])) : '' ?></p><?php endif; ?>
+            <?php $terms = mk_booking_cancel_terms($b); if ($terms['allowed']): $paidIn = $b['payment_status'] === 'paid' ? (int) $b['total_centavos'] : 0; ?>
+            <details class="mk-cancel"><summary>Cancel booking</summary>
+            <form method="post" data-confirm="Cancel this booking?<?= $terms['fee'] ? ' A ' . e(mk_money($terms['fee'])) . ' late cancellation fee applies.' : '' ?>"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                <p class="mk-fine"><?php if ($terms['fee']): ?>Late cancellation: fee <b><?= e(mk_money($terms['fee'])) ?></b> (<?= e(cancel_pct_label('booking')) ?>) goes to the provider. You get back <?= e(mk_money($paidIn - $terms['fee'])) ?>.<?php elseif ($terms['late']): ?>Late cancellation. Please let the provider know.<?php else: ?>Free cancellation<?= $paidIn ? ': ' . e(mk_money($paidIn)) . ' comes back to your wallet' : '' ?>.<?= $b['status'] === 'confirmed' && (int) $b['cancel_hours'] ? ' Free until ' . e(mk_booking_starts($b)->modify('-' . (int) $b['cancel_hours'] . ' hours')->format('M j, g:i A')) . '; after that a ' . e(cancel_pct_label('booking')) . ' fee applies.' : '' ?><?php endif; ?></p>
+                <select name="reason" required data-reason aria-label="Reason"><option value="">Why are you cancelling?</option><?php foreach (cancel_reasons('booking') as $rs): ?><option><?= e($rs) ?></option><?php endforeach; ?></select>
+                <input name="reason_other" maxlength="150" placeholder="Tell us more" data-reason-other hidden aria-label="Other reason">
+                <button class="mk-ghost" type="submit">Cancel booking<?= $terms['fee'] ? ' (' . e(mk_money($terms['fee'])) . ' fee)' : '' ?></button></form>
+            </details>
+            <?php elseif ($b['status'] === 'confirmed'): ?><p class="mk-fine">This booking has started. Contact the provider for changes.</p><?php endif; ?>
         </div>
     </div>
     <a class="mk-cta" href="<?= e($cfg['page']) ?>">Explore more <?= e($cfg['plural']) ?></a>

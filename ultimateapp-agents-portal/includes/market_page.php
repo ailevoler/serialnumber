@@ -35,7 +35,7 @@ function mk_service_page(PDO $pdo, array $user, string $service): void
     $GLOBALS['pageTitle'] = $pageTitle;
     $e = 'e';
     require __DIR__ . '/header.php';
-    echo '<link rel="stylesheet" href="assets/css/market.css?v=2">';
+    echo '<link rel="stylesheet" href="assets/css/market.css?v=3">';
     if ($listing) { mk_render_detail($pdo, $user, $listing, $cfg, $error); }
     else { mk_render_browse($pdo, $service, $cfg, $category, $q, $error); }
     echo '<script defer src="assets/js/market.js?v=2"></script>';

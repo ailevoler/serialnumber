@@ -67,7 +67,7 @@ $q = mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 60);
 $pageTitle = $store ? $store['display_name'] : ($view === 'cart' ? 'Your basket' : ($view === 'orders' ? 'My orders' : 'UEat'));
 require __DIR__ . '/includes/header.php';
 ?>
-<link rel="stylesheet" href="assets/css/market.css?v=2">
+<link rel="stylesheet" href="assets/css/market.css?v=3">
 <?php if ($store):
     $menu = mk_menu($pdo, $rid);
     $open = mk_store_open($store);

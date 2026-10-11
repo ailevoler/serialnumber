@@ -143,3 +143,5 @@
 .uride-avail{display:block;font-style:normal;font-size:10.5px;font-weight:700;color:#0b7d71;min-height:14px}.uride-avail:empty{display:none}
 .uride-avail.none{color:#b42318}.uride-vehicle:has(input:checked) .uride-avail{color:#bff5df}.uride-vehicle:has(input:checked) .uride-avail.none{color:#ffb4ab}
 .uride-vehicle.off{opacity:.45;cursor:not-allowed}
+.uride-cancel-fee{margin:0;padding:8px 10px;border-radius:8px;background:#fff6e5;color:#7a4b00;font-size:12.5px;line-height:1.45}
+.uride-cancel input[data-reason-other]{height:42px;border:1px solid #e0e3e6;border-radius:8px;padding:0 10px;font:inherit}

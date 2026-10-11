@@ -46,11 +46,11 @@ function wallet_balance(PDO $pdo, int $userId, string $source): int
 }
 
 /** Takes money from a wallet inside the caller's transaction (no ledger lines: the caller posts them). */
-function wallet_debit_tx(PDO $pdo, int $userId, string $source, int $amount, string $title): void
+function wallet_debit_tx(PDO $pdo, int $userId, string $source, int $amount, string $title, bool $evenWhenOff = false): void
 {
     if ($amount <= 0) return;
     if ($source === 'bcash') {
-        if (!pay_bcash_enabled()) throw new InvalidArgumentException('Paying with BCash is turned off right now. Please use Credits.');
+        if (!$evenWhenOff && !pay_bcash_enabled()) throw new InvalidArgumentException('Paying with BCash is turned off right now. Please use Credits.');
         $s = $pdo->prepare('UPDATE boracay_cash_wallets SET balance_centavos = balance_centavos - ? WHERE user_id = ? AND balance_centavos >= ?');
         $s->execute([$amount, $userId, $amount]);
         if ($s->rowCount() !== 1) throw new InvalidArgumentException('Not enough BCash (₱' . peso($amount) . ' needed). Convert Credits to BCash or pay with Credits.');

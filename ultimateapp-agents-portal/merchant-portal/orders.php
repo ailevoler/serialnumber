@@ -40,8 +40,8 @@ if ($tab === 'bookings') {
 }
 $history = [];
 if ($tab === 'history') {
-    $s = $pdo->prepare("(SELECT 'order' kind, o.reference, o.status, o.created_at, o.total_credits * 100 amount, CONCAT(o.fulfillment, ' · ', u.full_name) detail, NULL bdate FROM ueat_orders o JOIN users u ON u.id = o.user_id WHERE o.merchant_id = ? AND o.status IN ('completed','declined','cancelled'))
-        UNION ALL (SELECT 'booking', b.reference, b.status, b.created_at, b.total_centavos, CONCAT(b.title, ' · ', u.full_name), b.booking_date FROM mk_bookings b JOIN users u ON u.id = b.user_id WHERE b.merchant_id = ? AND b.status IN ('completed','declined','cancelled'))
+    $s = $pdo->prepare("(SELECT 'order' kind, o.reference, o.status, o.created_at, o.total_credits * 100 amount, CONCAT(o.fulfillment, ' · ', u.full_name, IF(o.cancel_reason IS NULL, '', CONCAT(' · ', o.cancel_reason)), IF(o.cancel_fee_centavos > 0, CONCAT(' · fee kept ₱', FORMAT(o.cancel_fee_centavos / 100, 2)), '')) detail, NULL bdate FROM ueat_orders o JOIN users u ON u.id = o.user_id WHERE o.merchant_id = ? AND o.status IN ('completed','declined','cancelled'))
+        UNION ALL (SELECT 'booking', b.reference, b.status, b.created_at, b.total_centavos, CONCAT(b.title, ' · ', u.full_name, IF(b.cancel_reason IS NULL, '', CONCAT(' · ', b.cancel_reason)), IF(b.cancel_fee_centavos > 0, CONCAT(' · fee kept ₱', FORMAT(b.cancel_fee_centavos / 100, 2)), '')), b.booking_date FROM mk_bookings b JOIN users u ON u.id = b.user_id WHERE b.merchant_id = ? AND b.status IN ('completed','declined','cancelled'))
         ORDER BY created_at DESC LIMIT 100");
     $s->execute([$id, $id]); $history = $s->fetchAll();
 }

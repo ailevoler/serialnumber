@@ -136,7 +136,7 @@ driver_header('', 'dashboard', 'ride');
     <p class="table-meta" data-gps role="status"></p>
     <?php else: ?>
         <?php if ($status === 'completed'): ?><div class="alert success">Completed <?= e(date('M j, g:i A', strtotime((string) $ride['completed_at']))) ?><?= $ride['rating'] !== null ? ' · Passenger rated ' . str_repeat('★', (int) $ride['rating']) : '' ?></div>
-        <?php else: ?><div class="alert warn">This ride was <?= e(strtolower(uride_ride_statuses()[$status] ?? $status)) ?><?= $ride['cancelled_by'] ? ' by the ' . e($ride['cancelled_by'] === 'admin' ? 'Ultimate App team' : $ride['cancelled_by']) : '' ?>.<?= $ride['cancel_reason'] ? ' ' . e($ride['cancel_reason']) : '' ?></div><?php endif; ?>
+        <?php else: ?><div class="alert warn">This ride was <?= e(strtolower(uride_ride_statuses()[$status] ?? $status)) ?><?= $ride['cancelled_by'] ? ' by the ' . e($ride['cancelled_by'] === 'admin' ? 'Ultimate App team' : $ride['cancelled_by']) : '' ?>.<?= $ride['cancel_reason'] ? ' Reason: ' . e($ride['cancel_reason']) . '.' : '' ?><?= (int) ($ride['cancel_fee_centavos'] ?? 0) ? ' Cancellation fee ₱' . peso((int) $ride['cancel_fee_centavos']) . ' added to your wallet.' : '' ?></div><?php endif; ?>
         <a class="btn" href="dashboard.php">Back to Drive</a>
     <?php endif; ?>
 </section>

@@ -95,9 +95,12 @@ try {
     $throws(fn() => mk_booking_update($pdo, $r1, 'decline', 'merchant', $tours, ''), 'why', 'declining needs a reason');
     mk_booking_update($pdo, $r1, 'confirm', 'merchant', $tours);
     $throws(fn() => mk_booking_update($pdo, $r1, 'complete', 'merchant', $tours, '', $now), 'on or after', 'cannot complete before the date');
-    $throws(fn() => mk_booking_update($pdo, $r1, 'cancel', 'customer', $u, '', new DateTimeImmutable('2026-10-13 20:00:00')), 'Free cancellation ended', 'customer cannot cancel within 24 hours of the start');
+    $throws(fn() => mk_booking_update($pdo, $r1, 'cancel', 'customer', $u, '', $now), 'reason', 'customer must give a reason to cancel');
+    $late = mk_booking_cancel_terms(mk_booking($pdo, $r1), new DateTimeImmutable('2026-10-13 20:00:00'));
+    $check($late['allowed'] && $late['late'] && $late['fee'] === (int) round(172750 * cancel_fee_pct('booking') / 100), 'within 24 hours of the start: allowed with the late cancellation fee (' . cancel_pct_label('booking') . ')');
+    $check(!mk_booking_cancel_terms(mk_booking($pdo, $r1), new DateTimeImmutable('2026-10-14 13:30:00'))['allowed'], 'cannot cancel after the start');
     $c1 = $credits($u); $m1 = $balance($tours);
-    $res = mk_booking_update($pdo, $r1, 'cancel', 'customer', $u, '', $now);
+    $res = mk_booking_update($pdo, $r1, 'cancel', 'customer', $u, 'Change of plans', $now);
     $check($res['refunded'] && abs($credits($u) - $c1 - 1727.50) < 0.001 && $m1 - $balance($tours) === 170000, 'cancelled in time: full refund including the charge');
     $check(mk_booking($pdo, $r1)['payment_status'] === 'refunded', 'booking marked refunded');
     $r4 = mk_book($pdo, $u, $tour, $base + ['quantity' => 2], $key(), $now); $refs[] = $r4;
@@ -135,7 +138,7 @@ try {
     $b7 = mk_booking($pdo, $r7);
     $check(str_starts_with($r7, 'UP-') && (int) $b7['total_centavos'] === 190000 && $b7['payment_status'] === 'paid', 'UPass: 2 × ₱950 paid with Credits');
     $check(in_array($pass, array_column(mk_browse($pdo, 'upass', 'Airport Transfer'), 'id')), 'UPass listed under Airport Transfer');
-    mk_booking_update($pdo, $r7, 'cancel', 'customer', $u, '', $now);
+    mk_booking_update($pdo, $r7, 'cancel', 'customer', $u, 'Weather', $now);
     $pdo->exec("DELETE FROM ledger_entries WHERE entry_group IN (" . $pdo->quote($b7['payment_ref']) . ", " . $pdo->quote('RF-' . substr($b7['payment_ref'], 3)) . ")");
 
     // ---------- UEat
@@ -181,18 +184,26 @@ try {
     $cart = mk_cart_set($pdo, $u, $sisig, 2, true);
     $o2 = mk_place_order($pdo, $u, $cart, ['fulfillment' => 'pickup', 'contact_mobile' => '09171234567'], $key());
     $c4 = $credits($u);
-    mk_order_update($pdo, $o2, 'cancelled', 'customer', $u);
+    mk_order_update($pdo, $o2, 'cancelled', 'customer', $u, 'Ordered by mistake');
     $check($credits($u) > $c4 && $pdo->query('SELECT payment_status FROM ueat_orders WHERE reference = ' . $pdo->quote($o2))->fetchColumn() === 'refunded', 'customer cancelled before acceptance: refunded');
     $cart = mk_cart_set($pdo, $u, $sisig, 2, true);
     $o3 = mk_place_order($pdo, $u, $cart, ['fulfillment' => 'pickup', 'contact_mobile' => '09171234567'], $key());
     mk_order_update($pdo, $o3, 'accepted', 'merchant', $kitchen);
-    $throws(fn() => mk_order_update($pdo, $o3, 'cancelled', 'customer', $u), 'already accepted', 'customer cannot cancel after the restaurant accepted');
+    $throws(fn() => mk_order_update($pdo, $o3, 'cancelled', 'customer', $u), 'reason', 'cancelling an order needs a reason');
+    $paid3 = (int) round((float) $pdo->query('SELECT total_credits FROM ueat_orders WHERE reference = ' . $pdo->quote($o3))->fetchColumn() * 100);
+    $c7 = $credits($u); $k7 = $balance($kitchen);
+    $res3 = mk_order_update($pdo, $o3, 'cancelled', 'customer', $u, 'Waiting too long');
+    $fee3 = (int) round($paid3 * cancel_fee_pct('ueat') / 100);
+    $check($res3['fee'] === $fee3 && abs(($credits($u) - $c7) * 100 - ($paid3 - $fee3)) < 1, 'after the restaurant accepted: cancelled with a ' . cancel_pct_label('ueat') . ' fee, the rest refunded');
+    $row3 = $pdo->query('SELECT cancel_reason, cancel_fee_centavos FROM ueat_orders WHERE reference = ' . $pdo->quote($o3))->fetch();
+    $check($row3['cancel_reason'] === 'Waiting too long' && (int) $row3['cancel_fee_centavos'] === $fee3, 'reason and fee saved on the order');
+    $check($balance($kitchen) - $k7 === $fee3 - (int) $pdo->query('SELECT merchant_net_centavos FROM merchant_payments WHERE reference = (SELECT payment_ref FROM ueat_orders WHERE reference = ' . $pdo->quote($o3) . ')')->fetchColumn(), 'restaurant keeps the fee (payment reversed, fee added)');
     $cart = mk_cart_set($pdo, $u, $sisig, 1, true);
     $o4 = mk_place_order($pdo, $u, $cart, ['fulfillment' => 'pickup', 'contact_mobile' => '09171234567'], $key());
     $c5 = $credits($u);
     mk_order_update($pdo, $o4, 'declined', 'merchant', $kitchen, 'Sold out');
     $check($credits($u) > $c5, 'restaurant declined: refunded');
-    $check(mk_merchant_waiting($pdo, $kitchen)['orders'] === 1, 'merchant sees 1 open order');
+    $check(mk_merchant_waiting($pdo, $kitchen)['orders'] === 0, 'no open orders left for the merchant');
     echo "\nAll marketplace tests passed.\n";
 } finally {
     $ids = static fn(array $a): string => $a ? implode(',', array_map('intval', $a)) : '0';

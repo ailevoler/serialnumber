@@ -71,7 +71,7 @@ try {
     $bk = mk_booking($pdo, $ref);
     $check($bk['pay_method'] === 'bcash' && $bk['payment_status'] === 'paid' && $bc($u) === $b1 - 100000, 'UGo booking paid with BCash (₱1,000)');
     $check((int) $pdo->query("SELECT balance_centavos FROM merchants WHERE id = $m")->fetchColumn() === $m1 + 100000 && $pdo->query('SELECT source FROM merchant_payments WHERE reference = ' . $pdo->quote($bk['payment_ref']))->fetchColumn() === 'boracay_cash', 'merchant paid like a BCash QR payment');
-    mk_booking_update($pdo, $ref, 'cancel', 'customer', $u, '', $now);
+    mk_booking_update($pdo, $ref, 'cancel', 'customer', $u, 'Change of plans', $now);
     $check($bc($u) === $b1, 'cancelled: BCash refunded');
     $ref2 = mk_book($pdo, $u, $ua, $in, $key(), $now);
     $bk2 = mk_booking($pdo, $ref2);

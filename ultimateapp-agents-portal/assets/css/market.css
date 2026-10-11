@@ -98,3 +98,7 @@
 .credit-uses-row a{flex:none;display:grid;justify-items:center;gap:3px;width:82px;text-align:center;text-decoration:none;color:#15181b}
 .credit-uses-row span{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:#f2f4f5}.credit-uses-row img{width:44px;height:44px}.credit-uses-row i svg{width:24px;height:24px}
 .credit-uses-row b{font-size:12px}.credit-uses-row small{font-size:10px;line-height:1.25;color:#6c757c}
+/* Cancel with reason */
+.mk-cancel{margin:14px 0 0}.mk-cancel summary{cursor:pointer;color:#b42318;font-weight:700;font-size:14px}
+.mk-cancel form{display:grid;gap:8px;margin-top:10px}.mk-cancel select,.mk-cancel input{width:100%;min-height:44px;padding:8px 12px;border:1px solid #cfd7dc;border-radius:12px;background:#fff;font:inherit;font-size:14px}
+.mk-cancel .mk-ghost{margin-top:2px}

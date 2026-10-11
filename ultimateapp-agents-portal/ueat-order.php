@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cance
     verify_csrf();
     rate_limit_enforce('ueat_cancel_order', 'user:' . $user['id'], 12, 3600);
     try {
-        if ($live) mk_order_update($pdo, $reference, 'cancelled', 'customer', (int) $user['id']);
+        if ($live) mk_order_update($pdo, $reference, 'cancelled', 'customer', (int) $user['id'], cancel_reason('ueat', (string) ($_POST['reason'] ?? ''), (string) ($_POST['reason_other'] ?? '')));
         else ueat_cancel_order($pdo, (int) $user['id'], $reference);
         redirect('ueat-order.php?reference=' . rawurlencode($reference));
     } catch (InvalidArgumentException $exception) {
@@ -49,7 +49,7 @@ $headline = [
 $pageTitle = 'UEat order';
 require __DIR__ . '/includes/header.php';
 ?>
-<link rel="stylesheet" href="assets/css/market.css?v=2">
+<link rel="stylesheet" href="assets/css/market.css?v=3">
 <section class="screen ue-screen">
     <header class="page-head"><a href="ueat.php?view=orders" aria-label="Back to orders"><span data-icon="arrow-left"></span></a><h1>Order</h1><span></span></header>
     <?php if ($error): ?><p class="alert" role="alert"><?= e($error) ?></p><?php endif; ?>
@@ -79,7 +79,16 @@ require __DIR__ . '/includes/header.php';
         <div><dt>Payment</dt><dd><?= e(wallet_label((string) ($order['pay_source'] ?? 'credits'))) ?> · <?= e(ucfirst($order['payment_status'])) ?></dd></div>
         <?php if ($order['notes']): ?><div><dt>Note</dt><dd><?= e($order['notes']) ?></dd></div><?php endif; ?>
     </dl>
-    <?php if ($order['status'] === 'pending'): ?><form method="post" data-confirm="Cancel this order? Your payment will be returned."><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="cancel"><button class="mk-ghost" type="submit">Cancel order</button></form><?php endif; ?>
+    <?php if ($order['status'] === 'cancelled' && !empty($order['cancel_reason'])): ?><p class="mk-note"><b>Cancelled:</b> <?= e($order['cancel_reason']) ?><?= (int) $order['cancel_fee_centavos'] ? ' · fee ' . e(mk_money((int) $order['cancel_fee_centavos'])) . ' kept by the restaurant' : '' ?></p><?php endif; ?>
+    <?php if ($order['status'] === 'pending' || ($live && in_array($order['status'], ['accepted', 'preparing'], true))): $ofee = $live ? mk_order_cancel_fee($order) : 0; $paidO = (int) round((float) $order['total_credits'] * 100); ?>
+    <details class="mk-cancel"><summary>Cancel order</summary>
+    <form method="post" data-confirm="Cancel this order?<?= $ofee ? ' A ' . e(mk_money($ofee)) . ' cancellation fee applies.' : '' ?>"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="cancel">
+        <p class="mk-fine"><?= $ofee ? 'The restaurant already accepted. Cancellation fee <b>' . e(mk_money($ofee)) . '</b> (' . e(cancel_pct_label('ueat')) . ') goes to the restaurant; you get back ' . e(mk_money($paidO - $ofee)) . '.' : 'Free to cancel until the restaurant accepts. ' . e(mk_money($paidO)) . ' comes back to your wallet.' ?></p>
+        <?php if ($live): ?><select name="reason" required data-reason aria-label="Reason"><option value="">Why are you cancelling?</option><?php foreach (cancel_reasons('ueat') as $rs): ?><option><?= e($rs) ?></option><?php endforeach; ?></select>
+        <input name="reason_other" maxlength="150" placeholder="Tell us more" data-reason-other hidden aria-label="Other reason"><?php endif; ?>
+        <button class="mk-ghost" type="submit">Cancel order<?= $ofee ? ' (' . e(mk_money($ofee)) . ' fee)' : '' ?></button></form>
+    </details>
+    <?php endif; ?>
     <a class="mk-cta" href="<?= $live && $store ? 'ueat.php?r=' . (int) $order['merchant_id'] : 'ueat.php' ?>"><?= $order['status'] === 'completed' ? 'Order again' : 'Back to UEat' ?></a>
 </section>
 <script defer src="assets/js/market.js?v=2"></script>

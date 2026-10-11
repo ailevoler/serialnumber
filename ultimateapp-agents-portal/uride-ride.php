@@ -19,8 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rate_limit_enforce('ride_write', 'user:' . $user['id'], 60, 3600);
     try {
         if (($_POST['action'] ?? '') === 'cancel') {
-            uride_cancel_by_passenger($pdo, (int) $user['id'], (int) $ride['id'], (string) ($_POST['reason'] ?? ''));
-            $_SESSION['uride_notice'] = 'Ride cancelled.' . ((int) $ride['held_centavos'] > 0 ? ' ₱' . peso((int) $ride['held_centavos']) . ' Credits returned to your wallet.' : '');
+            $res = uride_cancel_by_passenger($pdo, (int) $user['id'], (int) $ride['id'], (string) ($_POST['reason'] ?? ''), (string) ($_POST['reason_other'] ?? ''));
+            $_SESSION['uride_notice'] = 'Ride cancelled.' . ($res['refund'] > 0 ? ' ₱' . peso($res['refund']) . ' returned to your ' . uride_pay_label((string) $ride['payment_method']) . '.' : '') . ($res['fee'] > 0 ? ' Cancellation fee ₱' . peso($res['fee']) . ' went to your driver.' : '');
         } elseif (($_POST['action'] ?? '') === 'rate') {
             uride_rate($pdo, (int) $user['id'], (int) $ride['id'], (int) ($_POST['rating'] ?? 0), (string) ($_POST['comment'] ?? ''));
             $_SESSION['uride_notice'] = 'Thanks for rating your driver!';
@@ -75,7 +75,7 @@ require __DIR__ . '/includes/header.php';
             elseif ($status === 'in_progress') echo 'Enjoy your ride. You are on the way to your drop-off.';
             elseif ($status === 'completed') echo 'You have arrived. Thank you for riding with URide!';
             elseif ($status === 'expired') echo 'No driver accepted in time.' . ($ride['payment_method'] !== 'cash' ? ' Your ' . uride_pay_label((string) $ride['payment_method']) . ' was returned.' : '');
-            else echo 'This ride was cancelled' . ($ride['cancelled_by'] === 'driver' ? ' by the driver' : ($ride['cancelled_by'] === 'admin' ? ' by Ultimate App' : '')) . '.' . ($ride['payment_method'] !== 'cash' ? ' Your ' . uride_pay_label((string) $ride['payment_method']) . ' was returned.' : '');
+            else echo 'This ride was cancelled' . ($ride['cancelled_by'] === 'driver' ? ' by the driver' : ($ride['cancelled_by'] === 'admin' ? ' by Ultimate App' : '')) . '.' . ($ride['payment_method'] !== 'cash' ? (((int) ($ride['cancel_fee_centavos'] ?? 0)) > 0 ? ' Your ' . uride_pay_label((string) $ride['payment_method']) . ' was returned less a ₱' . peso((int) $ride['cancel_fee_centavos']) . ' cancellation fee.' : ' Your ' . uride_pay_label((string) $ride['payment_method']) . ' was returned.') : '') . ($ride['cancel_reason'] ? ' Reason: ' . e((string) $ride['cancel_reason']) . '.' : '');
         ?></p>
         <?php if ($status === 'requested' && !$upcoming): ?><p class="uride-searching"><span></span><span></span><span></span></p><p class="uride-help" data-rs-nearby></p><?php endif; ?>
     </div>
@@ -108,8 +108,11 @@ require __DIR__ . '/includes/header.php';
     <?php if (in_array($status, ['requested', 'accepted', 'arrived'], true)): ?>
     <details class="uride-cancel"><summary>Cancel ride</summary>
         <form method="post" data-confirm-cancel><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="code" value="<?= e($code) ?>"><input type="hidden" name="action" value="cancel">
-            <select name="reason" aria-label="Reason"><option value="">Reason (optional)</option><option>Driver is taking too long</option><option>Changed my plans</option><option>Booked by mistake</option><option>Found another ride</option></select>
-            <button type="submit">Cancel this ride</button></form>
+            <?php $cfee = uride_cancel_fee($ride); $freeUntil = $status === 'accepted' && !empty($ride['accepted_at']) && (int) $ride['held_centavos'] > 0 ? strtotime((string) $ride['accepted_at']) + 60 * cancel_uride_free_minutes() : 0; ?>
+            <p class="uride-cancel-fee"><?php if ($cfee > 0): ?>Cancellation fee: <b>₱<?= peso($cfee) ?></b> (<?= e(cancel_pct_label('uride')) ?> of the fare) goes to your driver. You get back ₱<?= peso((int) $ride['held_centavos'] - $cfee) ?>.<?php elseif ($freeUntil > time()): ?>Free cancellation until <?= e(date('g:i A', $freeUntil)) ?>. After that, or once the driver arrives, a <?= e(cancel_pct_label('uride')) ?> cancellation fee applies.<?php elseif ($status === 'requested'): ?>Free to cancel while we look for a driver.<?php else: ?>No cancellation fee for cash rides, but please tell your driver.<?php endif; ?></p>
+            <select name="reason" aria-label="Reason" required data-reason><option value="">Why are you cancelling?</option><?php foreach (cancel_reasons('uride') as $rs): ?><option><?= e($rs) ?></option><?php endforeach; ?></select>
+            <input name="reason_other" maxlength="150" placeholder="Tell us more" aria-label="Other reason" data-reason-other hidden>
+            <button type="submit">Cancel this ride<?= $cfee > 0 ? ' (₱' . peso($cfee) . ' fee)' : '' ?></button></form>
     </details>
     <?php endif; ?>
 

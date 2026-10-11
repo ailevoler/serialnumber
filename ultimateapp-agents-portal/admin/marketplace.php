@@ -193,7 +193,7 @@ elseif ($view === 'bookings'):
         <td><?= e($b['business_name'] ?: 'Ultimate App') ?></td>
         <td><?= e(date('M j, Y', strtotime($b['booking_date']))) ?><small><?= $b['booking_time'] ? e(date('g:i A', strtotime($b['booking_time']))) : '' ?></small></td>
         <td class="num">₱<?= e(number_format((int) $b['total_centavos'] / 100, 2)) ?><small><?= $b['pay_method'] !== 'on_site' ? e(wallet_label($b['pay_method'])) . ' · ' . e($b['payment_status']) : 'On the day' ?></small></td>
-        <td><?= status_badge($b['status']) ?></td>
+        <td><?= status_badge($b['status']) ?><?= $b['cancel_reason'] ? '<small>' . e($b['cancel_reason']) . ((int) $b['cancel_fee_centavos'] ? ' · fee ₱' . e(number_format((int) $b['cancel_fee_centavos'] / 100, 2)) : '') . '</small>' : '' ?></td>
         <td class="mk-acts"><?php if ($b['status'] === 'pending'): ?><?= $act($b['reference'], 'confirm', 'Confirm', 'primary') ?><?= $act($b['reference'], 'decline', 'Decline') ?><?php elseif ($b['status'] === 'confirmed'): ?><?= $b['booking_date'] <= date('Y-m-d') ? $act($b['reference'], 'complete', 'Complete', 'primary') : '' ?><?= $act($b['reference'], 'cancel', 'Cancel', 'danger') ?><?php endif; ?></td>
     </tr><?php endforeach; ?>
     </tbody></table></div>
@@ -216,7 +216,7 @@ else:
         <td><a class="row-link" href="customer.php?id=<?= (int) $o['user_id'] ?>"><?= e($o['full_name']) ?></a><small><?= e((string) $o['contact_mobile']) ?></small></td>
         <td><?= e(ucfirst($o['fulfillment'])) ?><small><?= e((string) $o['delivery_address']) ?></small></td>
         <td class="num">₱<?= e(number_format((float) $o['total_credits'], 2)) ?><small><?= e($o['payment_status']) ?></small></td>
-        <td><?= status_badge($o['status']) ?><?= $o['status_note'] ? '<small>' . e($o['status_note']) . '</small>' : '' ?></td>
+        <td><?= status_badge($o['status']) ?><?= !empty($o['cancel_reason']) ? '<small>' . e($o['cancel_reason']) . ((int) $o['cancel_fee_centavos'] ? ' · fee ₱' . e(number_format((int) $o['cancel_fee_centavos'] / 100, 2)) : '') . '</small>' : '' ?><?= $o['status_note'] ? '<small>' . e($o['status_note']) . '</small>' : '' ?></td>
         <td class="mk-acts"><?php if ($openO && $canManage): ?>
             <form method="post" class="inline" data-confirm="Cancel <?= e($o['reference']) ?> and refund the customer?"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="order"><input type="hidden" name="ref" value="<?= e($o['reference']) ?>"><input type="hidden" name="to" value="cancelled"><input type="hidden" name="note" value="Cancelled by Ultimate App support"><button class="btn small danger" type="submit">Cancel &amp; refund</button></form>
             <form method="post" class="inline"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="order"><input type="hidden" name="ref" value="<?= e($o['reference']) ?>"><input type="hidden" name="to" value="completed"><button class="btn small" type="submit">Mark completed</button></form>

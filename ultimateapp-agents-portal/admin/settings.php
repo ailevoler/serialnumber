@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             foreach (['enabled', 'credits_enabled', 'cash_enabled', 'bcash_enabled'] as $k) setting_save($pdo, "uride.$k", p($k) === '1' ? '1' : '0', $aid);
             // Rent a Ride (vehicle with driver by the hour / whole day)
-            foreach (array_keys(uride_vehicles()) as $v) {
+            foreach (array_keys(uride_rentable_vehicles()) as $v) {
                 setting_save($pdo, "uride.$v.rental_enabled", p("{$v}_rental_enabled") === '1' ? '1' : '0', $aid);
                 setting_save($pdo, "uride.$v.rental_hour_centavos", $pesoToCentavos(p("{$v}_rental_hour", '0'), 'Rental per hour'), $aid);
                 setting_save($pdo, "uride.$v.rental_min_hours", (string) max(1, (int) p("{$v}_rental_min", '1')), $aid);
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setting_save($pdo, 'uride.rental_max_hours', (string) (int) p('rental_max_hours', '12'), $aid);
             setting_save($pdo, 'uride.rental_schedule_days', (string) (int) p('rental_schedule_days', '7'), $aid);
             // Self-drive (customer drives; deposit held in Credits)
-            foreach (array_keys(uride_vehicles()) as $v) {
+            foreach (array_keys(uride_rentable_vehicles()) as $v) {
                 setting_save($pdo, "uride.$v.self_enabled", p("{$v}_self_enabled") === '1' ? '1' : '0', $aid);
                 setting_save($pdo, "uride.$v.self_hour_centavos", $pesoToCentavos(p("{$v}_self_hour", '0'), 'Self-drive per hour'), $aid);
                 setting_save($pdo, "uride.$v.self_min_hours", (string) max(1, (int) p("{$v}_self_min", '1')), $aid);
@@ -246,7 +246,7 @@ admin_header('Settings', 'settings');
 <form method="post">
 <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="section" value="uride">
 <section class="card"><h2>Fare matrix <small>per vehicle type · PHP</small></h2>
-    <p class="muted">Fare = base fare (covers the first km shown) + per-km rate for the rest of the estimated road distance, never below the minimum, rounded up to the peso. Road distance = straight-line distance × road factor below. Passengers see this fare before booking and it does not change during the trip.</p>
+    <p class="muted">Fare = base fare (covers the first km shown) + per-km rate for the rest of the estimated road distance, never below the minimum, rounded up to the peso. Road distance = straight-line distance × road factor below. Passengers see this fare before booking and it does not change during the trip. <b>Boat</b> is for point-to-point rides only (no hourly rental or self-drive); set a higher per-km rate for sea travel.</p>
     <div class="table-wrap"><table class="fare-matrix"><thead><tr><th>Vehicle</th><th>Available</th><th>Base fare</th><th>Km in base</th><th>Per km after</th><th>Minimum fare</th></tr></thead><tbody>
     <?php foreach (uride_vehicles() as $v => $veh): $r = uride_fare_rule($v); ?>
         <tr><td><b><?= e($veh['label']) ?></b><small><?= e($veh['seats']) ?></small></td>
@@ -272,7 +272,7 @@ admin_header('Settings', 'settings');
         <div class="field"><label for="rental_schedule_days">Book up to (days ahead)</label><input id="rental_schedule_days" name="rental_schedule_days" type="number" min="0" max="30" value="<?= (int) $rs['schedule_days'] ?>"><small>0 = only "Now".</small></div>
     </div>
     <div class="table-wrap"><table class="fare-matrix"><thead><tr><th>Vehicle</th><th>Rentable</th><th>Per hour</th><th>Minimum hours</th><th>Whole day</th><th>Example: 3 hours</th></tr></thead><tbody>
-    <?php foreach (uride_vehicles() as $v => $veh): $rr = uride_rental_rule($v); $ex = uride_rental_quote($v, '3'); ?>
+    <?php foreach (uride_rentable_vehicles() as $v => $veh): $rr = uride_rental_rule($v); $ex = uride_rental_quote($v, '3'); ?>
         <tr><td><b><?= e($veh['label']) ?></b></td>
             <td><select name="<?= $v ?>_rental_enabled" aria-label="<?= e($veh['label']) ?> rentable"><option value="1"<?= $rr['enabled'] ? ' selected' : '' ?>>Yes</option><option value="0"<?= !$rr['enabled'] ? ' selected' : '' ?>>No</option></select></td>
             <td><input type="text" name="<?= $v ?>_rental_hour" inputmode="decimal" value="<?= e($pesoV($rr['hour'])) ?>" aria-label="<?= e($veh['label']) ?> per hour"></td>
@@ -290,7 +290,7 @@ admin_header('Settings', 'settings');
         <div class="field"><label for="self_drive_grace_min">Late return grace (minutes)</label><input id="self_drive_grace_min" name="self_drive_grace_min" type="number" min="0" max="120" value="<?= setting_int('uride.self_drive_grace_min', 15) ?>"></div>
     </div>
     <div class="table-wrap"><table class="fare-matrix"><thead><tr><th>Vehicle</th><th>Self-drive</th><th>Per hour</th><th>Minimum hours</th><th>Whole day</th><th>Deposit</th><th>Example: 4 hours</th></tr></thead><tbody>
-    <?php foreach (uride_vehicles() as $v => $veh): $sr = uride_self_rule($v); $ex = uride_rental_quote($v, '4', 'self'); ?>
+    <?php foreach (uride_rentable_vehicles() as $v => $veh): $sr = uride_self_rule($v); $ex = uride_rental_quote($v, '4', 'self'); ?>
         <tr><td><b><?= e($veh['label']) ?></b><small>License <?= uride_license_class($v) === 'car' ? 'B' : 'A / A1' ?></small></td>
             <td><select name="<?= $v ?>_self_enabled" aria-label="<?= e($veh['label']) ?> self-drive"><option value="1"<?= setting("uride.$v.self_enabled", '1') === '1' ? ' selected' : '' ?>>Yes</option><option value="0"<?= setting("uride.$v.self_enabled", '1') !== '1' ? ' selected' : '' ?>>No</option></select></td>
             <td><input type="text" name="<?= $v ?>_self_hour" inputmode="decimal" value="<?= e($pesoV($sr['hour'])) ?>" aria-label="<?= e($veh['label']) ?> self-drive per hour"></td>

@@ -58,7 +58,7 @@ driver_header('Driver application');
         <p class="table-meta" role="status" data-selfie-status></p>
     </div>
 
-    <div class="reg-section"><h2>3 · License &amp; vehicle</h2><p>You can only receive requests for the vehicle type you register.</p>
+    <div class="reg-section"><h2>3 · License &amp; vehicle</h2><p>You can only receive requests for the vehicle type you register. <b>Boat operators:</b> enter your boat captain's (MARINA) license and the boat's registration number as the plate number. Boats get point-to-point rides only.</p>
         <div class="form-grid">
             <div class="field"><label for="license_no">Driver's license no.</label><input id="license_no" name="license_no" type="text" required maxlength="20" placeholder="N01-23-456789" value="<?= $v('license_no') ?>"></div>
             <div class="field"><label for="license_expiry">License expiry</label><input id="license_expiry" name="license_expiry" type="date" required value="<?= $v('license_expiry') ?>"></div>

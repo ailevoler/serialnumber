@@ -39,7 +39,7 @@ $jpeg = static function (): array {
 };
 $base = ['pickup_address' => "D'Mall Boracay", 'pickup_lat' => '11.9667000', 'pickup_lng' => '121.9246000', 'vehicle_type' => 'e_bike', 'payment_method' => 'credits', 'rental_hours' => '4', 'start_mode' => 'now', 'rental_mode' => 'self', 'self_terms' => '1'];
 try {
-    $check(array_keys(uride_vehicles()) === ['e_bike', 'motorcycle', 'e_trike', 'car', 'van'], 'vehicles: E-Bike, Motorcycle, E-Trike, Car, Van');
+    $check(array_keys(uride_vehicles()) === ['e_bike', 'motorcycle', 'e_trike', 'car', 'van', 'boat'], 'vehicles: E-Bike, Motorcycle, E-Trike, Car, Van, Boat');
     $check(uride_vehicles()['van']['seats'] === '10–12 passengers', 'Van seats 10-12');
     $check(!uride_quote('e_bike', 2)['enabled'] && uride_quote('van', 2)['enabled'], 'E-Bike is rental only; Van can be booked for rides');
     $check(uride_quote('van', 2)['fare'] >= 30000, 'Van ride fare from ₱300');

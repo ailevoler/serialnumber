@@ -16,16 +16,26 @@ require_once __DIR__ . '/uride_selfdrive.php';
  * driver's wallet on completion; cash rides only deduct the commission from the driver's wallet.
  */
 
-/** Vehicle types. 'ride' = can be booked for point-to-point rides (E-Bike is rental only). */
+/**
+ * Vehicle types. 'ride' = can be booked for point-to-point rides (E-Bike is rental only).
+ * 'rent' = can be rented by the hour, with driver or self-drive (Boat is point-to-point only).
+ */
 function uride_vehicles(): array
 {
     return [
-        'e_bike' => ['label' => 'E-Bike', 'seats' => '1 rider', 'ride' => false],
-        'motorcycle' => ['label' => 'Motorcycle', 'seats' => '1 passenger', 'ride' => true],
-        'e_trike' => ['label' => 'E-Trike', 'seats' => '3 passengers', 'ride' => true],
-        'car' => ['label' => 'Car', 'seats' => '4 passengers', 'ride' => true],
-        'van' => ['label' => 'Van', 'seats' => '10–12 passengers', 'ride' => true],
+        'e_bike' => ['label' => 'E-Bike', 'seats' => '1 rider', 'ride' => false, 'rent' => true],
+        'motorcycle' => ['label' => 'Motorcycle', 'seats' => '1 passenger', 'ride' => true, 'rent' => true],
+        'e_trike' => ['label' => 'E-Trike', 'seats' => '3 passengers', 'ride' => true, 'rent' => true],
+        'car' => ['label' => 'Car', 'seats' => '4 passengers', 'ride' => true, 'rent' => true],
+        'van' => ['label' => 'Van', 'seats' => '10–12 passengers', 'ride' => true, 'rent' => true],
+        'boat' => ['label' => 'Boat', 'seats' => 'Up to 10 · point to point', 'ride' => true, 'rent' => false],
     ];
+}
+
+/** Vehicle types that can be rented by the hour (with driver or self-drive). */
+function uride_rentable_vehicles(): array
+{
+    return array_filter(uride_vehicles(), static fn(array $v): bool => $v['rent']);
 }
 
 function uride_distance(float $aLat, float $aLng, float $bLat, float $bLng): float
@@ -77,7 +87,7 @@ function uride_settings(): array
 function uride_fare_rule(string $vehicle): array
 {
     if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
-    $defaults = ['e_bike' => [3000, 1000, 3000], 'e_trike' => [3000, 1500, 3000], 'motorcycle' => [4000, 1200, 4000], 'car' => [10000, 2500, 10000], 'van' => [30000, 4000, 30000]][$vehicle];
+    $defaults = ['e_bike' => [3000, 1000, 3000], 'e_trike' => [3000, 1500, 3000], 'motorcycle' => [4000, 1200, 4000], 'car' => [10000, 2500, 10000], 'van' => [30000, 4000, 30000], 'boat' => [50000, 10000, 50000]][$vehicle];
     return [
         'enabled' => uride_vehicles()[$vehicle]['ride'] && setting("uride.$vehicle.enabled", '1') === '1',
         'base' => setting_int("uride.$vehicle.base_centavos", $defaults[0]),
@@ -133,10 +143,10 @@ function uride_rental_settings(): array
 function uride_rental_rule(string $vehicle): array
 {
     if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
-    $d = ['e_bike' => [15000, 1, 80000], 'e_trike' => [50000, 1, 300000], 'motorcycle' => [30000, 1, 180000], 'car' => [80000, 2, 500000], 'van' => [150000, 3, 900000]][$vehicle];
+    $d = ['e_bike' => [15000, 1, 80000], 'e_trike' => [50000, 1, 300000], 'motorcycle' => [30000, 1, 180000], 'car' => [80000, 2, 500000], 'van' => [150000, 3, 900000], 'boat' => [0, 1, 0]][$vehicle];
     return [
         // An E-Bike carries one rider, so it is rented without a driver (self-drive) unless Admin turns this on.
-        'enabled' => setting("uride.$vehicle.rental_enabled", $vehicle === 'e_bike' ? '0' : '1') === '1',
+        'enabled' => uride_vehicles()[$vehicle]['rent'] && setting("uride.$vehicle.rental_enabled", $vehicle === 'e_bike' ? '0' : '1') === '1',
         'hour' => setting_int("uride.$vehicle.rental_hour_centavos", $d[0]),
         'min_hours' => max(1, setting_int("uride.$vehicle.rental_min_hours", $d[1])),
         'day' => setting_int("uride.$vehicle.rental_day_centavos", $d[2]),
@@ -147,9 +157,9 @@ function uride_rental_rule(string $vehicle): array
 function uride_self_rule(string $vehicle): array
 {
     if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
-    $d = ['e_bike' => [10000, 1, 60000, 100000], 'e_trike' => [35000, 2, 200000, 200000], 'motorcycle' => [20000, 2, 120000, 300000], 'car' => [60000, 4, 350000, 500000], 'van' => [120000, 4, 700000, 1000000]][$vehicle];
+    $d = ['e_bike' => [10000, 1, 60000, 100000], 'e_trike' => [35000, 2, 200000, 200000], 'motorcycle' => [20000, 2, 120000, 300000], 'car' => [60000, 4, 350000, 500000], 'van' => [120000, 4, 700000, 1000000], 'boat' => [0, 1, 0, 0]][$vehicle];
     return [
-        'enabled' => setting('uride.self_drive_enabled', '1') === '1' && setting("uride.$vehicle.self_enabled", '1') === '1',
+        'enabled' => uride_vehicles()[$vehicle]['rent'] && setting('uride.self_drive_enabled', '1') === '1' && setting("uride.$vehicle.self_enabled", '1') === '1',
         'hour' => setting_int("uride.$vehicle.self_hour_centavos", $d[0]),
         'min_hours' => max(1, setting_int("uride.$vehicle.self_min_hours", $d[1])),
         'day' => setting_int("uride.$vehicle.self_day_centavos", $d[2]),
@@ -164,6 +174,7 @@ function uride_self_rule(string $vehicle): array
 function uride_license_class(string $vehicle): string
 {
     if ($vehicle === 'e_bike') return setting('uride.e_bike_license', '0') === '1' ? 'motorcycle' : 'none';
+    if ($vehicle === 'boat') return 'none'; // never self-drive
     return in_array($vehicle, ['car', 'van'], true) ? 'car' : 'motorcycle';
 }
 
@@ -266,7 +277,7 @@ function uride_fleet_save(PDO $pdo, int $driverId, array $units, array $models =
 {
     if (!uride_fleet_ready($pdo)) throw new InvalidArgumentException('Rental fleet is being set up. Please try again later.');
     $use = uride_fleet_in_use($pdo, $driverId);
-    foreach (array_keys(uride_vehicles()) as $v) {
+    foreach (array_keys(uride_rentable_vehicles()) as $v) {
         $n = (int) ($units[$v] ?? 0);
         if ($n < 0 || $n > 200) throw new InvalidArgumentException('Units must be 0 to 200.');
         if ($n < ($use[$v] ?? 0)) throw new InvalidArgumentException(($use[$v]) . ' ' . uride_vehicles()[$v]['label'] . ' unit(s) are rented out now. Set at least that many until they come back.');
@@ -317,7 +328,7 @@ function uride_rental_counts(PDO $pdo): array
     if (uride_fleet_ready($pdo)) {
         $total = array_map('intval', $pdo->query("SELECT f.vehicle_type, SUM(f.units) FROM uride_fleet f JOIN uride_drivers d ON d.id = f.driver_id WHERE d.status = 'approved' GROUP BY f.vehicle_type")->fetchAll(PDO::FETCH_KEY_PAIR));
     }
-    foreach (array_keys(uride_vehicles()) as $v) {
+    foreach (array_keys(uride_rentable_vehicles()) as $v) {
         $out[$v] = ['driver' => (int) uride_rental_available($pdo, $v, 'driver'), 'self' => (int) uride_rental_available($pdo, $v, 'self'), 'fleet' => $total[$v] ?? 0];
     }
     return $out;
@@ -348,6 +359,7 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
         throw new InvalidArgumentException('Choose the pick-up location, vehicle, duration and payment method.');
     }
     if (!$s[$payment . '_enabled']) throw new InvalidArgumentException(wallet_label($payment) . ' payment is turned off right now.');
+    if (!uride_vehicles()[$vehicle]['rent']) throw new InvalidArgumentException(uride_vehicles()[$vehicle]['label'] . ' is for point-to-point rides only. Choose Book a Ride.');
     [$lat, $lng] = uride_coordinates($in, 'pickup');
     // Self-drive-only vehicles (E-Bike unless Admin allows a driver): a "with driver" request becomes self-drive.
     if ($mode === 'driver' && !uride_rental_rule($vehicle)['enabled'] && uride_self_rule($vehicle)['enabled']) $mode = 'self';

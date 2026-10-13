@@ -3,6 +3,7 @@
 
 // Fallbacks for installs whose config/config.php predates these settings.
 if (!defined('APP_KEY')) define('APP_KEY', (string) getenv('APP_KEY'));
+if (!defined('APP_VERSION')) define('APP_VERSION', '3.0.0');
 if (!defined('APP_KEY_FILE')) define('APP_KEY_FILE', __DIR__ . '/../config/app.key');
 
 function setting(string $key, ?string $default = null): ?string

@@ -12,16 +12,38 @@ function admin_tabs(string $active): void
 {
     $tabs = [
         'index' => ['admin/index.php', 'chart', 'Dashboard'],
-        'paymongo' => ['admin/paymongo.php', 'settings', 'PayMongo & Giving'],
-        'payments' => ['admin/payments.php', 'receipt', 'Payments'],
-        'projects' => ['admin/projects.php', 'target', 'Projects'],
-        'registrations' => ['admin/registrations.php', 'users', 'Registrations'],
+        'members' => ['admin/members.php', 'users', 'Members'],
+        'inbox' => ['admin/inbox.php', 'mail', 'Inbox'],
+        'community' => ['admin/community.php', 'comment', 'Community'],
+        'announcements' => ['admin/announcements.php', 'bell', 'Announcements'],
+        'events' => ['admin/events.php', 'calendar', 'Events'],
+        'ndc' => ['admin/ndc.php', 'shield', 'NDC Posts'],
+        'payments' => ['admin/payments.php', 'receipt', 'Donations'],
+        'paymongo' => ['admin/paymongo.php', 'qr', 'QR Ph & Giving'],
+        'registrations' => ['admin/registrations.php', 'check', 'Registrations'],
+        'about' => ['admin/about.php', 'church', 'About & Office'],
+        'email' => ['admin/email.php', 'send', 'Email'],
     ];
-    echo '<nav class="admin-tabs chips-scroll">';
+    echo '<nav class="admin-tabs chips-scroll" aria-label="Admin sections">';
     foreach ($tabs as $k => [$href, $ic, $label]) {
-        echo '<a href="' . e(url($href)) . '" class="' . ($k === $active ? 'on' : '') . '">' . icon($ic) . e($label) . '</a>';
+        echo '<a href="' . e(url($href)) . '" class="' . ($k === $active ? 'on' : '') . '"' . ($k === $active ? ' aria-current="page"' : '') . '>' . icon($ic) . e($label) . '</a>';
     }
     echo '</nav>';
+}
+
+/** Send the same notification to every confirmed member (one INSERT … SELECT). */
+function notify_all_members(string $type, string $message, string $link): void
+{
+    q("INSERT INTO notifications (user_id, actor_id, type, message, link)
+       SELECT id, NULL, ?, ?, ? FROM users WHERE status = 'approved'", [$type, mb_substr($message, 0, 255), $link]);
+}
+
+/** Save an optional image upload; returns the stored path, the existing one, or null if removed. */
+function admin_image(string $field, ?string $current, string $folder = 'events'): ?string
+{
+    if (!empty($_POST['remove_' . $field])) return null;
+    $up = handle_upload($field, $folder, ['image']);
+    return $up[0] ?? $current;
 }
 
 function csv_out(string $filename, array $header, array $rows): never

@@ -7,7 +7,7 @@ function current_user(): ?array
     static $user = false;
     if ($user === false) {
         $user = empty($_SESSION['uid']) ? null
-            : q_one('SELECT u.*, c.name AS church_name FROM users u LEFT JOIN churches c ON c.id = u.church_id WHERE u.id = ?', [$_SESSION['uid']]);
+            : q_one('SELECT * FROM users WHERE id = ?', [$_SESSION['uid']]);
     }
     return $user;
 }
@@ -20,6 +20,16 @@ function uid(): int
 function require_login(): array
 {
     $u = current_user();
+    if ($u && $u['status'] !== 'approved') {
+        // Suspended (or not yet confirmed) accounts can't use the app.
+        $msg = $u['status'] === 'suspended'
+            ? 'This account is suspended. Please contact the PCEC office if you think this is a mistake.'
+            : 'Please confirm your email address first. We sent you a link when you signed up.';
+        logout_user();
+        session_start();
+        flash('error', $msg);
+        $u = null;
+    }
     if (!$u) {
         if (str_contains($_SERVER['SCRIPT_NAME'], '/api/')) {
             json_out(['error' => 'Not logged in'], 401);
@@ -27,6 +37,18 @@ function require_login(): array
         redirect('login.php');
     }
     return $u;
+}
+
+/** Members can use the app once their email is confirmed and they are not suspended. */
+function can_use_app(?array $u): bool
+{
+    return $u !== null && $u['status'] === 'approved';
+}
+
+/** "New Member" for the first 30 days, until an admin marks them as reviewed. */
+function is_new_member(array $u): bool
+{
+    return !$u['reviewed_at'] && strtotime((string) $u['created_at']) > time() - 30 * 86400;
 }
 
 function is_admin(): bool

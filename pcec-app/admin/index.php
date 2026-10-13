@@ -1,55 +1,55 @@
 <?php
 require __DIR__ . '/_admin.php';
 
-$s = q_one("SELECT
-    COALESCE(SUM(CASE WHEN purpose = 'donation' AND status = 'paid' AND paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN amount - fee_amount END), 0) AS month_total,
-    COALESCE(SUM(CASE WHEN purpose = 'donation' AND status = 'paid' THEN amount - fee_amount END), 0) AS all_total,
-    COALESCE(SUM(CASE WHEN purpose = 'event' AND status = 'paid' THEN amount - fee_amount END), 0) AS event_total,
-    COUNT(DISTINCT CASE WHEN purpose = 'donation' AND status = 'paid' THEN user_id END) AS donors,
-    SUM(status = 'pending' AND method = 'bank' AND payer_reference IS NOT NULL) AS to_verify
-  FROM payments");
-$regs = (int) q_val("SELECT COUNT(*) FROM event_registrations WHERE status = 'confirmed'");
-$byFund = q_all("SELECT d.fund, SUM(p.amount - p.fee_amount) AS total FROM donations d JOIN payments p ON p.id = d.payment_id WHERE p.status = 'paid' GROUP BY d.fund ORDER BY total DESC");
-$recent = q_all("SELECT p.*, u.first_name, u.last_name FROM payments p LEFT JOIN users u ON u.id = p.user_id WHERE p.status <> 'cancelled' ORDER BY p.created_at DESC LIMIT 8");
-$fundMax = max(1, ...array_map(fn($r) => (int) $r['total'], $byFund ?: [['total' => 1]]));
+$c = q_one("SELECT
+    (SELECT COUNT(*) FROM users WHERE status = 'approved' AND reviewed_at IS NULL AND created_at > NOW() - INTERVAL 30 DAY) AS new_members,
+    (SELECT COUNT(*) FROM users WHERE status = 'pending') AS unconfirmed,
+    (SELECT COUNT(*) FROM contact_messages WHERE is_read = 0) AS unread,
+    (SELECT COUNT(DISTINCT post_id) FROM post_reports WHERE resolved_at IS NULL) AS reports,
+    (SELECT COALESCE(SUM(amount - fee_amount), 0) FROM payments WHERE purpose = 'donation' AND status = 'paid' AND paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS month_gifts,
+    (SELECT COUNT(*) FROM users WHERE status = 'approved') AS members");
+$name = current_user()['first_name'];
+$cards = [
+    ['admin/members.php', 'users', 'Member Management', 'View and manage members', (int) $c['new_members'] + (int) $c['unconfirmed']],
+    ['admin/inbox.php', 'mail', 'Inbox', 'Contact Us messages', (int) $c['unread']],
+    ['admin/community.php', 'comment', 'Community', 'Posts and reports', (int) $c['reports']],
+    ['admin/announcements.php', 'bell', 'Announcements', 'Post updates', 0],
+    ['admin/events.php', 'calendar', 'Events', 'Manage events', 0],
+    ['admin/ndc.php', 'shield', 'NDC Posts', 'Events, pictures, promotions', 0],
+    ['admin/payments.php', 'receipt', 'Donations', 'QR Ph gifts and event fees', 0],
+    ['admin/paymongo.php', 'qr', 'QR Ph & Giving', 'PayMongo keys, amounts and fees', 0],
+    ['admin/about.php', 'church', 'About & Office', 'Text and contact details', 0],
+    ['admin/email.php', 'send', 'Email Settings', 'Confirmation and reset emails', 0],
+    ['index.php', 'home', 'Member App', 'See what members see', 0],
+];
 
 $pageTitle = 'Admin';
 $activeNav = 'admin';
 require __DIR__ . '/../includes/header.php';
-admin_tabs('index');
 ?>
 <div class="admin-wrap">
+  <header class="dash-header">
+    <div><h2>Admin Dashboard</h2><p>Welcome back, <?= e($name) ?></p></div>
+  </header>
   <?php if (!PayMongo::fromSettings()): ?>
-    <div class="alert alert-info">PayMongo is not connected yet. <a href="<?= e(url('admin/paymongo.php')) ?>">Set it up now</a> to accept QR Ph, cards and e-wallets.</div>
+    <div class="alert alert-info">QR Ph giving is not connected yet. <a href="<?= e(url('admin/paymongo.php')) ?>">Set up PayMongo</a> to accept donations and event fees.</div>
   <?php endif; ?>
   <section class="kpis">
-    <div class="card kpi"><small>Donations this month</small><strong><?= money((int) $s['month_total']) ?></strong></div>
-    <div class="card kpi"><small>Total donations</small><strong><?= money((int) $s['all_total']) ?></strong></div>
-    <div class="card kpi"><small>Donors</small><strong><?= (int) $s['donors'] ?></strong></div>
-    <div class="card kpi"><small>Event fees collected</small><strong><?= money((int) $s['event_total']) ?></strong></div>
-    <div class="card kpi"><small>Confirmed registrations</small><strong><?= $regs ?></strong></div>
-    <a class="card kpi <?= $s['to_verify'] ? 'kpi-alert' : '' ?>" href="<?= e(url('admin/payments.php?method=bank&status=pending')) ?>"><small>Bank transfers to verify</small><strong><?= (int) $s['to_verify'] ?></strong></a>
+    <a class="card kpi" href="<?= e(url('admin/members.php?show=new')) ?>"><small>New members</small><strong><?= (int) $c['new_members'] ?></strong></a>
+    <a class="card kpi" href="<?= e(url('admin/members.php?show=pending')) ?>"><small>Email not confirmed</small><strong><?= (int) $c['unconfirmed'] ?></strong></a>
+    <a class="card kpi<?= $c['unread'] ? ' kpi-alert' : '' ?>" href="<?= e(url('admin/inbox.php')) ?>"><small>Unread messages</small><strong><?= (int) $c['unread'] ?></strong></a>
+    <a class="card kpi" href="<?= e(url('admin/payments.php')) ?>"><small>Gifts this month</small><strong><?= money((int) $c['month_gifts']) ?></strong></a>
+    <a class="card kpi" href="<?= e(url('admin/members.php?show=all')) ?>"><small>Active members</small><strong><?= (int) $c['members'] ?></strong></a>
+    <a class="card kpi<?= $c['reports'] ? ' kpi-alert' : '' ?>" href="<?= e(url('admin/community.php')) ?>"><small>Reported posts</small><strong><?= (int) $c['reports'] ?></strong></a>
   </section>
-
-  <?php if ($byFund): ?>
-  <section class="card">
-    <h2 class="card-title">Giving by fund</h2>
-    <?php foreach ($byFund as $f): ?>
-      <div class="bar-row"><span><?= e($f['fund']) ?></span><span class="bar"><span style="width:<?= round($f['total'] / $fundMax * 100) ?>%"></span></span><b><?= money((int) $f['total']) ?></b></div>
-    <?php endforeach; ?>
-  </section>
-  <?php endif; ?>
-
-  <section class="card list-card">
-    <div class="section-head" style="margin:8px 10px"><h2>Recent payments</h2><a href="<?= e(url('admin/payments.php')) ?>">See All <?= icon('chevron-right') ?></a></div>
-    <?php foreach ($recent as $r): ?>
-      <a class="giving-row" href="<?= e(url('admin/payments.php?q=' . urlencode($r['reference']))) ?>">
-        <span class="giving-ic <?= $r['purpose'] === 'event' ? 'is-event' : '' ?>"><?= icon($r['purpose'] === 'event' ? 'calendar' : 'gift') ?></span>
-        <span class="giving-text"><strong><?= e(trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? '')) ?: 'Guest') ?></strong><small><?= e($r['description']) ?> · <?= e(time_ago($r['created_at'])) ?></small></span>
-        <span class="giving-amt"><b><?= money((int) $r['amount']) ?></b><?= payment_status_badge($r['status']) ?></span>
+  <nav class="dash-grid" aria-label="Admin">
+    <?php foreach ($cards as [$href, $ic, $title, $sub, $badge]): ?>
+      <a class="card dash-card" href="<?= e(url($href)) ?>">
+        <span class="dash-card-icon"><?= icon($ic) ?></span>
+        <?php if ($badge): ?><b class="pill dash-badge" aria-label="<?= $badge ?> need attention"><?= $badge ?></b><?php endif; ?>
+        <strong><?= e($title) ?></strong><small><?= e($sub) ?></small>
       </a>
     <?php endforeach; ?>
-    <?php if (!$recent) empty_state('receipt', 'No payments yet.'); ?>
-  </section>
+  </nav>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

@@ -7,18 +7,6 @@ const MIN_PAYMENT = 2000; // ₱20.00 — PayMongo's minimum charge
 // to bring those options back (their checkout / bank-transfer flows are still implemented).
 const ALLOWED_METHODS = ['qrph'];
 
-/** Add new columns to databases created by an older schema.sql (runs once). */
-function payments_schema_upgrade(): void
-{
-    if ((int) setting('schema_version', '1') >= 2) return;
-    try {
-        db()->exec('ALTER TABLE payments ADD COLUMN fee_amount INT UNSIGNED NOT NULL DEFAULT 0 AFTER amount');
-    } catch (PDOException $e) {
-        if (($e->errorInfo[1] ?? 0) !== 1060) throw $e; // 1060 = column already exists
-    }
-    setting_set('schema_version', '2');
-}
-
 /** Processing-fee (MDR) settings: percent (e.g. 1.5) and fixed fee in centavos. */
 function fee_config(): array
 {

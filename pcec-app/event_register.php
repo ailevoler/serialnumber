@@ -10,7 +10,7 @@ if (!$ev) {
     flash('error', 'Event not found.');
     redirect('events.php');
 }
-$back = 'event.php?id=' . $ev['id'];
+$back = ($_POST['back'] ?? '') === 'events' ? 'events.php' : 'event.php?id=' . $ev['id'];
 $reg = q_one('SELECT * FROM event_registrations WHERE event_id = ? AND user_id = ?', [$ev['id'], uid()]);
 
 if (($_POST['action'] ?? '') === 'cancel') {
@@ -18,7 +18,7 @@ if (($_POST['action'] ?? '') === 'cancel') {
         q('DELETE FROM event_registrations WHERE id = ?', [$reg['id']]);
         q('DELETE FROM event_rsvps WHERE event_id = ? AND user_id = ?', [$ev['id'], uid()]);
         if ($reg['payment_id']) q("UPDATE payments SET status = 'cancelled' WHERE id = ? AND status = 'pending'", [$reg['payment_id']]);
-        flash('info', 'Your registration was cancelled.');
+        flash('info', 'Registration cancelled.');
     } elseif ($reg) {
         flash('info', 'Paid registrations can be cancelled by contacting the organizer.');
     }
@@ -40,7 +40,7 @@ if ((int) $ev['fee'] === 0) {
     q("INSERT INTO event_registrations (event_id, user_id, status) VALUES (?,?,'confirmed') ON DUPLICATE KEY UPDATE status = 'confirmed'", [$ev['id'], uid()]);
     q('INSERT IGNORE INTO event_rsvps (event_id, user_id) VALUES (?,?)', [$ev['id'], uid()]);
     notify((int) $ev['user_id'], uid(), 'rsvp', display_name(current_user()) . ' registered for ' . $ev['title'] . '.', $back);
-    flash('success', "You're registered for " . $ev['title'] . '!');
+    flash('success', "You're registered for " . $ev['title'] . '. See you there!');
     redirect($back);
 }
 

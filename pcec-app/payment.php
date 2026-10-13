@@ -10,7 +10,7 @@ if (!$p) {
 }
 $self = 'payment.php?ref=' . urlencode($p['reference']);
 $reg = $p['purpose'] === 'event' ? q_one('SELECT r.*, e.title, e.id AS eid FROM event_registrations r JOIN events e ON e.id = r.event_id WHERE r.payment_id = ?', [$p['id']]) : null;
-$don = $p['purpose'] === 'donation' ? q_one('SELECT d.*, gp.title AS project FROM donations d LEFT JOIN giving_projects gp ON gp.id = d.project_id WHERE d.payment_id = ?', [$p['id']]) : null;
+$don = $p['purpose'] === 'donation' ? q_one('SELECT * FROM donations WHERE payment_id = ?', [$p['id']]) : null;
 
 if (is_post() && $p['status'] === 'pending') {
     csrf_check();
@@ -31,7 +31,7 @@ if (is_post() && $p['status'] === 'pending') {
             q("UPDATE payments SET status = 'cancelled' WHERE id = ? AND status = 'pending'", [$p['id']]);
             if ($reg) q("DELETE FROM event_registrations WHERE id = ? AND status = 'pending'", [$reg['id']]);
             flash('info', 'Payment cancelled.');
-            redirect($reg ? 'event.php?id=' . $reg['eid'] : 'give.php');
+            redirect($reg ? 'event.php?id=' . $reg['eid'] : 'donate.php');
         }
     } catch (Throwable $e) {
         flash('error', $e instanceof RuntimeException ? $e->getMessage() : 'Something went wrong. Please try again.');
@@ -44,7 +44,7 @@ $p = payment_refresh($p, !empty($_GET['return']));
 $opts = payment_options();
 $qrValid = $p['method'] === 'qrph' && $p['qr_image'] && strtotime((string) $p['qr_expires_at']) > time();
 $payee = setting('giving_payee', APP_ORG);
-$forLabel = $reg ? $reg['title'] : ($don ? ($don['project'] ?: $don['fund']) : '');
+$forLabel = $reg ? $reg['title'] : ($don ? $don['fund'] : '');
 
 $pageTitle = $p['status'] === 'paid' ? 'Receipt' : 'Complete Payment';
 $activeNav = $p['purpose'] === 'event' ? 'events' : 'give';
@@ -69,7 +69,7 @@ require __DIR__ . '/includes/header.php';
     </dl>
     <div class="receipt-actions">
       <?php if ($reg): ?><a class="btn btn-gradient" href="<?= e(url('event.php?id=' . $reg['eid'])) ?>"><?= icon('calendar') ?> View Event</a>
-      <?php else: ?><a class="btn btn-gradient" href="<?= e(url('give.php')) ?>"><?= icon('gift') ?> Give Again</a><?php endif; ?>
+      <?php else: ?><a class="btn btn-gradient" href="<?= e(url('donate.php')) ?>"><?= icon('gift') ?> Give Again</a><?php endif; ?>
       <a class="btn btn-outline" href="<?= e(url('my_giving.php')) ?>"><?= icon('receipt') ?> My Giving</a>
       <button class="btn btn-outline" onclick="window.print()"><?= icon('download') ?> Save</button>
     </div>
@@ -80,7 +80,7 @@ require __DIR__ . '/includes/header.php';
     <div class="receipt-check is-off"><?= icon('x') ?></div>
     <h2>Payment <?= e($p['status']) ?></h2>
     <p class="muted"><?= e($p['reference']) ?> · <?= money((int) $p['amount']) ?></p>
-    <div class="receipt-actions"><a class="btn btn-gradient" href="<?= e(url($reg ? 'event.php?id=' . $reg['eid'] : 'give.php')) ?>">Start again</a></div>
+    <div class="receipt-actions"><a class="btn btn-gradient" href="<?= e(url($reg ? 'event.php?id=' . $reg['eid'] : 'donate.php')) ?>">Start again</a></div>
   </section>
 
 <?php else: ?>

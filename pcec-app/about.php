@@ -2,24 +2,53 @@
 require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/partials.php';
 
+const ABOUT_MISSION = 'The Philippine Council of Evangelical Churches (PCEC) is a fellowship of churches committed to the unity of the body of Christ and the proclamation of the Gospel to the nation and the world. We serve as a platform for collaboration, resource sharing, and collective witness among our member denominations.';
+const ABOUT_HISTORY = 'Founded on the principles of biblical authority and ecclesiastical cooperation, PCEC has been instrumental in the development of evangelical thought and practice in the Philippines. Through decades of ministry, we have supported the growth of local churches and contributed to social outreach programs that address the spiritual and physical needs of our communities.';
+$values = ['Biblical Inerrancy and Authority', 'Evangelism and Discipleship', 'Ecclesiastical Unity and Fellowship', 'Social Responsibility and Outreach'];
+$org = setting('about_org_name') ?: 'Philippine Council of Evangelical Churches';
+$mission = trim((string) setting('about_text')) ?: ABOUT_MISSION;
+$site = trim((string) setting('about_website'));
+$year = trim((string) setting('about_established_year'));
+$location = trim((string) setting('about_office_location')) ?: 'Manila, Philippines';
+
 $pageTitle = 'About PCEC';
-$activeNav = 'more';
+$activeNav = 'about';
+$rightRail = right_rail();
 require __DIR__ . '/includes/header.php';
 ?>
 <section class="banner banner-tall">
   <div class="banner-text">
-    <h2>One Body<br>Many Churches<br>Greater Impact</h2>
+    <p class="banner-pillars">About PCEC</p>
+    <h2><?= e($org) ?></h2>
     <p class="banner-pillars">Unity &middot; Evangelism &middot; Discipleship</p>
   </div>
 </section>
-<section class="card prose">
-  <h2>Philippine Council of Evangelical Churches</h2>
-  <p>PCEC is a fellowship of evangelical denominations, churches, and para-church organizations in the Philippines, working together with God to transform the nation through the gospel of Jesus Christ.</p>
-  <div class="pillars">
-    <div class="pillar"><span class="tile-blue"><?= icon('users') ?></span><h3>Unity</h3><p>Standing together as one body of Christ across denominations and regions.</p></div>
-    <div class="pillar"><span class="tile-orange"><?= icon('globe') ?></span><h3>Evangelism</h3><p>Reaching every Filipino with the good news of salvation.</p></div>
-    <div class="pillar"><span class="tile-green"><?= icon('book') ?></span><h3>Discipleship</h3><p>Equipping believers and leaders to grow in Christlikeness.</p></div>
-  </div>
-  <p>This Community Platform connects member churches and leaders to pray, share resources, coordinate events, and encourage one another.</p>
+<section class="card about-sec">
+  <h2 class="sec-label">Mission</h2>
+  <p class="lead pre-line"><?= e($mission) ?></p>
 </section>
+<section class="card about-sec">
+  <h2 class="sec-label">Our History</h2>
+  <p class="lead"><?= e(ABOUT_HISTORY) ?></p>
+</section>
+<section class="card about-sec">
+  <h2 class="sec-label">Core Values</h2>
+  <div class="pillars">
+    <?php foreach ($values as $i => $v): ?>
+      <div class="pillar"><span class="<?= ['tile-blue', 'tile-orange', 'tile-green', 'tile-purple'][$i] ?>"><?= icon(['book', 'globe', 'users', 'heart'][$i]) ?></span><h3><?= e($v) ?></h3></div>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php if ($site): ?>
+<section class="card about-sec">
+  <h2 class="sec-label">Official Website</h2>
+  <p class="muted">For the most recent updates, official statements, and detailed resources, please visit our web portal.</p>
+  <a class="btn btn-outline btn-block" href="<?= e($site) ?>" target="_blank" rel="noopener external"><?= icon('external') ?> Visit PCEC Portal</a>
+</section>
+<?php endif; ?>
+<footer class="about-foot">
+  <?php if ($year): ?><p>ESTABLISHED <?= e($year) ?></p><?php endif; ?>
+  <p><?= e(strtoupper($location)) ?></p>
+  <a class="link" href="<?= e(url('contact.php')) ?>">Contact the PCEC office <?= icon('chevron-right') ?></a>
+</footer>
 <?php require __DIR__ . '/includes/footer.php'; ?>

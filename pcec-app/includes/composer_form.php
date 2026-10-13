@@ -1,17 +1,16 @@
 <?php $composerId = $composerId ?? 'm'; ?>
-<form class="composer-form" action="<?= e(url('post_create.php')) ?>" method="post" enctype="multipart/form-data">
+<form class="composer-form" action="<?= e(url('community_action.php')) ?>" method="post" enctype="multipart/form-data">
   <?= csrf_field() ?>
+  <input type="hidden" name="action" value="create">
   <div class="composer-row">
     <?= avatar(current_user(), 'md') ?>
-    <textarea name="body" rows="3" placeholder="<?= e(t("What's on your mind?")) ?>" maxlength="5000"></textarea>
+    <textarea name="body" rows="3" placeholder="Share a prayer request, a testimony or an encouraging word…" maxlength="2000"></textarea>
   </div>
   <div class="composer-preview" hidden></div>
-  <input type="file" name="media" id="media-<?= e($composerId) ?>" class="visually-hidden">
-  <div class="composer-actions">
-    <label for="media-<?= e($composerId) ?>" class="ca ca-photo" data-accept="image/*"><span class="ca-ic"><?= icon('camera') ?></span><?= e(t('Photo')) ?></label>
-    <label for="media-<?= e($composerId) ?>" class="ca ca-video" data-accept="video/*"><span class="ca-ic"><?= icon('video') ?></span><?= e(t('Video')) ?></label>
-    <a href="<?= e(url('events.php?new=1')) ?>" class="ca ca-event"><span class="ca-ic"><?= icon('calendar') ?></span><?= e(t('Event')) ?></a>
-    <label for="media-<?= e($composerId) ?>" class="ca ca-file" data-accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"><span class="ca-ic"><?= icon('file') ?></span><?= e(t('File')) ?></label>
+  <input type="file" name="media" id="media-<?= e($composerId) ?>" class="visually-hidden" accept="image/jpeg,image/png,image/webp,image/gif">
+  <div class="composer-tools">
+    <label for="media-<?= e($composerId) ?>" class="composer-tool"><?= icon('camera') ?> Add photo</label>
+    <button class="btn btn-gradient composer-submit"><?= icon('send') ?> Post</button>
   </div>
-  <button class="btn btn-gradient btn-block composer-submit"><?= icon('send') ?> <?= e(t('Post')) ?></button>
+  <p class="composer-rules">Please follow the <a href="<?= e(url('terms.php#community-rules')) ?>" target="_blank" rel="noopener">Community Rules</a>.</p>
 </form>

@@ -1,33 +1,48 @@
 <?php
 /**
  * App shell header. Before including set:
- *   $pageTitle (string), $activeNav (home|events|post|chat|more|churches|members|resources|prayer|posts|notifications|profile)
+ *   $pageTitle (string)
+ *   $activeNav — home|events|about|donate|profile, or an inner page: community|news|media|notifications|
+ *                membership|contact|settings|chat|members|admin (highlights its parent tab)
  *   $hero (bool) — show the big welcome hero (home page only)
  */
 $authUser = require_login();
 $pageTitle = $pageTitle ?? 'Home';
 $activeNav = $activeNav ?? '';
 $hero = $hero ?? false;
+$activeTab = [
+    'community' => 'home', 'news' => 'home', 'media' => 'home', 'notifications' => 'home',
+    'membership' => 'profile', 'contact' => 'profile', 'settings' => 'profile', 'members' => 'profile', 'chat' => 'profile', 'admin' => 'profile',
+][$activeNav] ?? $activeNav;
 $unreadNotif = (int) q_val('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0', [uid()]);
 $unreadChat = (int) q_val(
     'SELECT COUNT(*) FROM messages m JOIN conversation_members cm ON cm.conversation_id = m.conversation_id AND cm.user_id = ?
      WHERE m.user_id <> ? AND m.id > cm.last_read_id', [uid(), uid()]);
 
-$sideNav = [
+$mainTabs = [
     'home' => ['index.php', 'home', 'Home'],
-    'posts' => ['posts.php', 'edit', 'Posts'],
     'events' => ['events.php', 'calendar', 'Events'],
-    'churches' => ['churches.php', 'church', 'Our Churches'],
-    'members' => ['members.php', 'users', 'Members'],
-    'prayer' => ['prayer.php', 'pray', 'Prayer Requests'],
-    'resources' => ['resources.php', 'book', 'Resources'],
+    'about' => ['about.php', 'church', 'About'],
+    'donate' => ['donate.php', 'heart', 'Donate'],
+    'profile' => ['profile.php', 'user', 'Profile'],
+];
+$moreNav = [
+    'community' => ['community.php', 'comment', 'Community Feed'],
+    'news' => ['news.php', 'bell', 'Latest News'],
+    'media' => ['media.php', 'camera', 'Media'],
     'chat' => ['chat.php', 'chat', 'Chat'],
-    'give' => ['give.php', 'gift', 'Give'],
+    'members' => ['members.php', 'users', 'Members'],
     'notifications' => ['notifications.php', 'bell', 'Notifications'],
 ];
 if (is_admin()) {
-    $sideNav['admin'] = ['admin/index.php', 'settings', 'Admin'];
+    $moreNav['admin'] = ['admin/index.php', 'settings', 'Admin Dashboard'];
 }
+$headerIcons = function () use ($unreadNotif, $unreadChat): string {
+    return '<a href="' . e(url('chat.php')) . '" class="bell" aria-label="Chat' . ($unreadChat ? ", $unreadChat new" : '') . '">' . icon('chat')
+        . ($unreadChat ? '<b class="badge">' . ($unreadChat > 9 ? '9+' : $unreadChat) . '</b>' : '') . '</a>'
+        . '<a href="' . e(url('notifications.php')) . '" class="bell" aria-label="Notifications' . ($unreadNotif ? ", $unreadNotif new" : '') . '">' . icon('bell')
+        . ($unreadNotif ? '<b class="badge">' . ($unreadNotif > 9 ? '9+' : $unreadNotif) . '</b>' : '') . '</a>';
+};
 ?>
 <!doctype html>
 <html lang="<?= lang() === 'fil' ? 'fil' : 'en' ?>">
@@ -50,7 +65,11 @@ if (is_admin()) {
     <span>Philippine Council of<br>Evangelical Churches</span>
   </a>
   <nav class="side-nav">
-    <?php foreach ($sideNav as $key => [$href, $ic, $label]): ?>
+    <?php foreach ($mainTabs as $key => [$href, $ic, $label]): ?>
+      <a href="<?= e(url($href)) ?>" class="<?= $activeTab === $key && !isset($moreNav[$activeNav]) ? 'active' : '' ?>"><?= icon($ic) ?><span><?= e(t($label)) ?></span></a>
+    <?php endforeach; ?>
+    <span class="side-sep"></span>
+    <?php foreach ($moreNav as $key => [$href, $ic, $label]): ?>
       <a href="<?= e(url($href)) ?>" class="<?= $activeNav === $key ? 'active' : '' ?>">
         <?= icon($ic) ?><span><?= e(t($label)) ?></span>
         <?php if ($key === 'chat' && $unreadChat): ?><b class="pill"><?= $unreadChat ?></b><?php endif; ?>
@@ -58,7 +77,7 @@ if (is_admin()) {
       </a>
     <?php endforeach; ?>
   </nav>
-  <button class="btn btn-gradient btn-block" data-open="composer-modal"><?= icon('plus-square') ?> <?= e(t('Post')) ?></button>
+  <button class="btn btn-gradient btn-block" data-open="composer-modal"><?= icon('edit') ?> New Post</button>
   <div class="sidebar-user">
     <a href="<?= e(url('profile.php')) ?>" class="sidebar-user-link">
       <?= avatar($authUser, 'sm') ?>
@@ -78,9 +97,7 @@ if (is_admin()) {
       </a>
       <div class="hero-actions">
         <?= lang_switch() ?>
-        <a href="<?= e(url('notifications.php')) ?>" class="bell" aria-label="<?= e(t('Notifications')) ?>">
-          <?= icon('bell') ?><?php if ($unreadNotif): ?><b class="badge"><?= $unreadNotif ?></b><?php endif; ?>
-        </a>
+        <?= $headerIcons() ?>
         <a href="<?= e(url('profile.php')) ?>" class="hero-avatar"><?= avatar($authUser, 'lg') ?></a>
       </div>
     </div>
@@ -96,10 +113,8 @@ if (is_admin()) {
     <h1><?= e(t($pageTitle)) ?></h1>
     <div class="topbar-actions">
       <?= lang_switch() ?>
-      <a href="<?= e(url('notifications.php')) ?>" class="bell" aria-label="<?= e(t('Notifications')) ?>">
-        <?= icon('bell') ?><?php if ($unreadNotif): ?><b class="badge"><?= $unreadNotif ?></b><?php endif; ?>
-      </a>
-      <a href="<?= e(url('profile.php')) ?>"><?= avatar($authUser, 'sm') ?></a>
+      <?= $headerIcons() ?>
+      <a href="<?= e(url('profile.php')) ?>" class="topbar-avatar"><?= avatar($authUser, 'sm') ?></a>
     </div>
   </header>
 <?php endif; ?>

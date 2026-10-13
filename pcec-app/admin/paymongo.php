@@ -186,8 +186,8 @@ admin_tabs('paymongo');
     <?= csrf_field() ?><input type="hidden" name="action" value="save_giving">
     <h2 class="card-title"><?= icon('gift') ?> Giving Options</h2>
     <label>Payee name<input name="giving_payee" value="<?= e(setting('giving_payee', APP_ORG)) ?>" required></label>
-    <label>Funds (comma separated)<input name="giving_funds" value="<?= e(setting('giving_funds')) ?>" placeholder="General Fund,Missions,Disaster Relief"></label>
-    <label>Preset amounts in ₱ (up to 5, comma separated)<input name="giving_amounts" value="<?= e(setting('giving_amounts')) ?>" placeholder="100,500,1000,2500,5000"></label>
+    <label>Fund name (shown on receipts)<input name="giving_funds" value="<?= e(setting('giving_funds')) ?>" placeholder="General Fund"></label>
+    <label>Preset amounts in ₱ (up to 5, comma separated)<input name="giving_amounts" value="<?= e(setting('giving_amounts')) ?>" placeholder="100,250,500,1000,2500"></label>
     <button class="btn btn-outline btn-block"><?= icon('check') ?> Save Giving Options</button>
   </form>
 </div>

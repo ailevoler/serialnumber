@@ -7,8 +7,8 @@ $events = q_all("SELECT e.id, e.title, e.starts_at, e.fee,
                  FROM events e ORDER BY e.starts_at DESC");
 $eventId = (int) ($_GET['event'] ?? ($events[0]['id'] ?? 0));
 $event = q_one('SELECT * FROM events WHERE id = ?', [$eventId]);
-$rows = $event ? q_all("SELECT r.*, u.first_name, u.last_name, u.title, u.email, u.username, c.name AS church, p.reference, p.method, p.amount - p.fee_amount AS amount, p.fee_amount, p.status AS pay_status
-                        FROM event_registrations r JOIN users u ON u.id = r.user_id LEFT JOIN churches c ON c.id = u.church_id
+$rows = $event ? q_all("SELECT r.*, u.first_name, u.last_name, u.title, u.email, u.username, u.church_name AS church, p.reference, p.method, p.amount - p.fee_amount AS amount, p.fee_amount, p.status AS pay_status
+                        FROM event_registrations r JOIN users u ON u.id = r.user_id
                         LEFT JOIN payments p ON p.id = r.payment_id WHERE r.event_id = ? ORDER BY r.status = 'confirmed' DESC, r.created_at", [$eventId]) : [];
 
 if ($event && ($_GET['export'] ?? '') === 'csv') {

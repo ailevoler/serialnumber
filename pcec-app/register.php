@@ -4,89 +4,96 @@ require __DIR__ . '/includes/layout_auth.php';
 
 if (current_user()) redirect('index.php');
 
+const MIN_PASSWORD = 8;
 $errors = [];
-$churches = q_all('SELECT id, name, city, region, denomination FROM churches ORDER BY name');
+$fieldErr = [];
+
+/** Unique username from the email address (members sign in with their email). */
+function make_username(string $email): string
+{
+    $base = substr(preg_replace('/[^a-z0-9_.]/', '', strtolower(strstr($email, '@', true) ?: 'member')), 0, 24) ?: 'member';
+    $name = strlen($base) >= 3 ? $base : $base . 'member';
+    for ($i = 0; q_val('SELECT 1 FROM users WHERE username = ?', [$name]); $i++) {
+        $name = $base . random_int(10, 9999);
+    }
+    return $name;
+}
 
 if (is_post()) {
     csrf_check();
     $first = trim($_POST['first_name'] ?? '');
     $last = trim($_POST['last_name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $username = trim($_POST['username'] ?? '');
+    $email = strtolower(trim($_POST['email'] ?? ''));
     $pass = (string) ($_POST['password'] ?? '');
     $confirm = (string) ($_POST['confirm'] ?? '');
-    $church = (int) ($_POST['church_id'] ?? 0) ?: null;
+    [$phoneOk, $phone, $phoneErr] = normalize_phone((string) ($_POST['phone_country'] ?? 'PH'), (string) ($_POST['phone'] ?? ''));
 
-    if ($first === '' || $last === '') $errors[] = 'Please enter your first and last name.';
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email address.';
-    if (!preg_match('/^[A-Za-z0-9_.]{3,30}$/', $username)) $errors[] = 'Username must be 3–30 letters, numbers, dots or underscores.';
-    if (strlen($pass) < 8) $errors[] = 'Password must be at least 8 characters.';
-    if ($pass !== $confirm) $errors[] = 'Passwords do not match.';
-    if (empty($_POST['agree'])) $errors[] = 'Please agree to the Terms of Service and Privacy Policy.';
-    if ($church && !q_val('SELECT 1 FROM churches WHERE id = ?', [$church])) $church = null;
+    if ($first === '') $fieldErr['first_name'] = 'Please enter your first name.';
+    if ($last === '') $fieldErr['last_name'] = 'Please enter your last name.';
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $fieldErr['email'] = 'Please enter a valid email address.';
+    if (!$phoneOk) $fieldErr['phone'] = $phoneErr;
+    if (strlen($pass) < MIN_PASSWORD) $fieldErr['password'] = 'Use at least ' . MIN_PASSWORD . ' characters.';
+    elseif ($pass !== $confirm) $fieldErr['confirm'] = "Passwords don't match.";
+    if (empty($_POST['agree'])) $errors[] = 'Please agree to the Terms, Community Rules and Privacy Notice to continue.';
 
-    if (!$errors) {
-        if (q_val('SELECT 1 FROM users WHERE email = ?', [$email])) $errors[] = 'That email is already registered.';
-        if (q_val('SELECT 1 FROM users WHERE username = ?', [$username])) $errors[] = 'That username is taken.';
+    if (!$fieldErr && !$errors && q_val('SELECT 1 FROM users WHERE email = ?', [$email])) {
+        $errors[] = 'This email is already registered. Please log in instead.';
     }
-    if (!$errors) {
-        q('INSERT INTO users (first_name, last_name, email, username, password_hash, church_id) VALUES (?,?,?,?,?,?)',
-            [mb_substr($first, 0, 80), mb_substr($last, 0, 80), $email, $username, password_hash($pass, PASSWORD_DEFAULT), $church]);
-        $id = (int) db()->lastInsertId();
-        login_user($id, false);
-        flash('success', 'Welcome to the PCEC Community, ' . $first . '!');
-        redirect('index.php');
+    // Light abuse protection: at most 5 sign-ups per session per hour.
+    $_SESSION['signups'] = array_filter($_SESSION['signups'] ?? [], fn($t) => $t > time() - 3600);
+    if (!$fieldErr && !$errors && count($_SESSION['signups']) >= 5) {
+        $errors[] = 'Too many attempts. Please wait a few minutes and try again.';
+    }
+
+    if (!$fieldErr && !$errors) {
+        q('INSERT INTO users (first_name, last_name, email, username, password_hash, phone, phone_country, status, terms_accepted_at) VALUES (?,?,?,?,?,?,?,?, NOW())',
+            [mb_substr($first, 0, 80), mb_substr($last, 0, 80), $email, make_username($email), password_hash($pass, PASSWORD_DEFAULT),
+             $phone, (string) $_POST['phone_country'], 'pending']);
+        $user = q_one('SELECT * FROM users WHERE id = ?', [(int) db()->lastInsertId()]);
+        $_SESSION['signups'][] = time();
+        $_SESSION['confirm_email'] = $email;
+        $_SESSION['confirm_sent'] = time();
+        $_SESSION['confirm_failed'] = !send_confirmation_email($user);
+        redirect('check_email.php');
     }
 }
 
-auth_head(t('Create Account'), 'register-body');
+$err = fn(string $k) => isset($fieldErr[$k]) ? '<p class="field-error">' . e($fieldErr[$k]) . '</p>' : '';
+$cls = fn(string $k) => isset($fieldErr[$k]) ? ' has-error' : '';
+
+auth_head('Sign Up', 'register-body');
 ?>
 <div class="auth-wrap">
   <div class="auth-card">
     <div class="auth-top auth-top-sm">
       <div class="auth-top-bar">
-        <a href="<?= e(url('login.php')) ?>" class="icon-btn light" aria-label="Back"><?= icon('arrow-left') ?></a>
+        <a href="<?= e(url('login.php')) ?>" class="icon-btn light" aria-label="Back to log in"><?= icon('arrow-left') ?></a>
         <?= lang_switch() ?>
       </div>
       <?php auth_brand(true); ?>
     </div>
     <div class="auth-panel">
-      <h1><?= e(t('Create Your Account')) ?></h1>
-      <p class="auth-sub"><?= e(t('Join the PCEC Community Platform and be part of our growing network of churches and leaders.')) ?></p>
-      <?php foreach ($errors as $err): ?><div class="alert alert-error"><?= e($err) ?></div><?php endforeach; ?>
+      <h1>Complete Your Profile</h1>
+      <p class="auth-sub">Create your PCEC member account and let us work together with God.</p>
+      <?php foreach ($errors as $m): ?><div class="alert alert-error" role="alert"><?= e($m) ?></div><?php endforeach; ?>
       <form method="post" class="auth-form" novalidate>
         <?= csrf_field() ?>
         <div class="grid-2">
-          <label class="field"><?= icon('user') ?><input name="first_name" placeholder="<?= e(t('First Name')) ?>" value="<?= old('first_name') ?>" autocomplete="given-name" required></label>
-          <label class="field"><?= icon('user') ?><input name="last_name" placeholder="<?= e(t('Last Name')) ?>" value="<?= old('last_name') ?>" autocomplete="family-name" required></label>
+          <div><label class="field<?= $cls('first_name') ?>"><?= icon('user') ?><input name="first_name" placeholder="First Name" value="<?= old('first_name') ?>" autocomplete="given-name" maxlength="80" required></label><?= $err('first_name') ?></div>
+          <div><label class="field<?= $cls('last_name') ?>"><?= icon('user') ?><input name="last_name" placeholder="Last Name" value="<?= old('last_name') ?>" autocomplete="family-name" maxlength="80" required></label><?= $err('last_name') ?></div>
         </div>
-        <label class="field"><?= icon('mail') ?><input type="email" name="email" placeholder="<?= e(t('Email Address')) ?>" value="<?= old('email') ?>" autocomplete="email" required></label>
-        <label class="field"><?= icon('user') ?><input name="username" placeholder="<?= e(t('Username')) ?>" value="<?= old('username') ?>" autocomplete="username" required></label>
-        <label class="field"><?= icon('lock') ?><input type="password" name="password" placeholder="<?= e(t('Password')) ?>" autocomplete="new-password" minlength="8" required><button type="button" class="pw-toggle" aria-label="Show password"><?= icon('eye-off') ?></button></label>
-        <label class="field"><?= icon('lock') ?><input type="password" name="confirm" placeholder="<?= e(t('Confirm Password')) ?>" autocomplete="new-password" required><button type="button" class="pw-toggle" aria-label="Show password"><?= icon('eye-off') ?></button></label>
-        <div class="picker" data-picker>
-          <label class="field field-select"><?= icon('church') ?>
-            <select name="church_id" data-picker-select aria-label="<?= e(t('Church / Organization (Optional)')) ?>"
-                    data-search-placeholder="Search church, city or denomination…" data-sheet-title="Select your church">
-              <option value=""><?= e(t('Church / Organization (Optional)')) ?></option>
-              <?php foreach ($churches as $c): ?>
-                <option value="<?= (int) $c['id'] ?>"
-                        data-city="<?= e($c['city']) ?>" data-region="<?= e($c['region']) ?>" data-denomination="<?= e($c['denomination']) ?>"
-                        <?= (int) ($_POST['church_id'] ?? 0) === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option>
-              <?php endforeach; ?>
-            </select>
-            <?= icon('chevron-down', 'select-caret') ?>
-          </label>
-        </div>
-        <label class="check"><input type="checkbox" name="agree" value="1" <?= is_post() && empty($_POST['agree']) ? '' : 'checked' ?>><span></span><em>I agree to the <a href="<?= e(url('terms.php')) ?>" class="link">Terms of Service</a> and <a href="<?= e(url('terms.php#privacy')) ?>" class="link u">Privacy Policy</a></em></label>
-        <button class="btn btn-gradient btn-lg btn-block"><?= icon('user-plus') ?> <?= e(t('Create Account')) ?></button>
+        <label class="field<?= $cls('email') ?>"><?= icon('mail') ?><input type="email" name="email" placeholder="Email Address" value="<?= old('email') ?>" autocomplete="email" inputmode="email" maxlength="160" required></label><?= $err('email') ?>
+        <?= phone_field((string) ($_POST['phone_country'] ?? 'PH'), (string) ($_POST['phone'] ?? ''), $fieldErr['phone'] ?? '') ?>
+        <label class="field<?= $cls('password') ?>"><?= icon('lock') ?><input type="password" name="password" placeholder="Password (min. <?= MIN_PASSWORD ?> characters)" autocomplete="new-password" minlength="<?= MIN_PASSWORD ?>" required><button type="button" class="pw-toggle" aria-label="Show password"><?= icon('eye-off') ?></button></label><?= $err('password') ?>
+        <label class="field<?= $cls('confirm') ?>"><?= icon('lock') ?><input type="password" name="confirm" placeholder="Confirm Password" autocomplete="new-password" required><button type="button" class="pw-toggle" aria-label="Show password"><?= icon('eye-off') ?></button></label><?= $err('confirm') ?>
+        <label class="check consent"><input type="checkbox" name="agree" value="1" <?= !empty($_POST['agree']) ? 'checked' : '' ?>><span></span>
+          <em>I agree to the <a href="<?= e(url('terms.php')) ?>" class="link" target="_blank" rel="noopener">Terms of Service</a> and
+          <a href="<?= e(url('terms.php#community-rules')) ?>" class="link" target="_blank" rel="noopener">Community Rules</a>, and I consent to PCEC
+          processing my personal information, including my church membership (sensitive personal information), as described in the
+          <a href="<?= e(url('privacy.php')) ?>" class="link" target="_blank" rel="noopener">Privacy Notice</a>. If I am under 18, my parent or guardian agrees too.</em></label>
+        <button class="btn btn-gradient btn-lg btn-block"><?= icon('user-plus') ?> Create My Account</button>
       </form>
-      <div class="divider"><span><?= e(t('OR SIGN UP WITH')) ?></span></div>
-      <div class="social-row social-row-2">
-        <a href="<?= e(url('social.php?p=google')) ?>" class="btn btn-social btn-google"><?= brand_icon('google') ?> Sign up with Google</a>
-        <a href="<?= e(url('social.php?p=facebook')) ?>" class="btn btn-social btn-facebook"><?= brand_icon('facebook') ?> Sign up with Facebook</a>
-      </div>
-      <p class="auth-switch"><?= e(t('Already have an account?')) ?> <a href="<?= e(url('login.php')) ?>"><?= e(t('Log In')) ?> <?= icon('chevron-right') ?></a></p>
+      <p class="auth-switch">Already a member? <a href="<?= e(url('login.php')) ?>">Sign In <?= icon('chevron-right') ?></a></p>
     </div>
   </div>
 </div>

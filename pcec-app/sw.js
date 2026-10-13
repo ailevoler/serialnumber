@@ -1,6 +1,6 @@
 /* PCEC service worker — makes the app installable, caches static files and shows an
    offline page when there is no connection. Pages with personal data are never cached. */
-const VERSION = 'pcec-v1';
+const VERSION = 'pcec-v2';
 const STATIC_CACHE = VERSION + '-static';
 const scoped = (p) => new URL(p, self.registration.scope).href;
 const PRECACHE = [

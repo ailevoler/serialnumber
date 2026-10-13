@@ -9,7 +9,7 @@ if (!$ev) {
     flash('error', 'Event not found.');
     redirect('events.php');
 }
-$canEdit = (int) $ev['user_id'] === uid() || is_admin();
+$canEdit = is_admin(); // events are managed by PCEC administrators
 $self = 'event.php?id=' . $id;
 
 if (is_post() && $canEdit) {
@@ -117,6 +117,7 @@ require __DIR__ . '/includes/header.php';
     <div class="host-row">
       <?= avatar($host, 'sm') ?>
       <span>Hosted by <a class="link" href="<?= e(url('profile.php?u=' . $host['username'])) ?>"><?= e(display_name($host)) ?></a></span>
+      <a class="btn btn-sm btn-outline" href="<?= e(url('event_ics.php?id=' . $id)) ?>"><?= icon('calendar') ?> Add to my calendar</a>
       <button class="btn btn-sm btn-outline" data-copy="<?= e(url($self)) ?>"><?= icon('share') ?> Share</button>
     </div>
     <?php if ($attendees): ?>
@@ -234,7 +235,7 @@ require __DIR__ . '/includes/header.php';
 
 <?php if ($canEdit): ?>
   <div class="owner-actions">
-    <a class="btn btn-sm btn-outline" href="<?= e(url('events.php?edit=' . $id)) ?>"><?= icon('edit') ?> Edit event</a>
+    <a class="btn btn-sm btn-outline" href="<?= e(url('admin/events.php?edit=' . $id)) ?>"><?= icon('edit') ?> Edit event</a>
     <?php if (is_admin()): ?><a class="btn btn-sm btn-outline" href="<?= e(url('admin/registrations.php?event=' . $id)) ?>"><?= icon('users') ?> Registrations</a><?php endif; ?>
     <form method="post" data-confirm="Delete this event?"><?= csrf_field() ?><input type="hidden" name="action" value="delete">
       <button class="btn btn-sm btn-danger-outline"><?= icon('trash') ?> Delete</button></form>

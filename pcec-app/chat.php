@@ -7,7 +7,7 @@ $me = uid();
 // Start (or reuse) a 1:1 conversation with ?to=<user id>.
 if (isset($_GET['to'])) {
     $to = (int) $_GET['to'];
-    if ($to !== $me && q_val('SELECT 1 FROM users WHERE id = ?', [$to])) {
+    if ($to !== $me && q_val("SELECT 1 FROM users WHERE id = ? AND status = 'approved' AND " . not_blocked_sql('id'), [$to])) {
         $cid = q_val('SELECT a.conversation_id FROM conversation_members a JOIN conversation_members b
                       ON b.conversation_id = a.conversation_id AND b.user_id = ? WHERE a.user_id = ?
                       AND (SELECT COUNT(*) FROM conversation_members c WHERE c.conversation_id = a.conversation_id) = 2 LIMIT 1', [$to, $me]);
@@ -36,7 +36,7 @@ $cid = (int) ($_GET['c'] ?? 0);
 foreach ($conversations as $cv) {
     if ((int) $cv['id'] === $cid) $active = $cv;
 }
-$contacts = q_all('SELECT * FROM users WHERE id <> ? ORDER BY first_name LIMIT 200', [$me]);
+$contacts = q_all("SELECT * FROM users WHERE id <> ? AND status = 'approved' AND " . not_blocked_sql('id') . ' ORDER BY first_name LIMIT 200', [$me]);
 
 $pageTitle = 'Chat';
 $activeNav = 'chat';
@@ -71,7 +71,7 @@ $online = fn($ts) => $ts && time() - strtotime($ts) < 300;
         <a href="<?= e(url('chat.php')) ?>" class="icon-btn chat-back" aria-label="Back"><?= icon('arrow-left') ?></a>
         <span class="presence<?= $online($active['last_seen']) ? ' on' : '' ?>"><?= avatar($active, 'md') ?></span>
         <div><strong><?= e(display_name($active)) ?></strong><small class="muted"><?= $online($active['last_seen']) ? 'Active now' : ($active['last_seen'] ? 'Active ' . e(time_ago($active['last_seen'])) : 'Offline') ?></small></div>
-        <a class="icon-btn" href="<?= e(url('profile.php?u=' . $active['username'])) ?>" aria-label="Profile"><?= icon('user') ?></a>
+        <a class="icon-btn" href="<?= e(url('community_user.php?id=' . $active['other_id'])) ?>" aria-label="Profile"><?= icon('user') ?></a>
       </header>
       <div class="chat-messages" id="chat-messages" data-conversation="<?= (int) $active['id'] ?>" data-me="<?= $me ?>"></div>
       <form class="chat-input" id="chat-form">

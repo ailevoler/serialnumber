@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ultimate App — Technical Documentation</title>
+<style>
+@page { size: A4; margin: 20mm 17mm 20mm 17mm; }
+
+:root { --ink:#111418; --muted:#5b6470; --line:#dde2e8; --soft:#f4f6f8; --accent:#0a7d4f; --blue:#1458d6; }
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background:#fff; }
+body { font-family: Inter, "DejaVu Sans", sans-serif; color: var(--ink); font-size: 9.6pt; line-height: 1.5; }
+h1, h2, h3, h4 { font-family: "Inter Display", Inter, sans-serif; line-height: 1.2; margin: 0; }
+h1.chap { font-size: 21pt; font-weight: 700; margin: 0 0 4mm; padding-top: 2mm; letter-spacing: -0.01em; }
+h1.chap .n { color: var(--accent); margin-right: 3mm; }
+h2 { font-size: 12.5pt; font-weight: 650; margin: 6mm 0 2mm; break-after: avoid; }
+h3 { font-size: 10.5pt; font-weight: 650; margin: 4mm 0 1.5mm; break-after: avoid; }
+p { margin: 0 0 2.4mm; }
+ul, ol { margin: 0 0 2.6mm; padding-left: 5mm; }
+li { margin: 0 0 0.8mm; }
+code, .mono { font-family: "DejaVu Sans Mono", monospace; font-size: 8.2pt; background: var(--soft); padding: 0.2mm 1mm; border-radius: 1mm; }
+pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8pt; background: #0f1720; color: #e6edf3; padding: 3mm 4mm; border-radius: 2mm; margin: 0 0 3mm; white-space: pre-wrap; break-inside: avoid; line-height: 1.45; }
+pre code { background: none; padding: 0; color: inherit; }
+table { width: 100%; border-collapse: collapse; margin: 1mm 0 3.5mm; font-size: 8.6pt; break-inside: auto; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { text-align: left; font-weight: 650; background: var(--soft); border-bottom: 1.2pt solid #c9d0d8; padding: 1.6mm 2mm; }
+td { border-bottom: 0.6pt solid var(--line); padding: 1.5mm 2mm; vertical-align: top; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+.chapter { break-before: page; }
+.lead { font-size: 10.5pt; color: #2b323a; margin-bottom: 4mm; }
+.note { border-left: 2.5pt solid var(--blue); background: #f2f6fe; padding: 2.4mm 3.5mm; margin: 2mm 0 3.5mm; break-inside: avoid; }
+.warn { border-left: 2.5pt solid #c2410c; background: #fff5ed; padding: 2.4mm 3.5mm; margin: 2mm 0 3.5mm; break-inside: avoid; }
+.note b:first-child, .warn b:first-child { display:block; margin-bottom: 0.6mm; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+.card { border: 0.8pt solid var(--line); border-radius: 2mm; padding: 3mm 3.5mm; break-inside: avoid; }
+.card h3 { margin-top: 0; }
+.muted { color: var(--muted); }
+.tag { display: inline-block; font-size: 7.4pt; font-weight: 600; padding: 0.3mm 1.6mm; border-radius: 5mm; background: #e7f5ee; color: var(--accent); }
+.tag.new { background: #e8effd; color: var(--blue); }
+
+/* cover */
+.cover { height: 297mm; width: 210mm; position: relative; background: #0d1117; color: #fff; overflow: hidden; }
+.cover .band { position: absolute; left: 0; right: 0; bottom: 0; height: 84mm; background: #fff; color: var(--ink); padding: 12mm 18mm; }
+.cover .top { padding: 26mm 18mm 0; }
+.cover .brand { font-size: 10pt; letter-spacing: 0.22em; font-weight: 600; color: #8fe3bd; }
+.cover h1 { font-size: 38pt; font-weight: 750; margin: 10mm 0 4mm; letter-spacing: -0.02em; }
+.cover .sub { font-size: 14pt; color: #c9d1d9; max-width: 150mm; }
+.cover .stripes { position: absolute; right: -20mm; top: 120mm; width: 150mm; }
+.cover .stripes div { height: 7mm; margin-bottom: 4mm; border-radius: 4mm; }
+.cover dl { display: grid; grid-template-columns: 38mm 1fr; gap: 2mm 6mm; margin: 0; font-size: 10pt; }
+.cover dt { color: var(--muted); }
+.cover dd { margin: 0; font-weight: 550; }
+
+/* toc */
+.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: c; }
+.toc li { display: flex; align-items: baseline; padding: 2mm 0; border-bottom: 0.6pt solid var(--line); font-size: 10.5pt; }
+.toc li .n { width: 10mm; color: var(--accent); font-weight: 650; }
+.toc li .d { margin-left: auto; color: var(--muted); font-size: 8.8pt; max-width: 95mm; text-align: right; }
+
+.stat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 2mm 0 5mm; }
+.stat div { border: 0.8pt solid var(--line); border-radius: 2mm; padding: 3mm; }
+.stat b { display: block; font-family: "Inter Display", Inter, sans-serif; font-size: 18pt; font-weight: 700; }
+.stat span { color: var(--muted); font-size: 8.4pt; }
+
+/* diagrams */
+.flow { display: flex; align-items: stretch; gap: 0; margin: 2mm 0 4mm; break-inside: avoid; }
+.flow .s { flex: 1; border: 0.8pt solid var(--line); border-radius: 2mm; padding: 2.4mm; font-size: 8.4pt; background: #fff; }
+.flow .s b { display: block; font-size: 8.8pt; margin-bottom: 0.6mm; }
+.flow .a { width: 6mm; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11pt; }
+.layers { margin: 2mm 0 4mm; break-inside: avoid; }
+.layers .row { display: flex; gap: 2mm; margin-bottom: 2mm; }
+.layers .row > div { flex: 1; border-radius: 2mm; padding: 2.6mm 3mm; font-size: 8.4pt; }
+.layers .row > div b { display: block; font-size: 9pt; }
+.l1 { background: #e8effd; } .l2 { background: #e7f5ee; } .l3 { background: #fff5ed; } .l4 { background: #f1eefc; }
+.layers .lab { flex: 0 0 26mm !important; background: none !important; color: var(--muted); font-weight: 600; font-size: 8pt !important; display: flex; align-items: center; }
+html.body-only .cover { display:none; }
+html.body-only .toc { break-before: auto; }
+html.cover-only body > section:not(.cover) { display:none; }
+.tight td, .tight th { padding: 1.1mm 2mm; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ COVER -->
+<section class="cover">
+  <div class="top">
+    <div class="brand">ULTIMATE APP · BORACAY</div>
+    <h1>Technical<br>Documentation</h1>
+    <p class="sub">Architecture, modules, money flows, integrations, deployment and testing of the Ultimate App platform.</p>
+  </div>
+  <div class="stripes">
+    <div style="background:#0a7d4f;width:120mm"></div>
+    <div style="background:#1458d6;width:95mm;margin-left:25mm"></div>
+    <div style="background:#e8eef5;width:70mm;margin-left:50mm;opacity:.25"></div>
+  </div>
+  <div class="band">
+    <dl>
+      <dt>Document</dt><dd>Technical Documentation, edition 2026.10</dd>
+      <dt>Date</dt><dd>13 October 2026</dd>
+      <dt>Platform</dt><dd>PHP 8.1+ · MySQL / MariaDB (InnoDB) · Progressive Web App</dd>
+      <dt>Hosting</dt><dd>Hostinger (shared hosting, HTTPS required)</dd>
+      <dt>Source</dt><dd>ailevoler/serialnumber · <span class="mono">ultimateapp-agents-portal/</span></dd>
+      <dt>Audience</dt><dd>Developers, system administrators, finance and operations</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================================================ TOC -->
+<section class="chapter toc">
+  <h1 class="chap">Contents</h1>
+  <ol>
+    <li><span class="n">1</span>System overview<span class="d">Apps, users, technology stack, size</span></li>
+    <li><span class="n">2</span>Architecture<span class="d">Layers, folders, request flow, settings, storage</span></li>
+    <li><span class="n">3</span>Money model and ledger<span class="d">Credits, BCash, centavos, double-entry, idempotency</span></li>
+    <li><span class="n">4</span>Payment methods<span class="d">Credits, BCash, Pay Cash switch, charges</span></li>
+    <li><span class="n">5</span>URide<span class="d">Vehicles incl. Boat, fares, dispatch, rentals, self-drive, fleets</span></li>
+    <li><span class="n">6</span>Marketplace<span class="d">UPass, UGo, ULocal, UEat</span></li>
+    <li><span class="n">7</span>Cancellation fees and reasons<span class="d">Rules, percentages, ledger</span></li>
+    <li><span class="n">8</span>Wallet, transfers and exchange<span class="d">Buy Credits, BCash, P2P/P2M, currency exchange</span></li>
+    <li><span class="n">9</span>Bills, load and cash-in<span class="d">SUNIWAY Partner API</span></li>
+    <li><span class="n">10</span>Identity: KYC, liveness, Face Login<span class="d">MediaPipe, face-api, review flow</span></li>
+    <li><span class="n">11</span>Portals<span class="d">Admin, Merchant Portal and MCTC, Driver App, Agents Portal, UBarangay</span></li>
+    <li><span class="n">12</span>Security<span class="d">Sessions, CSRF, rate limits, files, secrets</span></li>
+    <li><span class="n">13</span>Deployment<span class="d">Server requirements, migrations, configuration, cron</span></li>
+    <li><span class="n">14</span>Testing<span class="d">Test suites and fake provider servers</span></li>
+    <li><span class="n">15</span>Operations and known limits<span class="d">Backups, reconciliation, open items</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ 1 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">1</span>System overview</h1>
+  <p class="lead">Ultimate App is a mobile-first super-app for Boracay. One PHP code base and one MySQL database serve five web applications: the customer app, the URide Driver App, the Merchant Portal, the Agents Portal and the Admin Panel.</p>
+
+  <div class="stat">
+    <div><b>227</b><span>PHP files (excluding tests and vendor)</span></div>
+    <div><b>~20,100</b><span>lines of PHP</span></div>
+    <div><b>58</b><span>database tables</span></div>
+    <div><b>23</b><span>automated test suites</span></div>
+  </div>
+
+  <h2>1.1 Applications and users</h2>
+  <table>
+    <thead><tr><th>Application</th><th>URL</th><th>Users</th><th>Main purpose</th></tr></thead>
+    <tbody>
+      <tr><td><b>Customer app</b> (PWA)</td><td class="mono">/</td><td>Residents and tourists</td><td>Wallets (Credits, BCash), URide, UPass/UGo/ULocal/UEat, bills and load, QR payments, exchange, UBarangay, KYC, Face Login</td></tr>
+      <tr><td><b>URide Driver App</b> (PWA)</td><td class="mono">/driver/</td><td>Drivers, boat operators, vehicle owners</td><td>Sign-up, go online, receive and run rides and rentals, self-drive hand-over, wallet, top-ups, payouts</td></tr>
+      <tr><td><b>Merchant Portal</b> (PWA)</td><td class="mono">/merchant-portal/</td><td>Businesses</td><td>Onboarding, payment QR, listings and orders, UEat restaurant, payouts, MCTC top-up center</td></tr>
+      <tr><td><b>Agents Portal</b></td><td class="mono">/agent-portal/</td><td>Referral agents</td><td>Referral link/QR, Master and Sub-Agent teams, commissions, payouts</td></tr>
+      <tr><td><b>Admin Panel</b></td><td class="mono">/admin/</td><td>Super Admin, Finance, Support, Barangay Officer</td><td>CRM, ERP (payments, finance, ledger, settlements), URide, marketplace, KYC, settings, audit log</td></tr>
+    </tbody>
+  </table>
+
+  <h2>1.2 Technology stack</h2>
+  <table>
+    <thead><tr><th style="width:32%">Area</th><th>Technology</th></tr></thead>
+    <tbody>
+      <tr><td>Server language</td><td>PHP 8.1 or newer (tested on 8.3), <code>declare(strict_types=1)</code> in libraries; no framework</td></tr>
+      <tr><td>Database</td><td>MySQL / MariaDB, InnoDB, <code>utf8mb4</code>; PDO with exceptions and prepared statements</td></tr>
+      <tr><td>Front end</td><td>Server-rendered HTML, plain CSS and vanilla JavaScript; installable PWA (service worker, manifests)</td></tr>
+      <tr><td>Maps</td><td>Google Maps JavaScript API, Places API (New), Geocoding API (optional)</td></tr>
+      <tr><td>Face and liveness</td><td>MediaPipe Face Landmarker (Apache-2.0) and face-api (MIT), both self-hosted under <code>assets/vendor/</code></td></tr>
+      <tr><td>QR codes</td><td>qrcode-generator 1.4.4 (MIT), html5-qrcode 2.3.8 (Apache-2.0)</td></tr>
+      <tr><td>Payments in</td><td>PayMongo QR Ph (Payment Intents and Hosted Checkout, signed webhooks)</td></tr>
+      <tr><td>Bills, load, e-wallet cash-in</td><td>SUNIWAY Partner API</td></tr>
+      <tr><td>Exchange rates</td><td>Frankfurter (ECB) with currency-api fallback, or a manual rate</td></tr>
+      <tr><td>Time zone</td><td>Asia/Manila in PHP and <code>+08:00</code> in every MySQL session</td></tr>
+    </tbody>
+  </table>
+
+  <h2>1.3 Customer services</h2>
+  <table>
+    <thead><tr><th>Service</th><th>What it does</th><th>Paid with</th></tr></thead>
+    <tbody>
+      <tr><td><b>URide</b></td><td>Point-to-point rides (Motorcycle, E-Trike, Car, Van, <b>Boat</b>), Rent a Ride with driver, Self-drive</td><td>Credits, BCash, Cash*</td></tr>
+      <tr><td><b>UPass</b></td><td>Airport transfers, island/day passes, event passes, entrance fees</td><td>Credits, BCash, on the day*</td></tr>
+      <tr><td><b>UGo</b></td><td>Tours and activities with time slots</td><td>Credits, BCash, on the day*</td></tr>
+      <tr><td><b>ULocal</b></td><td>Local services (spa, photography, laundry, guides…)</td><td>Credits, BCash, on the day*</td></tr>
+      <tr><td><b>UEat</b></td><td>Food delivery and pick-up from merchant restaurants</td><td>Credits, BCash</td></tr>
+      <tr><td><b>UBills / ULoad / UCash In</b></td><td>Bills payment, prepaid load, send to GCash/Maya and other e-wallets</td><td>Credits</td></tr>
+      <tr><td><b>Pay / Scan QR</b></td><td>Pay merchants (P2M) and people (P2P)</td><td>Credits, BCash</td></tr>
+      <tr><td><b>Exchange</b></td><td>Buy and sell USD and about 20 other currencies</td><td>BCash</td></tr>
+      <tr><td><b>UBarangay</b></td><td>Barangay permits and certificates with QR verification (switchable)</td><td>Credits, BCash, QR Ph</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">* Cash and pay-on-the-day are available only while Admin keeps <b>Pay Cash</b> on (chapter 4).</p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">2</span>Architecture</h1>
+  <p class="lead">A classic page-per-file PHP application. Each page includes a shared bootstrap, does its own POST handling (CSRF-checked), calls domain functions in <code>includes/</code>, and renders HTML. All business rules live in the domain libraries so that pages, cron jobs and tests use the same code.</p>
+
+  <div class="layers">
+    <div class="row"><div class="lab">Clients</div><div class="l1"><b>Customer PWA</b>phone browser / home screen</div><div class="l1"><b>Driver App</b>/driver/</div><div class="l1"><b>Merchant Portal</b>/merchant-portal/</div><div class="l1"><b>Agents · Admin</b>/agent-portal/ · /admin/</div></div>
+    <div class="row"><div class="lab">Pages</div><div class="l2"><b>Page scripts</b>uride.php, ueat.php, mk-booking.php, pay.php… plus each portal's <code>_bootstrap.php</code> (login, roles, menu)</div></div>
+    <div class="row"><div class="lab">Domain</div><div class="l3"><b>includes/</b>uride.php · marketplace.php · wallet.php · p2m.php · cancellation.php · ledger.php · kyc.php · suniway.php · fx.php · agents.php · settings.php …</div></div>
+    <div class="row"><div class="lab">Data &amp; services</div><div class="l4"><b>MySQL (InnoDB)</b>58 tables, double-entry ledger</div><div class="l4"><b>storage/</b>private uploads</div><div class="l4"><b>External APIs</b>PayMongo · SUNIWAY · Google · FX</div></div>
+  </div>
+
+  <h2>2.1 Folder layout</h2>
+  <table>
+    <thead><tr><th style="width:30%">Path</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">/*.php</td><td>Customer pages (dashboard, uride, ueat, upass/ugo/ulocal, pay, bcash-*, kyc, face-login, ubills…)</td></tr>
+      <tr><td class="mono">includes/</td><td>Domain libraries and shared layout (<code>functions.php</code> bootstrap, <code>header.php</code>, <code>footer.php</code>, <code>menu.php</code>)</td></tr>
+      <tr><td class="mono">admin/</td><td>Admin Panel; <code>_bootstrap.php</code> defines roles, permissions and menu</td></tr>
+      <tr><td class="mono">driver/</td><td>URide Driver App (own login, manifest, JSON <code>api.php</code> for live feed and GPS)</td></tr>
+      <tr><td class="mono">merchant-portal/</td><td>Merchant Portal (onboarding, listings, orders, payouts, MCTC top-up)</td></tr>
+      <tr><td class="mono">agent-portal/</td><td>Agents Portal (referrals, team, earnings, payouts)</td></tr>
+      <tr><td class="mono">assets/</td><td>CSS, JavaScript, images, PWA icons, <code>vendor/mediapipe</code> (~22 MB), <code>vendor/face-api</code> (~14 MB)</td></tr>
+      <tr><td class="mono">config/</td><td><code>config.php</code> (DB), <code>paymongo.php</code>, <code>google_maps.php</code>, <code>app_secret.php</code> (generated encryption key), <code>storage.php</code> (optional)</td></tr>
+      <tr><td class="mono">database/</td><td><code>schema.sql</code> and 37 migration files, plus <code>ALL_UPDATES_2026-09.sql</code></td></tr>
+      <tr><td class="mono">storage/</td><td>Private uploads: <code>kyc/</code>, <code>licenses/</code>, <code>driver_docs/</code>, <code>market/</code>, <code>brgy/</code>, <code>cache/</code> (blocked from the web)</td></tr>
+      <tr><td class="mono">cron/</td><td><code>fx-refresh.php</code> (hourly exchange-rate refresh)</td></tr>
+      <tr><td class="mono">tests/</td><td>CLI test suites and fake provider servers (never deployed)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2.2 Request flow</h2>
+  <div class="flow">
+    <div class="s"><b>1 · Bootstrap</b><code>functions.php</code>: session, security headers, PDO, time zone</div><div class="a">→</div>
+    <div class="s"><b>2 · Auth</b><code>require_auth()</code> or the portal's login guard and role check</div><div class="a">→</div>
+    <div class="s"><b>3 · POST</b><code>verify_csrf()</code>, <code>rate_limit_enforce()</code>, input validation</div><div class="a">→</div>
+    <div class="s"><b>4 · Domain</b>transaction, row locks, ledger lines, notifications</div><div class="a">→</div>
+    <div class="s"><b>5 · Redirect / render</b>Post-Redirect-Get with flash messages</div>
+  </div>
+  <p>Domain functions throw <code>InvalidArgumentException</code> for user-facing errors (shown as alerts) and other exceptions for system faults (logged, generic message shown). Every money change runs inside one InnoDB transaction.</p>
+
+  <h2>2.3 Settings</h2>
+  <ul>
+    <li>Stored in <code>app_settings</code> (<code>setting_key</code>, <code>setting_value</code>, <code>is_secret</code>). Read with <code>setting()</code> / <code>setting_int()</code>; written with <code>setting_save()</code>, which records the admin and audit trail.</li>
+    <li><code>includes/settings.php</code> holds the schema: type, limits and label for every key (e.g. <code>uride.boat.per_km_centavos</code>, <code>cancel.ueat_pct</code>).</li>
+    <li>Secret values (PayMongo and SUNIWAY keys) are encrypted with the key in <code>config/app_secret.php</code>. Back up that file with the site, or the secrets must be entered again.</li>
+    <li>Most settings are edited in <b>Admin › Settings</b> (Super Admin only): Payments, Charges &amp; limits, Google Maps, URide.</li>
+  </ul>
+
+  <h2>2.4 File storage</h2>
+  <p>Uploads are saved on disk, not in the database, with random names, and served only through access-checked PHP scripts (e.g. <code>market-photo.php</code>, <code>admin/kyc-file.php</code>). Images are re-encoded on upload, which strips EXIF/GPS data. To keep files safe across redeploys, copy <code>config/storage.php.example</code> to <code>config/storage.php</code> and point it to a folder outside <code>public_html</code>. <b>Admin › System › Files &amp; storage</b> runs a write test and lists records whose files are missing.</p>
+</section>
+
+<!-- ============================================================ 3 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">3</span>Money model and ledger</h1>
+  <p class="lead">Two customer wallets, one rule: every money movement is posted to a balanced double-entry ledger in the same database transaction as the balance change.</p>
+
+  <div class="grid2">
+    <div class="card"><h3>Credits</h3><p>The main in-app balance. <b>1 Credit = ₱1.00.</b> Stored in <code>users.credits</code> (decimal pesos). Bought with QR Ph or at an MCTC top-up center; spent on every service. Ledger account <code>user_credits:ID</code>.</p></div>
+    <div class="card"><h3>BCash</h3><p>A separate peso wallet in <code>boracay_cash_wallets.balance_centavos</code>. Converted 1:1 from/to Credits with no fee; used for transfers, payments and currency exchange. Ledger account <code>user_cash:ID</code>.</p></div>
+  </div>
+
+  <h2>3.1 Amounts</h2>
+  <ul>
+    <li>All new money columns are <b>integer centavos</b> (<code>*_centavos</code>). No floating-point arithmetic is used for money.</li>
+    <li>Percentages are computed with integer basis points and rounded once (e.g. commission <code>intdiv(fare × bp + 5000, 10000)</code>).</li>
+    <li>URide fares and rental prices are rounded <b>up</b> to the whole peso.</li>
+  </ul>
+
+  <h2>3.2 The ledger</h2>
+  <p><code>ledger_post($pdo, $group, $event, $lines)</code> inserts lines into <code>ledger_entries</code>. Each line is <code>[account, debit, credit]</code>. The function refuses any entry whose debits and credits differ, or that is zero. The <code>group</code> ties the lines to a business reference (e.g. a ride code, <code>RF-…</code> for a refund, <code>CF-…</code> for a cancellation fee).</p>
+  <table>
+    <thead><tr><th style="width:34%">Account</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">user_credits:ID</td><td>Customer Credits</td></tr>
+      <tr><td class="mono">user_cash:ID</td><td>Customer BCash</td></tr>
+      <tr><td class="mono">merchant_payable:ID</td><td>Owed to a merchant (paid out in Settlements)</td></tr>
+      <tr><td class="mono">driver_wallet:ID</td><td>URide driver wallet</td></tr>
+      <tr><td class="mono">uride_escrow</td><td>URide fares on hold until the trip ends</td></tr>
+      <tr><td class="mono">uride_deposit</td><td>Self-drive deposits held</td></tr>
+      <tr><td class="mono">platform_sales:&lt;service&gt;</td><td>Ultimate App sales (its own UPass/UGo/ULocal listings)</td></tr>
+      <tr><td class="mono">fee_revenue:&lt;kind&gt;</td><td>Charge and commission revenue</td></tr>
+      <tr><td class="mono">agent_payable:ID · agent_commission_expense</td><td>Agent commissions owed and their expense</td></tr>
+      <tr><td class="mono">paymongo_clearing · bank_clearing</td><td>Money in transit with PayMongo or the bank</td></tr>
+      <tr><td class="mono">settlement_payable:…</td><td>Payouts requested but not yet transferred</td></tr>
+      <tr><td class="mono">mctc_merchant_due:ID · mctc_collections:ID · office_cash</td><td>Cash collected for top-ups</td></tr>
+      <tr><td class="mono">suniway_payable</td><td>Owed to SUNIWAY for bills, load and cash-in</td></tr>
+      <tr><td class="mono">fx_usd_book · fx_book:&lt;ccy&gt; · fx_fee_revenue</td><td>Customer foreign-currency holdings (PHP value) and exchange fees</td></tr>
+      <tr><td class="mono">brgy_payable:&lt;barangay&gt;</td><td>Permit fees owed to each barangay</td></tr>
+      <tr><td class="mono">adjustments</td><td>Manual admin adjustments</td></tr>
+    </tbody>
+  </table>
+  <p><b>Admin › Finance</b> shows liabilities, revenue, a trial balance and reconciliation checks (for example, every driver wallet and every merchant MCTC due must equal its ledger balance). <b>Admin › General ledger</b> lists and exports entries.</p>
+
+  <h2>3.3 Safety against double charging</h2>
+  <ul>
+    <li><b>Request keys.</b> Booking and payment forms carry a random one-time key; replays return the original result instead of charging again.</li>
+    <li><b>Row locks.</b> Balances, rides, orders and top-ups are read with <code>SELECT … FOR UPDATE</code> inside the transaction (e.g. first driver to accept wins).</li>
+    <li><b>Unique constraints.</b> Payment IDs, references, receipt numbers per merchant and approval keys are unique in the database.</li>
+    <li><b>Webhooks</b> are verified by signature and matched to the stored order (amount, currency, mode, session) before settling.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ 4 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">4</span>Payment methods</h1>
+  <p class="lead">Admin controls which payment methods customers see. Credits are always on; BCash and Pay Cash have their own switches.</p>
+  <p><b>Admin › Settings › Charges &amp; limits › Payment methods</b></p>
+  <table>
+    <thead><tr><th>Method</th><th>Switch</th><th>Covers</th></tr></thead>
+    <tbody>
+      <tr><td><b>Credits</b></td><td>Always on</td><td>Every service</td></tr>
+      <tr><td><b>BCash</b></td><td><code>pay_bcash_enabled()</code></td><td>URide (rides, rentals, self-drive), UPass, UGo, ULocal, UEat, QR payments</td></tr>
+      <tr><td><b>Pay Cash</b></td><td><code>pay_cash_enabled()</code></td><td>Cash to the URide driver; "pay on the day" for UPass, UGo and ULocal</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li>When Pay Cash is off, every payment is held in the app and refunded automatically on cancel, decline or expiry.</li>
+    <li>URide has its own Credits/Cash/BCash switches; a method shows only when both the app-wide and the URide switch are on.</li>
+    <li>Existing bookings keep the method they were made with.</li>
+  </ul>
+
+  <h2>4.1 Implementation</h2>
+  <table>
+    <thead><tr><th style="width:42%">Function (includes/wallet.php)</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">wallet_debit_tx($pdo,$uid,$source,$amount,$title,$evenWhenOff=false)</td><td>Debit Credits or BCash inside the caller's transaction; refuses insufficient balance. <code>$evenWhenOff</code> lets a cancellation fee be taken even if BCash payments were switched off later.</td></tr>
+      <tr><td class="mono">wallet_credit_tx(…)</td><td>Credit (refund) the same wallet</td></tr>
+      <tr><td class="mono">wallet_account() · wallet_balance() · wallet_label()</td><td>Ledger account name, balance and display label for a source</td></tr>
+      <tr><td class="mono">p2m_pay_tx() · p2m_refund_tx() (includes/p2m.php)</td><td>Pay a merchant from Credits or BCash with the configured charge, and refund it in full</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4.2 Merchant charges</h2>
+  <p>Paying a merchant (QR or marketplace) applies the charge in <b>Charges &amp; limits</b>: a percentage plus a fixed amount, separately for Credits and BCash, and who pays it (customer = added on top; merchant = deducted, like MDR). Each payment stores the charge it was made with. Listings run by Ultimate App have no charge and post to <code>platform_sales</code>.</p>
+</section>
+
+<!-- ============================================================ 5 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">5</span>URide</h1>
+  <p class="lead">Ride-hailing, rentals with a driver, and self-drive rentals, with a driver wallet, live dispatch and full ledger posting. Library: <code>includes/uride.php</code> and <code>includes/uride_selfdrive.php</code>.</p>
+
+  <h2>5.1 Vehicle types <span class="tag new">Boat added</span></h2>
+  <p>Defined in <code>uride_vehicles()</code>. The flag <code>ride</code> allows point-to-point booking; <code>rent</code> allows hourly rental (with driver or self-drive). <code>uride_rentable_vehicles()</code> returns only rentable types.</p>
+  <table>
+    <thead><tr><th>Key</th><th>Label</th><th>Seats</th><th>Ride</th><th>Rent</th><th>Self-drive license</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">e_bike</td><td>E-Bike</td><td>1 rider</td><td>—</td><td>Yes (self-drive by default)</td><td>Verified ID only (Admin can require A/A1)</td></tr>
+      <tr><td class="mono">motorcycle</td><td>Motorcycle</td><td>1 passenger</td><td>Yes</td><td>Yes</td><td>Code A / A1</td></tr>
+      <tr><td class="mono">e_trike</td><td>E-Trike</td><td>3 passengers</td><td>Yes</td><td>Yes</td><td>Code A / A1</td></tr>
+      <tr><td class="mono">car</td><td>Car</td><td>4 passengers</td><td>Yes</td><td>Yes</td><td>Code B</td></tr>
+      <tr><td class="mono">van</td><td>Van</td><td>10–12 passengers</td><td>Yes</td><td>Yes</td><td>Code B / B1</td></tr>
+      <tr><td class="mono">boat</td><td><b>Boat</b></td><td>Up to 10</td><td>Yes</td><td><b>No — point to point only</b></td><td>— (never self-drive)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>Boat rules</b>Boat appears only in Book a Ride. Rental and self-drive quotes are always disabled, <code>uride_book_rental()</code> refuses it ("Boat is for point-to-point rides only"), fleet units ignore it, and Admin's rental and self-drive tables skip it. Only drivers registered with vehicle type Boat receive Boat requests. Operators enter their MARINA / boat captain license and the boat registration number.</div>
+
+  <h2>5.2 Fares (Book a Ride)</h2>
+  <p>Upfront and fixed at booking: <b>fare = max(minimum, base + per-km × (road km − km in base) + night surcharge)</b>, rounded up to the peso. Road km = straight-line distance × road factor (default 1.3). Set in <b>Admin › Settings › URide › Fare matrix</b>. Code defaults (placeholders):</p>
+  <table>
+    <thead><tr><th>Vehicle</th><th class="num">Base (1 km incl.)</th><th class="num">Per km after</th><th class="num">Minimum</th></tr></thead>
+    <tbody>
+      <tr><td>Motorcycle</td><td class="num">₱40</td><td class="num">₱12</td><td class="num">₱40</td></tr>
+      <tr><td>E-Trike</td><td class="num">₱30</td><td class="num">₱15</td><td class="num">₱30</td></tr>
+      <tr><td>Car</td><td class="num">₱100</td><td class="num">₱25</td><td class="num">₱100</td></tr>
+      <tr><td>Van</td><td class="num">₱300</td><td class="num">₱40</td><td class="num">₱300</td></tr>
+      <tr><td>Boat</td><td class="num">₱500</td><td class="num">₱100</td><td class="num">₱500</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.3 Ride lifecycle and dispatch</h2>
+  <div class="flow">
+    <div class="s"><b>Requested</b>fare held (Credits/BCash) in <code>uride_escrow</code></div><div class="a">→</div>
+    <div class="s"><b>Broadcast</b>online drivers of that type within the radius (3 km), GPS ≤ 2 min old</div><div class="a">→</div>
+    <div class="s"><b>Accepted</b>first accept wins (row lock)</div><div class="a">→</div>
+    <div class="s"><b>Arrived → In progress</b>live position for the passenger</div><div class="a">→</div>
+    <div class="s"><b>Completed</b>driver wallet + fare − commission</div>
+  </div>
+  <ul>
+    <li>Unaccepted requests expire after the timeout (default 5 min; rentals 10 min) and are refunded.</li>
+    <li>Drivers need the minimum wallet (default ₱50) to go online; cash rides deduct the commission from the wallet.</li>
+    <li>Commission: percentage (default 10%) or a fixed amount per trip, never more than the fare.</li>
+    <li>Passengers rate the driver 1–5 stars. Drivers can skip a request or give an accepted ride back before pick-up.</li>
+  </ul>
+
+  <h2>5.4 Rent a Ride (with driver)</h2>
+  <p>Packages of 1–12 hours or a whole day (default 8 h), now or scheduled up to 7 days ahead. Price = per hour × hours (at least the minimum), never more than the whole-day price. Scheduled rentals appear to drivers 60 minutes before the start.</p>
+  <table>
+    <thead><tr><th>Vehicle</th><th class="num">Per hour</th><th class="num">Min hours</th><th class="num">Whole day</th></tr></thead>
+    <tbody>
+      <tr><td>E-Bike (off by default)</td><td class="num">₱150</td><td class="num">1</td><td class="num">₱800</td></tr>
+      <tr><td>Motorcycle</td><td class="num">₱300</td><td class="num">1</td><td class="num">₱1,800</td></tr>
+      <tr><td>E-Trike</td><td class="num">₱500</td><td class="num">1</td><td class="num">₱3,000</td></tr>
+      <tr><td>Car</td><td class="num">₱800</td><td class="num">2</td><td class="num">₱5,000</td></tr>
+      <tr><td>Van</td><td class="num">₱1,500</td><td class="num">3</td><td class="num">₱9,000</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.5 Self-drive and fleets</h2>
+  <ul>
+    <li>The customer needs a verified ID (switchable), a driver's license on file that covers the vehicle and does not expire before the end, and must accept the self-drive rules. Paid with Credits or BCash; price plus refundable deposit are held.</li>
+    <li>Owners enter how many units of each type they have (<code>uride_fleet</code>). Customers see "N available"; "Now" bookings are refused when nothing is free.</li>
+    <li>Hand-over: the owner confirms the license and ID check; the rental clock starts. Return: good condition (deposit back), late (hourly rate per started hour after the grace period, default 15 min), or damage claim decided by Admin.</li>
+  </ul>
+  <table>
+    <thead><tr><th>Vehicle</th><th class="num">Per hour</th><th class="num">Min</th><th class="num">Whole day</th><th class="num">Deposit</th></tr></thead>
+    <tbody>
+      <tr><td>E-Bike</td><td class="num">₱100</td><td class="num">1 h</td><td class="num">₱600</td><td class="num">₱1,000</td></tr>
+      <tr><td>Motorcycle</td><td class="num">₱200</td><td class="num">2 h</td><td class="num">₱1,200</td><td class="num">₱3,000</td></tr>
+      <tr><td>E-Trike</td><td class="num">₱350</td><td class="num">2 h</td><td class="num">₱2,000</td><td class="num">₱2,000</td></tr>
+      <tr><td>Car</td><td class="num">₱600</td><td class="num">4 h</td><td class="num">₱3,500</td><td class="num">₱5,000</td></tr>
+      <tr><td>Van</td><td class="num">₱1,200</td><td class="num">4 h</td><td class="num">₱7,000</td><td class="num">₱10,000</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.6 Places and maps</h2>
+  <p>Pick-up and drop-off suggestions combine the customer's recent places, Admin-managed landmarks (<b>Admin › URide › URide places</b>), approved merchants near Boracay and Google Places. GPS "precise location" keeps the best fix for up to 20 s; pins are draggable and stored with 7 decimals.</p>
+
+  <h2>5.7 Driver wallet</h2>
+  <table>
+    <thead><tr><th>Event</th><th>Driver wallet</th><th>Ledger</th></tr></thead>
+    <tbody>
+      <tr><td>Ride completed (Credits/BCash)</td><td>+ fare − commission</td><td>uride_escrow → driver_wallet + fee_revenue:uride</td></tr>
+      <tr><td>Ride completed (cash)</td><td>− commission</td><td>driver_wallet → fee_revenue:uride</td></tr>
+      <tr><td>Passenger cancellation fee</td><td>+ fee</td><td>uride_escrow → user wallet (refund) + driver_wallet (fee)</td></tr>
+      <tr><td>Top-up: QR Ph / MCTC / BCash</td><td>+ amount</td><td>paymongo_clearing / mctc_merchant_due / user_cash → driver_wallet</td></tr>
+      <tr><td>Payout requested → paid</td><td>− amount</td><td>driver_wallet → settlement_payable → bank_clearing</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 6 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">6</span>Marketplace: UPass, UGo, ULocal, UEat</h1>
+  <p class="lead">Merchants sell bookings and food through the Merchant Portal; Ultimate App can also run its own listings. Library: <code>includes/marketplace.php</code>, page helpers in <code>includes/market_page.php</code> and <code>includes/market_forms.php</code>.</p>
+
+  <h2>6.1 Bookings (UPass, UGo, ULocal)</h2>
+  <ul>
+    <li>Customer chooses date, start time (time slots with a guest capacity), guests or quantity, and for ULocal the address.</li>
+    <li>Statuses: <b>pending → confirmed → completed</b>, or <b>declined / cancelled</b>. Listings can confirm instantly.</li>
+    <li>Paid in the app (Credits or BCash) or on the day (when Pay Cash is on). Merchant bookings use <code>p2m_pay_tx()</code>; Ultimate App listings post to <code>platform_sales:&lt;service&gt;</code>.</li>
+    <li>Each listing sets a free-cancellation cut-off (<code>cancel_hours</code> before the start).</li>
+  </ul>
+
+  <h2>6.2 UEat orders</h2>
+  <div class="flow">
+    <div class="s"><b>Pending</b>paid; customer may cancel free</div><div class="a">→</div>
+    <div class="s"><b>Accepted</b>restaurant accepted</div><div class="a">→</div>
+    <div class="s"><b>Preparing</b>kitchen cooking</div><div class="a">→</div>
+    <div class="s"><b>On the way / Ready</b>delivery or pick-up</div><div class="a">→</div>
+    <div class="s"><b>Completed</b>delivered / picked up</div>
+  </div>
+  <ul>
+    <li>Restaurant profile: cuisine, cover, prep time, delivery fee, minimum order, hours (Philippine time), delivery and/or pick-up, open/close switch.</li>
+    <li>Delivery is done by the restaurant itself; there is no rider dispatch yet.</li>
+    <li>Merchant order board refreshes automatically; every status change creates a customer notification.</li>
+  </ul>
+
+  <h2>6.3 Moderation</h2>
+  <p><b>Admin › UGo · ULocal · UEat</b>: review new and edited listings and restaurants, manage any listing, feature listings, and confirm, complete or cancel bookings and orders (always with a full refund). Listing photos are stored in <code>storage/market/</code> and served by <code>market-photo.php</code>.</p>
+
+  <h2>6.4 Agent commissions</h2>
+  <p>Customers referred by an agent earn the agent a commission on completed URide trips, paid UEat orders and completed UPass/UGo/ULocal bookings (chapter 11.4).</p>
+</section>
+
+<!-- ============================================================ 7 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">7</span>Cancellation fees and reasons <span class="tag new">New</span></h1>
+  <p class="lead">Customers must give a reason every time they cancel. A configurable percentage of what they paid in the app is kept as a fee when they cancel late. Library: <code>includes/cancellation.php</code>.</p>
+
+  <h2>7.1 Settings</h2>
+  <p><b>Admin › Settings › Charges &amp; limits › Cancellation fees</b> (0–100%, up to 2 decimals; 0% = free)</p>
+  <table>
+    <thead><tr><th>Setting key</th><th>Default</th><th>Applies when</th><th>Fee goes to</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">cancel.uride_pct</td><td>20%</td><td>After the free minutes once a driver accepted, or after the driver arrived</td><td>Driver wallet</td></tr>
+      <tr><td class="mono">cancel.uride_free_min</td><td>2 min</td><td>Free window after the driver accepts</td><td>—</td></tr>
+      <tr><td class="mono">cancel.booking_pct</td><td>25%</td><td>After the listing's cut-off and before the start</td><td>Merchant (or Ultimate App sales)</td></tr>
+      <tr><td class="mono">cancel.ueat_pct</td><td>30%</td><td>While the order is accepted or preparing</td><td>Restaurant</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7.2 When customers can cancel</h2>
+  <table>
+    <thead><tr><th>Service</th><th>Free</th><th>With fee</th><th>Not allowed</th></tr></thead>
+    <tbody>
+      <tr><td>URide</td><td>Searching; first free minutes after accept</td><td>After the free minutes; driver arrived</td><td>Trip started</td></tr>
+      <tr><td>UPass / UGo / ULocal</td><td>Pending; confirmed before the cut-off</td><td>Between the cut-off and the start</td><td>After the start</td></tr>
+      <tr><td>UEat</td><td>Before the restaurant accepts</td><td>Accepted or preparing</td><td>Ready or on the way</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li>Only in-app payments (Credits or BCash) carry a fee. Cash rides and pay-on-the-day bookings never do.</li>
+    <li>Declines by a driver, merchant or restaurant, and cancellations by Admin, are always refunded in full.</li>
+    <li>Reasons come from <code>cancel_reasons($area)</code>; picking <b>Other</b> requires typed text. Reason and fee are stored (<code>cancel_reason</code>, <code>cancel_fee_centavos</code>) and shown to the customer, the driver or merchant (Orders › History) and Admin.</li>
+  </ul>
+
+  <h2>7.3 Ledger</h2>
+  <ul>
+    <li><b>URide:</b> <code>uride_release_hold($pdo,$ride,'cancelled',$fee)</code> moves held − fee back to the customer's wallet and the fee to <code>driver_wallet:ID</code> (group <code>RF-…</code>); the driver's wallet history shows "Cancellation fee".</li>
+    <li><b>Merchant bookings and UEat:</b> full refund first, then <code>mk_cancel_fee_to_merchant_tx()</code> moves the fee from the customer's wallet to <code>merchant_payable:ID</code> (group <code>CF-…</code>).</li>
+    <li><b>Ultimate App listings:</b> only paid − fee is refunded; the fee stays in <code>platform_sales</code>.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ 8 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">8</span>Wallet, transfers and exchange</h1>
+
+  <h2>8.1 Buy Credits</h2>
+  <ul>
+    <li><b>QR Ph (PayMongo):</b> in-app QR via Payment Intent (<code>topup-qr.php</code>), with hosted checkout as fallback. Credited only by a signed webhook (<code>payment.paid</code> or <code>checkout_session.payment.paid</code>) or by an authenticated status check that matches session, reference, mode and exact amount. QR expires after 30 minutes. A ₱5.00 service fee per top-up is configurable.</li>
+    <li><b>MCTC (cash):</b> the customer shows a request QR at an MCTC top-up center (an approved merchant). The merchant scans it, enters a receipt number (unique per merchant) and confirms; Credits are added immediately and the cash becomes the merchant's MCTC due, deducted from the next payout.</li>
+  </ul>
+
+  <h2>8.2 BCash</h2>
+  <ul>
+    <li>Convert Credits ⇄ BCash 1:1, no fee, atomic with a unique request key.</li>
+    <li><b>Send / Receive / My QR:</b> BCash QR codes (with the BCash logo) always send BCash; Credits QR codes always pay Credits. ₱1–₱10,000 per transfer, max 20 sends per hour, no fee.</li>
+    <li>When KYC is required for customers, unverified accounts cannot send Credits or BCash or use UCash In.</li>
+  </ul>
+
+  <h2>8.3 P2M and P2P payments</h2>
+  <p>Scan QR detects merchant QR codes (<code>UM-…</code>, P2M) and person QR codes (<code>UA-…</code>, P2P). P2M shows the charge and total before paying, with Credits or BCash.</p>
+
+  <h2>8.4 Currency exchange</h2>
+  <ul>
+    <li>USD/PHP is the main pair; about 20 more currencies can be enabled in <b>Admin › ERP › Currency exchange</b>. Each currency has its own wallet and decimals.</li>
+    <li>Rates: Frankfurter first, then currency-api, or a manual rate. Refreshed hourly (<code>cron/fx-refresh.php</code>). Exchanges pause if the rate is older than 24 h; an automatic rate outside ₱20–200 or more than 10% from the last one is refused.</li>
+    <li>Fees 0–5% for buy and sell (default 0.50% for USD, 1.00% for other currencies). The amount is locked to the rate shown.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ 9 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">9</span>Bills, load and cash-in (SUNIWAY)</h1>
+  <table>
+    <thead><tr><th>Tile</th><th>Purpose</th><th>SUNIWAY group</th></tr></thead>
+    <tbody>
+      <tr><td><b>UBills</b></td><td>Electricity (AKELCO), water, internet, cable, SSS, Pag-IBIG, PhilHealth…</td><td class="mono">bills</td></tr>
+      <tr><td><b>ULoad</b></td><td>Prepaid load for Globe, TM, Smart, TNT, DITO</td><td class="mono">eload</td></tr>
+      <tr><td><b>UCash In</b></td><td>Send Credits to GCash, Maya, ShopeePay and other e-wallets</td><td class="mono">ecCash</td></tr>
+    </tbody>
+  </table>
+  <div class="flow">
+    <div class="s"><b>GET providers</b>billers, networks, e-wallets</div><div class="a">→</div>
+    <div class="s"><b>POST transactions/preview</b>provider fee and total shown</div><div class="a">→</div>
+    <div class="s"><b>Debit Credits</b>then <code>POST transactions</code></div><div class="a">→</div>
+    <div class="s"><b>GET transactions/{id}</b>until final</div>
+  </div>
+  <ul>
+    <li><b>Successful:</b> done. <b>Rejected / Failed:</b> automatic refund. <b>Processing:</b> rechecked; refunded if it later fails.</li>
+    <li><b>Checking</b> (no reply in time): Credits stay on hold; Finance resolves it in <b>Admin › Bills &amp; Load › Needs checking</b> (Refund or Mark successful).</li>
+    <li>Ledger: debit <code>user_credits</code>, credit <code>suniway_payable</code> (amount + provider fee) and <code>fee_revenue:&lt;service&gt;</code> (optional convenience fee).</li>
+    <li>The Partner API key is encrypted in settings. "Test connection" counts the billers, products and e-wallets found.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ 10 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">10</span>Identity: KYC, liveness and Face Login</h1>
+
+  <h2>10.1 KYC</h2>
+  <ul>
+    <li>Available to customers, merchants, drivers and agents: ID front and back, then a guided liveness selfie (look straight, left, right, up, down, blink), then review and send.</li>
+    <li>Face detection runs on the phone with MediaPipe. The side to turn to flashes red; correct poses turn green and capture automatically; wrong turns are counted and shown to Admin.</li>
+    <li>The "look straight" selfie is compared with the ID photo using face-api. The server re-checks the descriptor distance (default max 0.60) and refuses a mismatch.</li>
+    <li>Every submission is reviewed by a person in <b>Admin › KYC verification</b>: Approve, Ask to resubmit, or Reject. "Manual" submissions (no automatic check) need extra care.</li>
+    <li>Rules (Admin › KYC › Rules): merchants, drivers and agents need approved KYC before approval (on by default); customers only for sending money and UCash In (off by default).</li>
+  </ul>
+
+  <h2>10.2 Face Login (customers)</h2>
+  <ul>
+    <li>Set up in Profile: a short liveness check whose face must match the approved KYC face. The phone gets an HttpOnly, SameSite=Strict device key; only its SHA-256 is stored.</li>
+    <li>Login: the server issues random steps and a one-time code valid for 2 minutes, checks step order and timing, and compares the 128-number face descriptor (default max distance 0.45).</li>
+    <li>5 wrong tries lock Face Login on that phone until a password login. Users can turn it off per phone or on all phones.</li>
+    <li>Face Login is a convenience login for the person's own phone, not a bank-grade identity proof. The password always works.</li>
+  </ul>
+  <div class="note"><b>Privacy</b>Only still photos (KYC) or 128 numbers (Face Login) leave the phone. Photos are re-encoded (no EXIF/GPS), stored with random names in <code>storage/kyc/</code>, and shown only to signed-in admins with KYC access. IP address and browser are recorded for audit.</div>
+</section>
+
+<!-- ============================================================ 11 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">11</span>Portals</h1>
+
+  <h2>11.1 Admin Panel and roles</h2>
+  <table>
+    <thead><tr><th>Role</th><th>Access</th></tr></thead>
+    <tbody>
+      <tr><td><b>Super Admin</b></td><td>Everything, including settings, rates, driver approval and admin users</td></tr>
+      <tr><td><b>Finance</b></td><td>Payments and refunds, finance, ledger, settlements, reports, Credits adjustments, driver and agent payouts, currency exchange</td></tr>
+      <tr><td><b>Support</b></td><td>Customers, merchant and driver review, tickets, notes, KYC decisions, ride cancellation</td></tr>
+      <tr><td><b>Barangay Officer</b></td><td>UBarangay applications for their own barangay only</td></tr>
+    </tbody>
+  </table>
+  <p>Every admin action is recorded in the audit log. First-time setup (<code>/admin/</code>) creates the Super Admin and then disables itself.</p>
+
+  <h2>11.2 Merchant Portal and MCTC</h2>
+  <ul>
+    <li>Onboarding: business, owner login, registration numbers, documents, payout account, map pin, KYC → Admin review → Approved.</li>
+    <li>After approval: payment QR (optional fixed amount), payments and CSV, payouts, listings (UPass/UGo/ULocal/UEat), orders and bookings, support tickets.</li>
+    <li>MCTC Top-up Center (on for every approved merchant by default): scan a customer's or driver's top-up QR, collect cash, enter the receipt and confirm. Cash collected is owed to Ultimate App (<code>merchants.mctc_due_centavos</code>, ledger <code>mctc_merchant_due:ID</code>) and deducted from the next payout, or recorded as a remittance.</li>
+  </ul>
+
+  <h2>11.3 URide Driver App</h2>
+  <ul>
+    <li>Registration with selfie, license, vehicle (including Boat), plate or boat registration, documents; status Submitted → Under review / Needs info → Approved.</li>
+    <li>Online/offline toggle, live request feed with beep, accept/skip, navigation, trip steps, self-drive hand-over and return, fleet units, wallet with QR Ph / MCTC / BCash top-ups and payouts.</li>
+    <li>The app must stay open with location allowed to receive requests (browsers pause background GPS).</li>
+  </ul>
+
+  <h2>11.4 Agents Portal</h2>
+  <ul>
+    <li>Approved agents get a referral link (<code>/register.php?ref=AG…</code>), code and QR. Customers are tagged once at sign-up, for <code>agents.earn_days</code> (default 365).</li>
+    <li>Default rates: URide 2% of the fare, UEat 3% (earned after a 3-day hold), UPass/UGo/ULocal 5% (earned when completed). Paid by Ultimate App as an expense.</li>
+    <li>Master Agents and Sub-Agents (one level). Masters earn an override on top (default 0.5% URide/UEat, 1% bookings).</li>
+    
+  </ul>
+
+  <h2>11.5 UBarangay</h2>
+  <p>Permits paid with Credits, BCash or QR Ph, reviewed by the Barangay Officer, issued with a verification QR (<code>/verify.php</code>). Fees post to <code>brgy_payable</code>. Off by default.</p>
+</section>
+
+<!-- ============================================================ 12 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">12</span>Security</h1>
+  <table>
+    <thead><tr><th style="width:30%">Control</th><th>Implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Passwords</td><td><code>password_hash()</code> / <code>password_verify()</code>; separate logins for customers, drivers, merchants, agents and admins</td></tr>
+      <tr><td>CSRF</td><td>Token per session, checked by <code>verify_csrf()</code> on every POST</td></tr>
+      <tr><td>Rate limits</td><td><code>rate_limit_enforce(action, actor, limit, window)</code> backed by the <code>rate_limits</code> table (logins, bookings, cancellations, transfers…)</td></tr>
+      <tr><td>SQL injection</td><td>PDO prepared statements; dynamic identifiers come from fixed allow-lists</td></tr>
+      <tr><td>XSS</td><td>All output escaped with <code>e()</code>; user text such as cancellation reasons is always escaped</td></tr>
+      <tr><td>Clickjacking</td><td><code>X-Frame-Options: DENY</code>; strict Content-Security-Policy on file viewers and camera pages</td></tr>
+      <tr><td>Private files</td><td><code>storage/</code> and <code>config/</code> blocked by <code>.htaccess</code>; files served only through permission-checked scripts with sandbox CSP</td></tr>
+      <tr><td>Secrets</td><td>API keys encrypted in <code>app_settings</code>; never logged or shown after saving; never commit <code>config/config.php</code>, <code>config/app_secret.php</code> or database dumps</td></tr>
+      <tr><td>Webhooks</td><td>Signature and timestamp (5 min) verification; idempotent settlement; no raw bodies logged</td></tr>
+      <tr><td>Audit</td><td>Admin audit log; ledger entries are append-only</td></tr>
+    </tbody>
+  </table>
+  <div class="warn"><b>Full package zips contain secrets</b>The full deployment zip includes the live <code>config/config.php</code> (database password). Share it only with the server owner, and never upload it to a public place.</div>
+</section>
+
+<!-- ============================================================ 13 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">13</span>Deployment</h1>
+
+  <h2>13.1 Server requirements</h2>
+  <ul>
+    <li>PHP 8.1+ with PDO MySQL, cURL, GD (image re-encoding), OpenSSL, mbstring; outbound HTTPS.</li>
+    <li>MySQL 8 or MariaDB 10.x with InnoDB (tested on MariaDB 10.11).</li>
+    <li>HTTPS (needed for camera, GPS, PWA install and Apple sign-in).</li>
+    <li>Writable <code>storage/</code> (or the folder in <code>config/storage.php</code>) and, once, <code>config/</code>.</li>
+  </ul>
+
+  <h2>13.2 Steps (Hostinger)</h2>
+  <ol>
+    <li>Back up the database and the site files (including <code>config/</code> and <code>storage/</code>).</li>
+    <li>Import migrations in phpMyAdmin (13.3). Every migration is safe to run again.</li>
+    <li>Upload the update zip (changed files only) or the full zip. Keep the live <code>config/config.php</code>, <code>config/app_secret.php</code> and <code>storage/</code>.</li>
+    <li>Configure in Admin › Settings: PayMongo keys, Google Maps key, URide fares, payment methods, cancellation fees, SUNIWAY.</li>
+    <li>Set the PayMongo webhook to <code>https://YOUR-DOMAIN/webhook.php</code> (events <code>payment.paid</code> and <code>checkout_session.payment.paid</code>).</li>
+    <li>Add the cron job: <code>php /home/&lt;user&gt;/public_html/cron/fx-refresh.php</code> every hour.</li>
+    <li>Smoke-test on real phones: booking, payment, driver app, merchant orders.</li>
+  </ol>
+
+  <h2 style="break-before:page">13.3 Migration order</h2>
+  <table class="tight">
+    <thead><tr><th style="width:8%">#</th><th>File</th><th>Adds</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td class="mono">schema.sql</td><td>Base tables (new install only)</td></tr>
+      <tr><td>2</td><td class="mono">paymongo, mctc, fees, conversion, service_requests, notifications, ueat_orders, boracay_cash, boracay_cash_reverse, oauth, rate_limits</td><td>Early platform features (see each module guide)</td></tr>
+      <tr><td>3</td><td class="mono">ALL_UPDATES_2026-09.sql</td><td>News, QR payments, Admin platform, UBarangay, in-app QR Ph, URide driver app, MCTC merchants</td></tr>
+      <tr><td>4</td><td class="mono">agents → agents_team</td><td>Agents Portal, Master/Sub-Agents</td></tr>
+      <tr><td>5</td><td class="mono">suniway</td><td>UBills, ULoad, UCash In</td></tr>
+      <tr><td>6</td><td class="mono">kyc</td><td>Identity verification</td></tr>
+      <tr><td>7</td><td class="mono">bcash_transfers</td><td>BCash Send/Receive</td></tr>
+      <tr><td>8</td><td class="mono">fx → fx_currencies</td><td>Currency exchange</td></tr>
+      <tr><td>9</td><td class="mono">uride_places → uride_rental → uride_selfdrive</td><td>Places, Rent a Ride, Self-drive</td></tr>
+      <tr><td>10</td><td class="mono">face</td><td>Face match and Face Login</td></tr>
+      <tr><td>11</td><td class="mono">marketplace</td><td>UGo, ULocal, UEat merchants</td></tr>
+      <tr><td>12</td><td class="mono">uride_fleet → upass_credits</td><td>E-Bike, Van, fleets; UPass bookings</td></tr>
+      <tr><td>13</td><td class="mono">pay_methods</td><td>Pay Cash switch, BCash payments</td></tr>
+      <tr><td>14</td><td class="mono">cancellation</td><td>Cancellation fees and reasons</td></tr>
+      <tr><td>15</td><td class="mono">uride_boat</td><td>Boat vehicle type and fares</td></tr>
+    </tbody>
+  </table>
+
+  <h2>13.4 Configuration files</h2>
+  <table>
+    <thead><tr><th style="width:32%">File / variable</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">config/config.php · DB_HOST, DB_NAME, DB_USER, DB_PASS</td><td>Database connection (environment variables override)</td></tr>
+      <tr><td class="mono">config/paymongo.php · PAYMONGO_*</td><td>Mode, keys, webhook secrets, <code>app_url</code></td></tr>
+      <tr><td class="mono">config/app_secret.php</td><td>Generated encryption key for stored secrets — back it up</td></tr>
+      <tr><td class="mono">config/storage.php</td><td>Optional private uploads folder outside <code>public_html</code></td></tr>
+      <tr><td class="mono">APP_URL, GOOGLE_*, FACEBOOK_*, APPLE_*</td><td>Social sign-in</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 14 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">14</span>Testing</h1>
+  <p class="lead">CLI test suites run real database transactions against a <b>copy</b> of the database and delete everything they create. Never run them on production or against real provider APIs.</p>
+<pre><code>DB_HOST=localhost DB_NAME=copy_db DB_USER=... DB_PASS=... php tests/uride_boat_test.php</code></pre>
+  <table>
+    <thead><tr><th style="width:36%">Suite</th><th>Covers</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">uride_test.php</td><td>Fares, night surcharge, commission, top-ups (QR Ph, MCTC, BCash), dispatch radius, first-accept-wins, refunds, payouts, reconciliation</td></tr>
+      <tr><td class="mono">uride_rental_test.php · uride_selfdrive_test.php</td><td>Rentals, scheduling, licenses, deposits, late fees, damage claims</td></tr>
+      <tr><td class="mono">uride_fleet_test.php · uride_places_test.php</td><td>Fleets and availability; place search</td></tr>
+      <tr><td class="mono">uride_boat_test.php</td><td>Boat ride-only rules, fares, dispatch to boat operators, payment</td></tr>
+      <tr><td class="mono">cancellation_test.php</td><td>Fee rules, free windows, reasons, ledger for URide, bookings, UEat</td></tr>
+      <tr><td class="mono">pay_methods_test.php</td><td>Pay Cash switch, BCash payments and refunds</td></tr>
+      <tr><td class="mono">marketplace_test.php · p2m_test.php · qr_pay_test.php</td><td>Bookings, UEat orders, merchant payments, P2P</td></tr>
+      <tr><td class="mono">boracay_cash_test.php · bcash_transfer_test.php</td><td>Conversions and transfers</td></tr>
+      <tr><td class="mono">fx_test.php</td><td>Exchange math, rates, fees, limits (needs <code>fx_fake_api.php</code> on port 8097)</td></tr>
+      <tr><td class="mono">suniway_test.php</td><td>Bills, load, cash-in (needs <code>suniway_fake_api.php</code> on port 8098)</td></tr>
+      <tr><td class="mono">paymongo_test.php</td><td>Webhook signatures and settlement (<code>PM_FAKE_API=1</code>)</td></tr>
+      <tr><td class="mono">kyc_test.php · face_test.php</td><td>KYC rules and Face Login</td></tr>
+      <tr><td class="mono">agents_test.php · agents_team_test.php</td><td>Commissions, teams, payouts</td></tr>
+      <tr><td class="mono">mctc_test.php · mctc_merchant_test.php</td><td>Cash top-up approvals</td></tr>
+      <tr><td class="mono">ubarangay_test.php</td><td>Permits, payments, certificates</td></tr>
+    </tbody>
+  </table>
+<pre><code># fake provider servers for local tests
+php -S 127.0.0.1:8098 tests/suniway_fake_api.php &amp;
+php -S 127.0.0.1:8097 tests/fx_fake_api.php &amp;</code></pre>
+  <div class="note"><b>Status at this edition</b>All 23 suites passed on 11–13 October 2026 (PHP 8.3, MariaDB), together with browser checks of the admin settings, URide booking (including Boat), and the cancel forms.</div>
+</section>
+
+<!-- ============================================================ 15 -->
+<section class="chapter">
+  <h1 class="chap"><span class="n">15</span>Operations and known limits</h1>
+
+  <h2>15.1 Routine operations</h2>
+  <ul>
+    <li><b>Daily:</b> process driver, agent and merchant payouts (mark paid with the transfer reference); resolve SUNIWAY "Needs checking"; review KYC and driver applications.</li>
+    <li><b>Weekly:</b> check Admin › Finance reconciliation (wallets, escrow, MCTC dues); export reports.</li>
+    <li><b>Backups:</b> database, <code>config/</code> (especially <code>app_secret.php</code>) and the storage folder, together.</li>
+    <li><b>Rates and prices:</b> starter fares, rental prices, deposits and listing prices are placeholders — confirm them with the LGU, TODA and partners.</li>
+  </ul>
+
+  <h2>15.2 Known limits</h2>
+  <ul>
+    <li>URide distances use straight line × road factor, not routed distance (this also applies to Boat routes).</li>
+    <li>UEat delivery is done by the restaurant; no rider dispatch yet.</li>
+    <li>Extending a running rental is not built in.</li>
+    <li>Liveness and Face Login run on the phone; every KYC is still reviewed by a person.</li>
+    <li>QR Ph and bank/e-wallet payouts are manual (Finance marks them paid); no automated payout provider is connected.</li>
+    <li>BCT, Buy BCT and Markets pages are "coming soon".</li>
+    <li>Stored-value and e-money rules (BSP Circular 1166) should be reviewed with counsel before BCash is offered as redeemable cash.</li>
+  </ul>
+
+  <h2>15.3 Related guides in the package</h2>
+  <p class="muted">URIDE-SETUP.md · URIDE-RENTAL-SETUP.md · URIDE-SELFDRIVE-SETUP.md · URIDE-PLACES-SETUP.md · URIDE-BOAT-SETUP.md · CREDITS-AND-RENTAL-FLEET-SETUP.md · MARKETPLACE-SETUP.md · PAYMENT-METHODS-SETUP.md · CANCELLATION-FEES-SETUP.md · BORACAY-CASH-SETUP.md · BCASH-SECTION-SETUP.md · USD-EXCHANGE-SETUP.md · SUNIWAY-SETUP.md · KYC-SETUP.md · FACE-LIVENESS-LOGIN-SETUP.md · AGENTS-PORTAL-SETUP.md · ADMIN-MERCHANT-SETUP.md · MERCHANT-PORTAL-SETUP.md · MCTC-SETUP.md · PAYMONGO-SETUP.md · UBARANGAY-SETUP.md · PWA-SETUP.md · MENU-COMMUNITY-SETUP.md · README.md</p>
+</section>
+
+</body>
+</html>

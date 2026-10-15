@@ -1,0 +1,26 @@
+<?php
+require_once __DIR__.'/../includes/bootstrap.php';require_once __DIR__.'/../includes/referrals.php';require_once __DIR__.'/../includes/cash_layout.php';
+$user=require_role(ROLE_FINANCE,ROLE_SUPER_ADMIN);
+if(is_post()){
+ csrf_verify();
+ try{
+  if(!password_verify(input('password'),$user['password_hash']))throw new DomainException('Confirm your administrator password.');
+  referral_save((int)$user['id'],input('enabled'),input('bonus_type'),input('value'),'lot_purchase');
+  flash_set('success','Referral bonus settings saved. Changes apply to future completed Lot purchases.');
+ }catch(DomainException $e){flash_set('error',$e->getMessage());}catch(Throwable $e){error_log('[referral settings] Save failed');flash_set('error','Unable to save. Check the referral database migration.');}
+ redirect('/admin/referrals.php');
+}
+cash_header($user,'Lot Referral Bonus Setup');
+if(!referral_ready()){echo '<section class="panel cash-body">Import the referral database migration first.</section>';cash_footer();exit;}
+$s=cash_query('SELECT * FROM referral_settings WHERE id=1')->fetch();
+try{$lotPlans=!referral_lot_ensure_schema()?[]:cash_query('SELECT name,price_minor,referral_bps,enabled FROM cash_lot_plans ORDER BY price_minor,id')->fetchAll();}catch(Throwable $e){$lotPlans=[];}
+$rows=cash_query('SELECT r.*,u.full_name FROM referral_rewards r JOIN users u ON u.id=r.referrer_id ORDER BY r.id DESC LIMIT 100')->fetchAll();
+?>
+<section class="panel cash-body"><h3>Lot Referral Bonus</h3><p>The referring Trader earns a bonus on <strong>every completed Lot purchase</strong> made by their referral. Deposits and registrations do not earn bonuses.</p>
+<p>Each Lot package can set its own referral percentage under <a href="/admin/lot-plans.php">Lot Packages</a>. The setting below is the default for packages left blank.</p><?php if($lotPlans): ?><div class="table-scroll"><table><thead><tr><th>Lot package</th><th>Price</th><th>Referral bonus</th></tr></thead><tbody><?php foreach($lotPlans as $lp): ?><tr><td><?= e($lp['name']) ?><?= (int)$lp['enabled']?'':' (disabled)' ?></td><td><?= cash_money((int)$lp['price_minor']) ?></td><td><?= e(referral_lot_label($lp,$s)) ?><?= $lp['referral_bps']===null?' (default)':'' ?></td></tr><?php endforeach ?></tbody></table></div><?php endif ?>
+<p><a class="button secondary" href="/admin/lot-plans.php">Manage USD Lot plans</a></p><form method="post"><?= csrf_field() ?><label>Status<select name="enabled"><option value="0">Disabled</option><option value="1" <?= $s['enabled']?'selected':'' ?>>Enabled</option></select></label>
+<label>Default bonus type<select name="bonus_type"><option value="percentage" <?= $s['bonus_type']==='percentage'?'selected':'' ?>>Percentage of Lot price</option><option value="fixed" <?= $s['bonus_type']==='fixed'?'selected':'' ?>>Fixed USD amount</option></select></label>
+<label>Default bonus value<input name="value" type="number" min="0.01" max="10000" step="0.01" required value="<?= e(number_format($s['value_minor']/100,2,'.','')) ?>"></label><p>Percentage: 5 means 5% (USD 100 Lot → USD 5 bonus). Fixed: 5 means USD 5 per purchased Lot. Percentage bonuses round down to whole USD cents.</p>
+<label>Your admin password<input name="password" type="password" autocomplete="current-password" required></label><button class="button">Save referral settings</button></form><p>Changes affect future Lot purchases only. Existing users, balances, charts and historical rewards are preserved. Bonuses are funded by the platform and do not increase the referred Trader’s Lot price.</p></section>
+<section class="panel cash-body"><h3>Recent referral bonuses</h3><p>Latest 100 awards · USD · Existing deposit bonuses remain historical records</p><div class="table-scroll"><table><thead><tr><th>Referrer</th><th>Source / ID</th><th>Rule applied</th><th>Bonus</th><th>Date</th></tr></thead><tbody><?php foreach($rows as $r): ?><tr><td><?= e($r['full_name']) ?></td><td><?= $r['trigger_type']==='lot_purchase'?'Lot purchase':'Historical deposit' ?> #<?= (int)$r['source_request_id'] ?></td><td><?= $r['bonus_type']==='percentage'?e(number_format($r['value_minor']/100,2)).'%':cash_money((int)$r['value_minor']) ?></td><td><?= cash_money((int)$r['amount_minor']) ?></td><td><?= e($r['created_at']) ?></td></tr><?php endforeach ?><?php if(!$rows): ?><tr><td colspan="5">No referral bonuses yet.</td></tr><?php endif ?></tbody></table></div></section>
+<?php cash_footer(); ?>

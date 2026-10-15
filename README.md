@@ -22,7 +22,7 @@ Lahat ay naka-on/off at nababago sa **Admin → Compensation Plan** (puwedeng ma
 ## PayMongo
 
 **Admin → PayMongo Settings**: ilagay ang Public/Secret key (test o live), piliin ang payment methods
-(GCash, Maya, Card, GrabPay, QR Ph, Online Banking, BillEase), i-click ang *Test Connection* at *Register Webhook*
+(default: **QR Ph lang**; puwede ring GCash, Maya, Card, GrabPay, Online Banking, BillEase), i-click ang *Test Connection* at *Register Webhook*
 (kailangang HTTPS ang site). Kapag naka-enable:
 
 - **Checkout ng produkto** — may "PayMongo" na payment option; pagkabayad, awtomatikong *paid* ang order at lumalabas ang commissions.
@@ -94,7 +94,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql` at `database/upgrade_v3.sql`.
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql` at `database/upgrade_v4.sql` (QR Ph bilang PayMongo method).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.

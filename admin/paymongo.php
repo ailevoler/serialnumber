@@ -19,7 +19,7 @@ if (is_post()) {
                 }
             }
             $methods = array_values(array_intersect((array)($_POST['paymongo_methods'] ?? []), array_keys(paymongo_method_options())));
-            save_setting('paymongo_methods', implode(',', $methods ?: ['gcash']));
+            save_setting('paymongo_methods', implode(',', $methods ?: ['qrph']));
             settings_all(true);
             $sk = (string)setting('paymongo_secret_key');
             $mode = setting('paymongo_mode');
@@ -52,7 +52,7 @@ if (is_post()) {
 $mask = function (string $v): string {
     return $v === '' ? 'Not set' : str_repeat('•', 8) . substr($v, -4);
 };
-$methods = setting_list('paymongo_methods');
+$methods = paymongo_methods();
 $stats = q_row("SELECT COUNT(*) n, COALESCE(SUM(IF(status='paid', amount, 0)),0) paid, SUM(status='pending') pending FROM payments");
 
 page_header('PayMongo Settings', $me, 'Accept GCash, Maya, cards and more');
@@ -88,7 +88,7 @@ page_header('PayMongo Settings', $me, 'Accept GCash, Maya, cards and more');
               <label class="radio-pill"><input type="checkbox" name="paymongo_methods[]" value="<?= $k ?>" <?= in_array($k, $methods, true) ? 'checked' : '' ?>><span><?= e($label) ?></span></label>
             <?php endforeach; ?>
           </div>
-          <div class="help">Only methods activated on your PayMongo account will work.</div></div>
+          <div class="help">Only the ticked methods appear on the PayMongo checkout page. Tick <strong>QR Ph</strong> only to accept QR Ph payments (any bank or e-wallet app can scan it). Each method must be activated on your PayMongo account.</div></div>
       </div>
       <button class="btn btn-primary mt-2" type="submit">Save Settings</button>
     </div>

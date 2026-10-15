@@ -276,7 +276,7 @@ INSERT INTO settings (skey, svalue) VALUES
  ('paymongo_secret_key', ''),
  ('paymongo_webhook_secret', ''),
  ('paymongo_webhook_id', ''),
- ('paymongo_methods', 'gcash,paymaya,card');
+ ('paymongo_methods', 'qrph');
 
 INSERT INTO announcements (title, body) VALUES
  ('Welcome to XGEN LIFE Intl!', 'Better Health • Brighter Future. Together. Start building your team by sharing your referral link.');

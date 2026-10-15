@@ -24,6 +24,24 @@ function paymongo_method_options(): array
     ];
 }
 
+/** Payment method types sent to PayMongo (only known types; QR Ph by default). */
+function paymongo_methods(): array
+{
+    $m = array_values(array_intersect(setting_list('paymongo_methods'), array_keys(paymongo_method_options())));
+    return $m ?: ['qrph'];
+}
+
+/** Customer-facing label for the PayMongo option, e.g. "QR Ph" or "GCash / Maya". */
+function paymongo_label(): string
+{
+    $opts = paymongo_method_options();
+    $m = paymongo_methods();
+    if ($m === ['qrph']) {
+        return 'QR Ph (scan with any bank or e-wallet app)';
+    }
+    return implode(' / ', array_map(fn($k) => $opts[$k], $m));
+}
+
 function paymongo_enabled(): bool
 {
     return setting('paymongo_enabled', '0') === '1' && trim((string)setting('paymongo_secret_key', '')) !== '';
@@ -59,6 +77,9 @@ function paymongo_request(string $method, string $path, ?array $body = null): ar
     $json = json_decode((string)$res, true) ?: [];
     if ($status >= 400) {
         $detail = $json['errors'][0]['detail'] ?? ('HTTP ' . $status);
+        if (str_contains(strtolower($detail), 'payment_method')) {
+            $detail .= ' — make sure the selected payment method (e.g. QR Ph) is activated on your PayMongo account.';
+        }
         throw new RuntimeException('PayMongo error: ' . $detail);
     }
     return $json;
@@ -82,7 +103,7 @@ function paymongo_start_checkout(int $userId, string $purpose, array $items, str
         [$ref, $userId, $purpose, $orderId, $packageId, $qty, round($amount, 2)]);
     $paymentId = (int)db()->lastInsertId();
 
-    $methods = setting_list('paymongo_methods') ?: ['gcash', 'paymaya', 'card'];
+    $methods = paymongo_methods();
     $user = q_row('SELECT first_name, last_name, email, mobile FROM users WHERE id = ?', [$userId]);
     $res = paymongo_request('POST', '/checkout_sessions', ['data' => ['attributes' => [
         'line_items' => array_map(fn($it) => [

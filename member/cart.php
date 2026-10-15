@@ -61,7 +61,7 @@ $methods = setting_list('order_payment_methods');
 if (paymongo_enabled()) {
     $methods[] = 'paymongo';
 }
-$labels = ['paymongo' => 'PayMongo (GCash / Maya / Card)', 'wallet' => 'E-Wallet', 'cash' => 'Cash / Pick-up', 'bank' => 'Bank Deposit', 'gcash' => 'GCash', 'maya' => 'Maya'];
+$labels = ['paymongo' => paymongo_label(), 'wallet' => 'E-Wallet', 'cash' => 'Cash / Pick-up', 'bank' => 'Bank Deposit', 'gcash' => 'GCash', 'maya' => 'Maya'];
 
 page_header('My Cart', $me, 'Review items and checkout');
 ?>

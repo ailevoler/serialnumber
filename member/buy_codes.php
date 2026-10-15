@@ -62,7 +62,7 @@ page_header('Buy Activation Codes', $me, 'Get codes to register your new members
         <div><label>Pay with</label>
           <div class="radio-row">
             <?php if ($walletOk): ?><label class="radio-pill"><input type="radio" name="method" value="wallet" checked><span>E-Wallet (<?= money($me['wallet_balance']) ?>)</span></label><?php endif; ?>
-            <?php if ($pmOk): ?><label class="radio-pill"><input type="radio" name="method" value="paymongo" <?= $walletOk ? '' : 'checked' ?>><span>PayMongo (GCash / Maya / Card)</span></label><?php endif; ?>
+            <?php if ($pmOk): ?><label class="radio-pill"><input type="radio" name="method" value="paymongo" <?= $walletOk ? '' : 'checked' ?>><span><?= e(paymongo_label()) ?></span></label><?php endif; ?>
           </div>
         </div>
         <button class="btn btn-primary" type="submit"><?= icon('cart', 16) ?> Buy Codes</button>

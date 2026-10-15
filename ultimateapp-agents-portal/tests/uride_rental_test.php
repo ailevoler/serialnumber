@@ -24,7 +24,7 @@ $set = static function (string $k, string $v) use ($pdo, &$saved): void {
 foreach (['uride.enabled' => '1', 'uride.credits_enabled' => '1', 'uride.cash_enabled' => '1', 'uride.rental_enabled' => '1', 'uride.rental_day_hours' => '8', 'uride.rental_max_hours' => '12',
     'uride.rental_schedule_days' => '7', 'uride.e_trike.rental_enabled' => '1', 'uride.e_trike.rental_hour_centavos' => '50000', 'uride.e_trike.rental_min_hours' => '1',
     'uride.e_trike.rental_day_centavos' => '300000', 'uride.car.rental_enabled' => '1', 'uride.car.rental_hour_centavos' => '80000', 'uride.car.rental_min_hours' => '2', 'uride.car.rental_day_centavos' => '500000',
-    'uride.commission_type' => 'percent', 'uride.commission_percent_bp' => '1000', 'uride.min_wallet_centavos' => '5000', 'uride.dispatch_radius_km' => '3', 'uride.request_timeout_min' => '5', 'uride.e_trike.enabled' => '1'] as $k => $v) $set($k, $v);
+    'uride.commission_type' => 'percent', 'uride.commission_percent_bp' => '1000', 'uride.rental_commission_bp' => '1500', 'uride.min_wallet_centavos' => '5000', 'uride.dispatch_radius_km' => '3', 'uride.request_timeout_min' => '5', 'uride.e_trike.enabled' => '1'] as $k => $v) $set($k, $v);
 $users = []; $drivers = [];
 $key = static fn(): string => bin2hex(random_bytes(32));
 $base = ['pickup_address' => "D'Mall Boracay", 'pickup_lat' => '11.9667000', 'pickup_lng' => '121.9246000', 'vehicle_type' => 'e_trike', 'payment_method' => 'credits', 'rental_hours' => '3', 'start_mode' => 'now', 'passenger_note' => 'Puka then Mt. Luho'];
@@ -105,7 +105,7 @@ try {
     $w0 = uride_wallet_balance($pdo, $d);
     uride_driver_action($pdo, $d, (int) $s['id'], 'complete');
     $done = $pdo->query('SELECT * FROM uride_requests WHERE id = ' . (int) $s['id'])->fetch();
-    $check($done['status'] === 'completed' && (int) $done['commission_centavos'] === 15000 && uride_wallet_balance($pdo, $d) === $w0 - 15000, 'cash rental completed: 10% commission (PHP 150) taken from the driver wallet');
+    $check($done['status'] === 'completed' && (int) $done['commission_centavos'] === 22500 && uride_wallet_balance($pdo, $d) === $w0 - 22500, 'cash rental completed: 15% rental commission (PHP 225) taken from the driver wallet');
 
     // Credits rental settles to the driver like a ride.
     $pdo->exec("UPDATE users SET credits = 5000 WHERE id = $u");
@@ -115,7 +115,7 @@ try {
     uride_driver_action($pdo, $d, (int) $c['id'], 'start');
     $w1 = uride_wallet_balance($pdo, $d);
     uride_driver_action($pdo, $d, (int) $c['id'], 'complete');
-    $check(uride_wallet_balance($pdo, $d) === $w1 + 150000 - 15000, 'Credits rental: driver wallet gets PHP 1,500 less PHP 150 commission');
+    $check(uride_wallet_balance($pdo, $d) === $w1 + 150000 - 22500, 'Credits rental: driver wallet gets PHP 1,500 less PHP 225 (15%) commission');
     $sum = $pdo->query('SELECT SUM(debit_centavos) d, SUM(credit_centavos) c FROM ledger_entries WHERE entry_group = ' . $pdo->quote($cc))->fetch();
     $check((int) $sum['d'] === (int) $sum['c'] && (int) $sum['d'] > 0, 'rental books balance');
     echo "\nAll Rent a Ride tests passed.\n";

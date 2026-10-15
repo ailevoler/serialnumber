@@ -3,7 +3,8 @@ declare(strict_types=1);
 // CLI only. Run against a COPY of the database after importing database/uride_pricing_2026_10_migration.sql:
 //   DB_HOST=... DB_NAME=... DB_USER=... DB_PASS=... php tests/uride_pricing_test.php
 // Checks the October 2026 URide pricing: Motorcycle/E-Trike PHP 50 for the first 2 km then PHP 25 per km
-// (4 km = PHP 100), PHP 10 deducted from the driver per trip, PHP 50 minimum top-up and wallet to go online.
+// (4 km = PHP 100), PHP 10 deducted from the driver per trip, PHP 50 minimum top-up and wallet to go online,
+// and 15% commission on Rent a Ride.
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 $check = static function (bool $ok, string $msg): void { if (!$ok) throw new RuntimeException('FAILED: ' . $msg); echo "PASS: $msg\n"; };
 $throws = static function (callable $fn, string $needle, string $msg) use ($check): void {
@@ -25,7 +26,7 @@ $set = static function (string $k, string $v) use ($pdo, &$saved): void {
 // The values from the migration, plus a neutral environment for the trip.
 foreach (['uride.motorcycle.enabled' => '1', 'uride.motorcycle.base_centavos' => '5000', 'uride.motorcycle.included_km' => '2', 'uride.motorcycle.per_km_centavos' => '2500', 'uride.motorcycle.minimum_centavos' => '5000',
     'uride.e_trike.enabled' => '1', 'uride.e_trike.base_centavos' => '5000', 'uride.e_trike.included_km' => '2', 'uride.e_trike.per_km_centavos' => '2500', 'uride.e_trike.minimum_centavos' => '5000',
-    'uride.commission_type' => 'fixed', 'uride.commission_fixed_centavos' => '1000', 'uride.topup_min_centavos' => '5000', 'uride.min_wallet_centavos' => '5000',
+    'uride.commission_type' => 'fixed', 'uride.commission_fixed_centavos' => '1000', 'uride.topup_min_centavos' => '5000', 'uride.min_wallet_centavos' => '5000', 'uride.rental_commission_bp' => '1500',
     'uride.enabled' => '1', 'uride.cash_enabled' => '1', 'pay.cash_enabled' => '1', 'uride.road_factor' => '1.3', 'uride.night_surcharge_bp' => '0', 'uride.dispatch_radius_km' => '3', 'uride.request_timeout_min' => '5'] as $k => $v) $set($k, $v);
 $users = []; $drivers = [];
 $road = static fn(float $km): float => $km / 1.3; // straight-line km that gives this many road km
@@ -40,6 +41,8 @@ try {
         $check(uride_quote($v, $road(2.5), 12)['fare'] === 6300, "$label: 2.5 km = PHP 62.50, rounded up to PHP 63");
     }
     $check(uride_commission_for(5000) === 1000 && uride_commission_for(15000) === 1000, 'PHP 10 per trip, whatever the fare');
+    $check(uride_commission_for(300000, 'rental') === 45000 && uride_commission_for(150000, 'rental') === 22500, 'Rent a Ride: 15% of each rental (PHP 3,000 → PHP 450)');
+    $check(uride_commission_label('rental') === '15% of each rental' && uride_commission_label() === 'PHP 10.00 per trip', 'labels: rides PHP 10 per trip, rentals 15%');
     $s = uride_settings();
     $check($s['topup_min'] === 5000 && $s['min_wallet'] === 5000, 'minimum top-up PHP 50 and PHP 50 to go online');
 

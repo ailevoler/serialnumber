@@ -44,7 +44,7 @@ if (!$ride) { dflash('error', 'Ride not found.'); redirect('dashboard.php'); }
 $status = $ride['status'];
 $activeRide = in_array($status, ['accepted', 'arrived', 'in_progress'], true);
 $fare = (int) $ride['fare_centavos'];
-$commission = (int) ($ride['commission_centavos'] ?? uride_commission_for($fare));
+$commission = (int) ($ride['commission_centavos'] ?? uride_commission_for($fare, (string) ($ride['trip_type'] ?? 'ride')));
 $isRental = ($ride['trip_type'] ?? 'ride') === 'rental';
 $rentalEnds = $isRental && $ride['started_at'] ? strtotime((string) $ride['started_at']) + 3600 * (int) $ride['rental_hours'] : null;
 $isSelf = uride_is_self_drive($ride);
@@ -99,7 +99,7 @@ driver_header('', 'dashboard', 'ride');
     <div class="d-card d-fare">
         <div class="kv"><span><?= $isRental ? e(uride_rental_label($ride)) : 'Fare (' . e(number_format((float) $ride['road_km'], 1)) . ' km)' ?></span><b>₱<?= peso($fare) ?></b></div>
         <div class="kv"><span>Payment</span><b><?= $ride['payment_method'] === 'cash' ? 'Cash — collect from passenger' : e(uride_pay_label((string) $ride['payment_method'])) . ' — paid in the app' ?></b></div>
-        <div class="kv"><span>URide commission</span><b>− ₱<?= peso($commission) ?></b></div>
+        <div class="kv"><span><?= $isRental ? 'Commission (' . e(rtrim(rtrim(number_format($fare > 0 ? $commission * 100 / $fare : 0, 1, '.', ''), '0'), '.')) . '%)' : 'URide trip fee' ?></span><b>− ₱<?= peso($commission) ?></b></div>
         <div class="kv total"><span>Your earnings</span><b>₱<?= peso($fare - $commission) ?></b></div>
     </div>
 

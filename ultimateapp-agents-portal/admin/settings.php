@@ -93,6 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setting_save($pdo, 'uride.rental_day_hours', (string) (int) p('rental_day_hours', '8'), $aid);
             setting_save($pdo, 'uride.rental_max_hours', (string) (int) p('rental_max_hours', '12'), $aid);
             setting_save($pdo, 'uride.rental_schedule_days', (string) (int) p('rental_schedule_days', '7'), $aid);
+            $rpct = trim(p('rental_commission_pct', '15'));
+            if (!preg_match('/^\d{1,2}(?:\.\d{1,2})?$/D', $rpct) || (float) $rpct > 50) throw new InvalidArgumentException('Rent a Ride commission must be from 0 to 50%.');
+            setting_save($pdo, 'uride.rental_commission_bp', (string) (int) round((float) $rpct * 100), $aid);
             // Self-drive (customer drives; deposit held in Credits)
             foreach (array_keys(uride_rentable_vehicles()) as $v) {
                 setting_save($pdo, "uride.$v.self_enabled", p("{$v}_self_enabled") === '1' ? '1' : '0', $aid);
@@ -268,12 +271,13 @@ admin_header('Settings', 'settings');
 </section>
 <?php $rs = uride_rental_settings(); ?>
 <section class="card mt"><h2>Rent a Ride <small>vehicle with driver · PHP</small> <?= status_badge($rs['enabled'] ? 'active' : 'disabled') ?></h2>
-    <p class="muted">Customers choose <b>Rent a Ride</b> in URide, pick a vehicle, how long (hours or a whole day) and when to start. The price is upfront: hourly rate × hours (at least the minimum hours), never more than the whole-day price. The same driver commission applies. Drivers see scheduled rentals <?= URIDE_RENTAL_LEAD_MIN ?> minutes before the start.</p>
+    <p class="muted">Customers choose <b>Rent a Ride</b> in URide, pick a vehicle, how long (hours or a whole day) and when to start. The price is upfront: hourly rate × hours (at least the minimum hours), never more than the whole-day price. Ultimate App keeps the Rent a Ride commission below (default 15%) of each completed rental. Drivers see scheduled rentals <?= URIDE_RENTAL_LEAD_MIN ?> minutes before the start.</p>
     <div class="form-grid">
         <div class="field"><label for="rental_enabled">Rent a Ride</label><select id="rental_enabled" name="rental_enabled"><option value="1"<?= $rs['enabled'] ? ' selected' : '' ?>>On</option><option value="0"<?= !$rs['enabled'] ? ' selected' : '' ?>>Off</option></select></div>
         <div class="field"><label for="rental_day_hours">Hours in a whole day</label><input id="rental_day_hours" name="rental_day_hours" type="number" min="4" max="24" value="<?= (int) $rs['day_hours'] ?>"></div>
         <div class="field"><label for="rental_max_hours">Longest hourly package</label><input id="rental_max_hours" name="rental_max_hours" type="number" min="1" max="24" value="<?= (int) $rs['max_hours'] ?>"></div>
         <div class="field"><label for="rental_schedule_days">Book up to (days ahead)</label><input id="rental_schedule_days" name="rental_schedule_days" type="number" min="0" max="30" value="<?= (int) $rs['schedule_days'] ?>"><small>0 = only "Now".</small></div>
+        <div class="field"><label for="rental_commission_pct">Rent a Ride commission (%)</label><input id="rental_commission_pct" name="rental_commission_pct" inputmode="decimal" value="<?= e(rtrim(rtrim(number_format(uride_rental_commission_bp() / 100, 2, '.', ''), '0'), '.')) ?>"><small>Of each completed rental (with driver and self-drive) and of late-return fees. Rides keep the trip fee.</small></div>
     </div>
     <div class="table-wrap"><table class="fare-matrix"><thead><tr><th>Vehicle</th><th>Rentable</th><th>Per hour</th><th>Minimum hours</th><th>Whole day</th><th>Example: 3 hours</th></tr></thead><tbody>
     <?php foreach (uride_rentable_vehicles() as $v => $veh): $rr = uride_rental_rule($v); $ex = uride_rental_quote($v, '3'); ?>

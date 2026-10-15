@@ -158,7 +158,7 @@ function uride_selfdrive_return(PDO $pdo, int $driverId, int $rideId, int $claim
 
         uride_settle_completed($pdo, $driver, $ride);
         if ($lateFee > 0) {
-            uride_deposit_pay_owner($pdo, $ride, $driverId, $lateFee, 'late_fee', 'Late return ' . $lateHours . ' h', uride_commission_for($lateFee));
+            uride_deposit_pay_owner($pdo, $ride, $driverId, $lateFee, 'late_fee', 'Late return ' . $lateHours . ' h', uride_commission_for($lateFee, 'rental'));
         }
         $pdo->prepare('UPDATE uride_requests SET returned_at = NOW(), late_fee_centavos = ?, claim_centavos = ?, claim_note = ? WHERE id = ?')
             ->execute([$lateFee, $claim, $claim > 0 ? $note : ($note ?: null), $rideId]);

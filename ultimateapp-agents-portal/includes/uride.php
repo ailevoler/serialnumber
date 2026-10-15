@@ -529,16 +529,25 @@ function uride_book_rental(PDO $pdo, int $userId, array $in, string $requestKey)
     });
 }
 
-function uride_commission_for(int $fare): int
+/** Rent a Ride (with driver and self-drive) pays a percentage of each completed rental, default 15%. */
+function uride_rental_commission_bp(): int
+{
+    return max(0, min(5000, setting_int('uride.rental_commission_bp', 1500)));
+}
+
+/** Commission for a fare: rides use the ride rule (default PHP 10 per trip); rentals use the rental percentage. */
+function uride_commission_for(int $fare, string $tripType = 'ride'): int
 {
     $s = uride_settings();
-    $c = $s['commission_type'] === 'fixed' ? $s['commission_fixed'] : intdiv($fare * $s['commission_bp'] + 5000, 10000);
+    if ($tripType === 'rental') $c = intdiv($fare * uride_rental_commission_bp() + 5000, 10000);
+    else $c = $s['commission_type'] === 'fixed' ? $s['commission_fixed'] : intdiv($fare * $s['commission_bp'] + 5000, 10000);
     return max(0, min($c, $fare));
 }
 
-function uride_commission_label(): string
+function uride_commission_label(string $tripType = 'ride'): string
 {
     $s = uride_settings();
+    if ($tripType === 'rental') return rtrim(rtrim(number_format(uride_rental_commission_bp() / 100, 2, '.', ''), '0'), '.') . '% of each rental';
     return $s['commission_type'] === 'fixed' ? 'PHP ' . peso($s['commission_fixed']) . ' per trip' : rtrim(rtrim(number_format($s['commission_bp'] / 100, 2, '.', ''), '0'), '.') . '% of fare';
 }
 
@@ -1031,7 +1040,7 @@ function uride_feed(PDO $pdo, array $driver): array
         $away = uride_distance($lat, $lng, (float) $r['pickup_lat'], (float) $r['pickup_lng']);
         if ($away > $s['radius_km']) continue;
         $fare = (int) $r['fare_centavos'];
-        $commission = uride_commission_for($fare);
+        $commission = uride_commission_for($fare, (string) ($r['trip_type'] ?? 'ride'));
         $out[] = [
             'id' => (int) $r['id'], 'code' => $r['code'], 'passenger' => uride_short_name((string) $r['full_name']),
             'pickup' => $r['pickup_address'], 'dropoff' => $r['dropoff_address'], 'pickup_km' => $away, 'trip_km' => (float) $r['road_km'],
@@ -1065,7 +1074,7 @@ function uride_accept(PDO $pdo, int $driverId, int $rideId): array
         $s = uride_settings();
         $away = uride_distance((float) $driver['lat'], (float) $driver['lng'], (float) $ride['pickup_lat'], (float) $ride['pickup_lng']);
         if ($away > $s['radius_km'] + 0.5) throw new InvalidArgumentException('You are too far from this pick-up.');
-        $commission = uride_commission_for((int) $ride['fare_centavos']);
+        $commission = uride_commission_for((int) $ride['fare_centavos'], (string) ($ride['trip_type'] ?? 'ride'));
         $need = max($s['min_wallet'], $ride['payment_method'] === 'cash' ? $commission : 0);
         if ((int) $driver['wallet_centavos'] < $need) throw new InvalidArgumentException('Your wallet needs at least PHP ' . peso($need) . ' to accept this ride. Top up first.');
         $pdo->prepare("UPDATE uride_requests SET status = 'accepted', driver_id = ?, accepted_at = NOW(), commission_centavos = ? WHERE id = ?")->execute([$driverId, $commission, $rideId]);
@@ -1125,7 +1134,7 @@ function uride_settle_completed(PDO $pdo, array $driver, array $ride): void
 {
     $driverId = (int) $driver['id'];
     $fare = (int) $ride['fare_centavos'];
-    $commission = (int) ($ride['commission_centavos'] ?? uride_commission_for($fare));
+    $commission = (int) ($ride['commission_centavos'] ?? uride_commission_for($fare, (string) ($ride['trip_type'] ?? 'ride')));
     $lines = [];
     if ($ride['payment_method'] !== 'cash') {
         $held = (int) $ride['held_centavos'];
@@ -1142,7 +1151,7 @@ function uride_settle_completed(PDO $pdo, array $driver, array $ride): void
         $lines[] = ['driver_wallet:' . $driverId, $commission, 0, 'Commission on cash trip'];
     }
     if ($commission > 0) {
-        uride_wallet_change($pdo, $driverId, -$commission, 'commission', $ride['code'], (int) $ride['id'], 'Commission ' . uride_commission_label());
+        uride_wallet_change($pdo, $driverId, -$commission, 'commission', $ride['code'], (int) $ride['id'], 'Commission ' . uride_commission_label((string) ($ride['trip_type'] ?? 'ride')));
         $lines[] = ['fee_revenue:uride', 0, $commission, 'URide commission'];
         ledger_post($pdo, $ride['code'], 'uride_trip', $lines);
     } elseif ($ride['payment_method'] !== 'cash') {

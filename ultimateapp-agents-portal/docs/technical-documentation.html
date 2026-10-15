@@ -369,7 +369,7 @@ html.cover-only body > section:not(.cover) { display:none; }
   <ul>
     <li>Unaccepted requests expire after the timeout (default 5 min; rentals 10 min) and are refunded.</li>
     <li>Drivers need ₱50 in the wallet to go online, and the minimum top-up is ₱50; cash rides deduct the trip fee from the wallet.</li>
-    <li>Trip fee: a fixed <b>₱10 per completed trip</b> (default), or a percentage of the fare; never more than the fare.</li>
+    <li>Trip fee: a fixed <b>₱10 per completed ride</b> (default), or a percentage of the fare; never more than the fare. <b>Rent a Ride</b> (with driver and self-drive) instead pays a <b>15% commission</b> of each completed rental and of late-return fees (<code>uride.rental_commission_bp</code>).</li>
     <li>Passengers rate the driver 1–5 stars. Drivers can skip a request or give an accepted ride back before pick-up.</li>
   </ul>
 
@@ -410,6 +410,7 @@ html.cover-only body > section:not(.cover) { display:none; }
   <table>
     <thead><tr><th>Event</th><th>Driver wallet</th><th>Ledger</th></tr></thead>
     <tbody>
+      <tr><td>Trip reward at a milestone</td><td>+ bonus</td><td>driver_reward_expense → driver_wallet</td></tr>
       <tr><td>Ride completed (Credits/BCash)</td><td>+ fare − commission</td><td>uride_escrow → driver_wallet + fee_revenue:uride</td></tr>
       <tr><td>Ride completed (cash)</td><td>− commission</td><td>driver_wallet → fee_revenue:uride</td></tr>
       <tr><td>Passenger cancellation fee</td><td>+ fee</td><td>uride_escrow → user wallet (refund) + driver_wallet (fee)</td></tr>
@@ -675,6 +676,7 @@ html.cover-only body > section:not(.cover) { display:none; }
       <tr><td>14</td><td class="mono">cancellation</td><td>Cancellation fees and reasons</td></tr>
       <tr><td>15</td><td class="mono">uride_boat</td><td>Boat vehicle type and fares</td></tr>
       <tr><td>16</td><td class="mono">uride_pricing_2026_10</td><td>₱50/2 km + ₱25/km (Motorcycle, E-Trike), ₱10 trip fee, ₱50 top-up</td></tr>
+      <tr><td>17</td><td class="mono">uride_rewards · uride_rental_commission</td><td>Driver trip rewards; 15% Rent a Ride commission</td></tr>
     </tbody>
   </table>
 

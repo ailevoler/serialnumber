@@ -85,7 +85,7 @@ driver_header('Driver application');
     </div>
 
     <div class="reg-section">
-        <div class="alert info">How earnings work: passengers pay the fare shown in the app, in cash or Ultimate App Credits. URide's commission (currently <?= e(uride_commission_label()) ?>) is deducted from your driver wallet after each trip, so keep your wallet topped up (via QR Ph) to stay online. Credits fares are added to your wallet and can be withdrawn.</div>
+        <div class="alert info">How earnings work: passengers pay the fare shown in the app, in cash or Ultimate App Credits. URide's commission (currently <?= e(uride_commission_label()) ?> for rides and <?= e(uride_commission_label('rental')) ?> for Rent a Ride) is deducted from your driver wallet after each trip, so keep your wallet topped up (via QR Ph) to stay online. Credits fares are added to your wallet and can be withdrawn.</div>
         <label class="d-agree"><input type="checkbox" name="agree" value="1"<?= dp('agree') === '1' ? ' checked' : '' ?>> I confirm these details are true and agree to the URide driver terms, commission and safety rules.</label>
         <div class="form-actions"><button class="btn grad" type="submit" data-submit>Submit application</button><a href="login.php">I already have an account</a></div>
     </div>

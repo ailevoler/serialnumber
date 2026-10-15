@@ -68,6 +68,7 @@ function settings_schema(): array
         'uride.self_drive_kyc' => ['type' => 'bool', 'label' => 'Self-drive needs a verified ID (KYC)'],
         'uride.e_bike_license' => ['type' => 'bool', 'label' => "E-Bike self-drive needs a driver's license (A/A1)"],
         'uride.self_drive_grace_min' => ['type' => 'int', 'min' => 0, 'max' => 120, 'label' => 'Late return grace (minutes)'],
+        'uride.rental_commission_bp' => ['type' => 'int', 'min' => 0, 'max' => 5000, 'label' => 'Rent a Ride commission (%)'],
         'uride.rental_day_hours' => ['type' => 'int', 'min' => 4, 'max' => 24, 'label' => 'Hours in a whole-day rental'],
         'uride.rental_max_hours' => ['type' => 'int', 'min' => 1, 'max' => 24, 'label' => 'Longest hourly rental'],
         'uride.rental_schedule_days' => ['type' => 'int', 'min' => 0, 'max' => 30, 'label' => 'Book rentals up to (days ahead)'],

@@ -26,7 +26,7 @@ foreach (['uride.enabled' => '1', 'uride.credits_enabled' => '1', 'uride.cash_en
     'uride.self_drive_enabled' => '1', 'uride.self_drive_kyc' => '0', 'uride.self_drive_grace_min' => '15',
     'uride.e_trike.self_enabled' => '1', 'uride.e_trike.self_hour_centavos' => '35000', 'uride.e_trike.self_min_hours' => '2', 'uride.e_trike.self_day_centavos' => '200000', 'uride.e_trike.self_deposit_centavos' => '200000',
     'uride.car.self_enabled' => '1', 'uride.car.self_hour_centavos' => '60000', 'uride.car.self_min_hours' => '4', 'uride.car.self_day_centavos' => '350000', 'uride.car.self_deposit_centavos' => '500000',
-    'uride.commission_type' => 'percent', 'uride.commission_percent_bp' => '1000', 'uride.min_wallet_centavos' => '5000', 'uride.dispatch_radius_km' => '3', 'uride.request_timeout_min' => '5', 'kyc.required_user' => '0'] as $k => $v) $set($k, $v);
+    'uride.commission_type' => 'percent', 'uride.commission_percent_bp' => '1000', 'uride.rental_commission_bp' => '1500', 'uride.min_wallet_centavos' => '5000', 'uride.dispatch_radius_km' => '3', 'uride.request_timeout_min' => '5', 'kyc.required_user' => '0'] as $k => $v) $set($k, $v);
 $users = []; $drivers = []; $photos = [];
 $key = static fn(): string => bin2hex(random_bytes(32));
 $jpeg = static function (): array {
@@ -109,7 +109,7 @@ try {
     uride_selfdrive_return($pdo, $owner, (int) $r1['id'], 0, '');
     $r1 = $ride($c1);
     $check($r1['status'] === 'completed' && $r1['deposit_status'] === 'refunded' && (int) $r1['late_fee_centavos'] === 0, 'on-time return: completed, deposit returned');
-    $check(uride_wallet_balance($pdo, $owner) === $w0 + 140000 - 14000 && $credits() === 1000000 - 140000, 'owner gets PHP 1,400 less 10%; customer paid only the price');
+    $check(uride_wallet_balance($pdo, $owner) === $w0 + 140000 - 21000 && $credits() === 1000000 - 140000, 'owner gets PHP 1,400 less 15% (PHP 210); customer paid only the price');
 
     // Late return: 1 h 45 min late -> 2 started hours after 15 min grace = PHP 700 from the deposit.
     $c2 = uride_book_rental($pdo, $u, $base, $key()); $r2 = $ride($c2);
@@ -119,7 +119,7 @@ try {
     uride_selfdrive_return($pdo, $owner, (int) $r2['id'], 0, '');
     $r2 = $ride($c2);
     $check((int) $r2['late_fee_centavos'] === 70000 && $r2['deposit_status'] === 'settled', 'late by 1 h 45 min: PHP 700 late fee (2 started hours after the 15 min grace)');
-    $check($credits() === $c0 + 130000 && uride_wallet_balance($pdo, $owner) === $w1 + 140000 - 14000 + 70000 - 7000, 'customer gets PHP 1,300 back; owner gets price and late fee, less commission');
+    $check($credits() === $c0 + 130000 && uride_wallet_balance($pdo, $owner) === $w1 + 140000 - 21000 + 70000 - 10500, 'customer gets PHP 1,300 back; owner gets price and late fee, less 15% commission');
 
     // Damage claim decided by Admin.
     $c3 = uride_book_rental($pdo, $u, $base, $key()); $r3 = $ride($c3);

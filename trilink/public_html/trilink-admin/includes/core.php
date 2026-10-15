@@ -186,10 +186,10 @@ class Permissions {
     /** Hardcoded fallback matrix used if the permissions tables are empty. */
     private static array $fallback = [
         'super_admin' => '*',
-        'admin'       => ['dashboard','users','drivers','agents','merchants','trips','deliveries','orders','transactions','topups','payouts','promos','banners','support','fare','settings',
+        'admin'       => ['dashboard','users','drivers','agents','merchants','trips','deliveries','orders','terminals','transactions','topups','payouts','promos','banners','support','fare','settings',
                           'crm_leads','crm_contacts','crm_accounts','crm_deals','crm_activities','crm_tasks','crm_campaigns','crm_reports',
                           'erp_financial','erp_sales','erp_purchasing','erp_inventory','erp_hr','erp_payroll','erp_projects','erp_assets','erp_maintenance','erp_reports'],
-        'manager'     => ['dashboard','users','drivers','agents','merchants','trips','deliveries','orders','transactions','topups','promos','banners','support',
+        'manager'     => ['dashboard','users','drivers','agents','merchants','trips','deliveries','orders','terminals','transactions','topups','promos','banners','support',
                           'crm_leads','crm_contacts','crm_accounts','crm_deals','crm_activities','crm_tasks','crm_reports',
                           'erp_sales','erp_inventory','erp_projects','erp_reports'],
         'support'     => ['dashboard','support','crm_leads','crm_contacts','crm_activities','crm_tasks'],

@@ -1,0 +1,12 @@
+# TriLink Dispatch – .htaccess (Hostinger Apache)
+Options -Indexes
+
+<FilesMatch "^(config\.php|.*\.sql|.*\.md|\.env)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(includes|lib)/ - [F,L]
+</IfModule>

@@ -16,6 +16,7 @@ return [
         ['key' => 'deliveries',   'label' => 'Deliveries',         'icon' => 'fa-box',                    'url' => 'modules/deliveries/index.php'],
         ['key' => 'orders',       'label' => 'Merchant Orders',    'icon' => 'fa-cart-shopping',          'url' => 'modules/orders/index.php'],
         ['key' => 'transactions', 'label' => 'Transactions',       'icon' => 'fa-money-bill-transfer',    'url' => 'modules/transactions/index.php'],
+        ['key' => 'terminals',    'label' => 'Terminals & Dispatch','icon' => 'fa-traffic-light',         'url' => 'modules/terminals/index.php'],
         ['key' => 'topups',       'label' => 'Wallet Top-Ups',     'icon' => 'fa-qrcode',                 'url' => 'modules/topups/index.php'],
         ['key' => 'payouts',      'label' => 'Payouts',            'icon' => 'fa-hand-holding-dollar',    'url' => 'modules/payouts/index.php'],
         ['key' => 'promos',       'label' => 'Promotions',         'icon' => 'fa-tags',                   'url' => 'modules/promos/index.php'],

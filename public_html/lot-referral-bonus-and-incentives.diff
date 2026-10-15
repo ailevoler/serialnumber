@@ -1,0 +1,439 @@
+diff -ruN zip1/marketplace/admin/lot-plans.php work/marketplace/admin/lot-plans.php
+--- zip1/marketplace/admin/lot-plans.php	2026-10-12 23:47:13.000000000 +0000
++++ work/marketplace/admin/lot-plans.php	2026-10-15 09:49:16.318904547 +0000
+@@ -4,17 +4,17 @@
+ if(is_post()){
+  csrf_verify();try{
+   if(!password_verify(input('password'),$user['password_hash']))throw new DomainException('Confirm your administrator password.');
+-  cash_lot_plan_save((int)$user['id'],(int)input('id'),input('name'),input('price'),input('capacity'),input('timeframe_days'),input('daily_earnings_percent'),input('enabled'));
++  cash_lot_plan_save((int)$user['id'],(int)input('id'),input('name'),input('price'),input('capacity'),input('timeframe_days'),input('daily_earnings_percent'),input('enabled'),input('referral_percent'),input('incentive'),input('incentive_invites'));
+   flash_set('success','Lot package saved. Timeframe and daily earnings are snapshotted when a trader purchases the Lot.');
+- }catch(DomainException $e){flash_set('error',$e->getMessage());}catch(Throwable $e){error_log('[Lot plan save] '.$e->getMessage());flash_set('error','Unable to save. Import the Lot timeframe and hourly earnings migration first.');}
++ }catch(DomainException $e){flash_set('error',$e->getMessage());}catch(Throwable $e){error_log('[Lot plan save] '.$e->getMessage());flash_set('error','Unable to save. Import the Lot timeframe and Lot referral bonus migrations first.');}
+  redirect('/admin/lot-plans.php');
+ }
+ cash_header($user,'Lot Packages');
+-try{$plans=cash_query('SELECT * FROM cash_lot_plans ORDER BY id')->fetchAll();}catch(Throwable $e){echo '<div class="notice">Import the Lot timeframe and hourly earnings database update first.</div>';cash_footer();exit;}
++try{if(!referral_lot_ensure_schema()||!lot_incentive_ensure_schema())throw new RuntimeException('Lot package columns missing.');$plans=cash_query('SELECT * FROM cash_lot_plans ORDER BY id')->fetchAll();}catch(Throwable $e){echo '<div class="notice">Import the Lot timeframe and Lot referral bonus database updates first.</div>';cash_footer();exit;}
+ $sample=input('sample')==='1';
+-$plans[]=['id'=>0,'name'=>$sample?'Sample Starter Lot':'','price_minor'=>$sample?1000:0,'capacity'=>$sample?5:1,'timeframe_days'=>$sample?30:30,'daily_earnings_bps'=>$sample?300:0,'enabled'=>$sample?1:0];
++$plans[]=['id'=>0,'name'=>$sample?'Sample Starter Lot':'','price_minor'=>$sample?1000:0,'capacity'=>$sample?5:1,'timeframe_days'=>$sample?30:30,'daily_earnings_bps'=>$sample?300:0,'referral_bps'=>null,'incentive_minor'=>0,'incentive_invites'=>0,'enabled'=>$sample?1:0];
+ ?>
+-<section class="panel cash-body"><h3>Lot Package settings</h3><p>Create Lot packages and configure the earning timeframe and percentage per Lot per day. The daily earning is divided across 24 hourly periods. A purchased Lot keeps the terms that were active at the exact time of purchase.</p><a class="button" href="/admin/lot-plans.php?sample=1#new-package">Use sample: $10 · 5 spaces · 30 days · 3%/day</a> <a class="button secondary" href="/admin/referrals.php">Lot Referral Bonus Setup</a></section>
+-<div class="dashboard-grid"><?php foreach($plans as $p): $hourlyEstimate=(int)$p['price_minor']*(int)($p['daily_earnings_bps']??0)/10000/24; ?><section class="panel cash-body" id="<?= $p['id']?'package-'.(int)$p['id']:'new-package' ?>"><h3><?= $p['id']?'Edit package #'.(int)$p['id']:'Add Lot package' ?></h3><p><span class="chip"><?= $p['enabled']?'Enabled':'Disabled' ?></span></p><form method="post" action="/admin/lot-plans.php"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$p['id'] ?>"><label>Name<input name="name" maxlength="100" value="<?= e($p['name']) ?>" required></label><label>Price (USD)<input name="price" type="number" min="1" max="1000000" step="0.01" value="<?= $p['price_minor']?e(number_format($p['price_minor']/100,2,'.','')):'' ?>" required></label><label>Product spaces<input name="capacity" type="number" min="1" max="1000" value="<?= (int)$p['capacity'] ?>" required></label><label>Timeframe (days)<input name="timeframe_days" type="number" min="1" max="3650" value="<?= (int)($p['timeframe_days']??30) ?>" required></label><label>Earnings per Lot per day (%)<input name="daily_earnings_percent" type="number" min="0" max="100" step="0.01" value="<?= e(number_format(((int)($p['daily_earnings_bps']??0))/100,2,'.','')) ?>" required></label><p class="fine-print">Current estimate: <?= cash_money((int)round($hourlyEstimate)) ?> per completed hour, divided from the configured daily amount. No compounding.</p><label>Status<select name="enabled"><option value="0">Disabled</option><option value="1" <?= $p['enabled']?'selected':'' ?>>Enabled</option></select></label><label>Your admin password<input name="password" type="password" autocomplete="current-password" required></label><button class="button">Save Lot package</button></form></section><?php endforeach ?></div>
++<section class="panel cash-body"><h3>Lot Package settings</h3><p>Create Lot packages and configure the earning timeframe and percentage per Lot per day. The daily earning is divided across 24 hourly periods. Each Lot package can have its own referral bonus percentage and completion incentive. A purchased Lot keeps the terms that were active at the exact time of purchase.</p><a class="button" href="/admin/lot-plans.php?sample=1#new-package">Use sample: $10 · 5 spaces · 30 days · 3%/day</a> <a class="button secondary" href="/admin/referrals.php">Lot Referral Bonus Setup</a></section>
++<div class="dashboard-grid"><?php foreach($plans as $p): $hourlyEstimate=(int)$p['price_minor']*(int)($p['daily_earnings_bps']??0)/10000/24; ?><section class="panel cash-body" id="<?= $p['id']?'package-'.(int)$p['id']:'new-package' ?>"><h3><?= $p['id']?'Edit package #'.(int)$p['id']:'Add Lot package' ?></h3><p><span class="chip"><?= $p['enabled']?'Enabled':'Disabled' ?></span></p><form method="post" action="/admin/lot-plans.php"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$p['id'] ?>"><label>Name<input name="name" maxlength="100" value="<?= e($p['name']) ?>" required></label><label>Price (USD)<input name="price" type="number" min="1" max="1000000" step="0.01" value="<?= $p['price_minor']?e(number_format($p['price_minor']/100,2,'.','')):'' ?>" required></label><label>Product spaces<input name="capacity" type="number" min="1" max="1000" value="<?= (int)$p['capacity'] ?>" required></label><label>Timeframe (days)<input name="timeframe_days" type="number" min="1" max="3650" value="<?= (int)($p['timeframe_days']??30) ?>" required></label><label>Earnings per Lot per day (%)<input name="daily_earnings_percent" type="number" min="0" max="100" step="0.01" value="<?= e(number_format(((int)($p['daily_earnings_bps']??0))/100,2,'.','')) ?>" required></label><label>Referral bonus for this Lot (%)<input name="referral_percent" type="number" min="0" max="100" step="0.01" placeholder="Blank = global setting" value="<?= ($p['referral_bps']??null)===null?'':e(number_format(((int)$p['referral_bps'])/100,2,'.','')) ?>"></label><p class="fine-print">Paid to the referrer on each purchase of this Lot. Leave blank to use the global Lot Referral Bonus setting.</p><label>Completion incentive (USD)<input name="incentive" type="number" min="0" max="1000000" step="0.01" placeholder="Blank = none" value="<?= (int)($p['incentive_minor']??0)>0?e(number_format(((int)$p['incentive_minor'])/100,2,'.','')):'' ?>"></label><label>Required invites for incentive<input name="incentive_invites" type="number" min="0" max="1000" step="1" value="<?= (int)($p['incentive_invites']??0) ?>"></label><p class="fine-print">Paid once to Withdrawable Earnings when the Lot completes its timeframe. With invites above 0, the buyer must have that many invited Traders who registered through their link and bought a Lot before this Lot ends. 0 invites = paid automatically.</p><p class="fine-print">Current estimate: <?= cash_money((int)round($hourlyEstimate)) ?> per completed hour, divided from the configured daily amount. No compounding.</p><label>Status<select name="enabled"><option value="0">Disabled</option><option value="1" <?= $p['enabled']?'selected':'' ?>>Enabled</option></select></label><label>Your admin password<input name="password" type="password" autocomplete="current-password" required></label><button class="button">Save Lot package</button></form></section><?php endforeach ?></div>
+ <section class="panel cash-body"><h3>Hourly earnings scheduler</h3><p>Configure the server cron to run <code>php /ABSOLUTE/PATH/TO/NEXMERCE/cli/lot-earnings-hourly.php</code> at least once per hour. The job is idempotent and catches up completed hours if a scheduled run is delayed.</p></section>
+ <?php cash_footer(); ?>
+diff -ruN zip1/marketplace/admin/referrals.php work/marketplace/admin/referrals.php
+--- zip1/marketplace/admin/referrals.php	2026-10-12 23:47:12.000000000 +0000
++++ work/marketplace/admin/referrals.php	2026-10-15 09:52:08.279292034 +0000
+@@ -1,5 +1,5 @@
+ <?php
+-require_once __DIR__.'/../includes/bootstrap.php';require_once __DIR__.'/../includes/referrals.php';require_once __DIR__.'/../includes/cash_layout.php';
++require_once __DIR__.'/../includes/bootstrap.php';require_once __DIR__.'/../includes/referrals.php';require_once __DIR__.'/../includes/lot_incentives.php';require_once __DIR__.'/../includes/cash_layout.php';
+ $user=require_role(ROLE_FINANCE,ROLE_SUPER_ADMIN);
+ if(is_post()){
+  csrf_verify();
+@@ -13,12 +13,16 @@
+ cash_header($user,'Lot Referral Bonus Setup');
+ if(!referral_ready()){echo '<section class="panel cash-body">Import the referral database migration first.</section>';cash_footer();exit;}
+ $s=cash_query('SELECT * FROM referral_settings WHERE id=1')->fetch();
++try{$incentiveRows=lot_incentive_ensure_schema()?cash_query('SELECT l.id,l.plan_name,l.incentive_minor,l.incentive_invites,l.incentive_status,l.incentive_invites_counted,l.incentive_settled_at,l.earnings_ends_at,u.full_name FROM cash_lots l JOIN users u ON u.id=l.user_id WHERE l.incentive_minor>0 ORDER BY (l.incentive_status IS NULL) DESC,l.earnings_ends_at,l.id DESC LIMIT 100')->fetchAll():[];}catch(Throwable $e){$incentiveRows=[];}
++try{$lotPlans=!referral_lot_ensure_schema()?[]:cash_query('SELECT name,price_minor,referral_bps,enabled FROM cash_lot_plans ORDER BY price_minor,id')->fetchAll();}catch(Throwable $e){$lotPlans=[];}
+ $rows=cash_query('SELECT r.*,u.full_name FROM referral_rewards r JOIN users u ON u.id=r.referrer_id ORDER BY r.id DESC LIMIT 100')->fetchAll();
+ ?>
+ <section class="panel cash-body"><h3>Lot Referral Bonus</h3><p>The referring Trader earns a bonus on <strong>every completed Lot purchase</strong> made by their referral. Deposits and registrations do not earn bonuses.</p>
++<p>Each Lot package can set its own referral percentage under <a href="/admin/lot-plans.php">Lot Packages</a>. The setting below is the default for packages left blank.</p><?php if($lotPlans): ?><div class="table-scroll"><table><thead><tr><th>Lot package</th><th>Price</th><th>Referral bonus</th></tr></thead><tbody><?php foreach($lotPlans as $lp): ?><tr><td><?= e($lp['name']) ?><?= (int)$lp['enabled']?'':' (disabled)' ?></td><td><?= cash_money((int)$lp['price_minor']) ?></td><td><?= referral_lot_label($lp,$s) ?><?= $lp['referral_bps']===null?' (default)':'' ?></td></tr><?php endforeach ?></tbody></table></div><?php endif ?>
+ <p><a class="button secondary" href="/admin/lot-plans.php">Manage USD Lot plans</a></p><form method="post"><?= csrf_field() ?><label>Status<select name="enabled"><option value="0">Disabled</option><option value="1" <?= $s['enabled']?'selected':'' ?>>Enabled</option></select></label>
+-<label>Bonus type<select name="bonus_type"><option value="percentage" <?= $s['bonus_type']==='percentage'?'selected':'' ?>>Percentage of Lot price</option><option value="fixed" <?= $s['bonus_type']==='fixed'?'selected':'' ?>>Fixed USD amount</option></select></label>
+-<label>Bonus value<input name="value" type="number" min="0.01" max="10000" step="0.01" required value="<?= e(number_format($s['value_minor']/100,2,'.','')) ?>"></label><p>Percentage: 5 means 5% (USD 100 Lot → USD 5 bonus). Fixed: 5 means USD 5 per purchased Lot. Percentage bonuses round down to whole USD cents.</p>
++<label>Default bonus type<select name="bonus_type"><option value="percentage" <?= $s['bonus_type']==='percentage'?'selected':'' ?>>Percentage of Lot price</option><option value="fixed" <?= $s['bonus_type']==='fixed'?'selected':'' ?>>Fixed USD amount</option></select></label>
++<label>Default bonus value<input name="value" type="number" min="0.01" max="10000" step="0.01" required value="<?= e(number_format($s['value_minor']/100,2,'.','')) ?>"></label><p>Percentage: 5 means 5% (USD 100 Lot → USD 5 bonus). Fixed: 5 means USD 5 per purchased Lot. Percentage bonuses round down to whole USD cents.</p>
+ <label>Your admin password<input name="password" type="password" autocomplete="current-password" required></label><button class="button">Save referral settings</button></form><p>Changes affect future Lot purchases only. Existing users, balances, charts and historical rewards are preserved. Bonuses are funded by the platform and do not increase the referred Trader’s Lot price.</p></section>
+ <section class="panel cash-body"><h3>Recent referral bonuses</h3><p>Latest 100 awards · USD · Existing deposit bonuses remain historical records</p><div class="table-scroll"><table><thead><tr><th>Referrer</th><th>Source / ID</th><th>Rule applied</th><th>Bonus</th><th>Date</th></tr></thead><tbody><?php foreach($rows as $r): ?><tr><td><?= e($r['full_name']) ?></td><td><?= $r['trigger_type']==='lot_purchase'?'Lot purchase':'Historical deposit' ?> #<?= (int)$r['source_request_id'] ?></td><td><?= $r['bonus_type']==='percentage'?e(number_format($r['value_minor']/100,2)).'%':cash_money((int)$r['value_minor']) ?></td><td><?= cash_money((int)$r['amount_minor']) ?></td><td><?= e($r['created_at']) ?></td></tr><?php endforeach ?><?php if(!$rows): ?><tr><td colspan="5">No referral bonuses yet.</td></tr><?php endif ?></tbody></table></div></section>
++<section class="panel cash-body"><h3>Lot completion incentives</h3><p>Pending incentives first, then the latest settled · Set amounts and required invites per package under <a href="/admin/lot-plans.php">Lot Packages</a>. Settled automatically by the hourly Lot earnings cron.</p><div class="table-scroll"><table><thead><tr><th>Trader</th><th>Lot</th><th>Incentive</th><th>Invites</th><th>Lot ends</th><th>Status</th></tr></thead><tbody><?php foreach($incentiveRows as $ir): $req=(int)$ir['incentive_invites']; ?><tr><td><?= e($ir['full_name']) ?></td><td>#<?= (int)$ir['id'] ?> <?= e($ir['plan_name']) ?></td><td><?= cash_money((int)$ir['incentive_minor']) ?></td><td><?= $req>0?($ir['incentive_status']===null?'Needs '.$req:(int)$ir['incentive_invites_counted'].' / '.$req):'Not required' ?></td><td><?= e((string)$ir['earnings_ends_at']) ?></td><td><?= $ir['incentive_status']==='credited'?'Credited '.e((string)$ir['incentive_settled_at']):($ir['incentive_status']==='missed'?'Not earned':'Pending') ?></td></tr><?php endforeach ?><?php if(!$incentiveRows): ?><tr><td colspan="6">No Lot incentives yet.</td></tr><?php endif ?></tbody></table></div></section>
+ <?php cash_footer(); ?>
+diff -ruN zip1/marketplace/cli/lot-earnings-hourly.php work/marketplace/cli/lot-earnings-hourly.php
+--- zip1/marketplace/cli/lot-earnings-hourly.php	2026-10-12 23:47:11.000000000 +0000
++++ work/marketplace/cli/lot-earnings-hourly.php	2026-10-15 09:49:16.319133201 +0000
+@@ -1,9 +1,12 @@
+ <?php
+ require_once __DIR__.'/../includes/bootstrap.php';
+ require_once __DIR__.'/../includes/cash_lot_earnings.php';
++require_once __DIR__.'/../includes/lot_incentives.php';
+ if(PHP_SAPI!=='cli'){http_response_code(404);exit;}
+ try{
+     $r=cash_lot_credit_all_due();
+     echo 'Checked '.$r['lots'].' active Lots; credited '.$r['credited_lots'].' Lots; total '.number_format($r['amount_minor']/100,2).' USD; errors '.$r['errors'].".\n";
+-    exit($r['errors']?2:0);
++    $i=lot_incentive_settle_all_due();
++    echo 'Incentives: checked '.$i['lots'].' completed Lots; credited '.$i['credited'].'; missed '.$i['missed'].'; total '.number_format($i['amount_minor']/100,2).' USD; errors '.$i['errors'].".\n";
++    exit(($r['errors']||$i['errors'])?2:0);
+ }catch(Throwable $e){fwrite(STDERR,"Lot earnings job failed. Check the migration and database configuration.\n");exit(1);}
+diff -ruN zip1/marketplace/includes/cash_lots.php work/marketplace/includes/cash_lots.php
+--- zip1/marketplace/includes/cash_lots.php	2026-10-12 23:47:12.000000000 +0000
++++ work/marketplace/includes/cash_lots.php	2026-10-15 09:49:16.317839450 +0000
+@@ -1,8 +1,11 @@
+ <?php
+ require_once __DIR__.'/referrals.php';
++require_once __DIR__.'/lot_incentives.php';
+ function cash_lot_buy(int $uid,int $plan,int $expectedPrice,string $key): int {
+  if(!preg_match('/^[a-f0-9-]{36}$/D',$key))throw new DomainException('Invalid purchase request.');
+  cash_wallet($uid);
++ if(referral_ready())referral_lot_ensure_schema();
++ lot_incentive_ensure_schema();
+  return cash_atomic(function()use($uid,$plan,$expectedPrice,$key){
+   if(!cash_query("SELECT id FROM users WHERE id=? AND role='trader' AND status='active'",[$uid])->fetchColumn())throw new DomainException('Active Trader account required.');
+   $w=cash_query('SELECT * FROM cash_wallets WHERE user_id=? FOR UPDATE',[$uid])->fetch();
+@@ -26,6 +29,10 @@
+   $dailyBps=max(0,(int)($p['daily_earnings_bps']??0));
+   cash_query('INSERT INTO cash_lots(user_id,plan_id,plan_name,capacity,price_minor,timeframe_days,daily_earnings_bps,earnings_started_at,earnings_ends_at,credited_hours,request_id) VALUES(?,?,?,?,?,?,?,CURRENT_TIMESTAMP,DATE_ADD(CURRENT_TIMESTAMP,INTERVAL ? DAY),0,?)',[$uid,$plan,$p['name'],$p['capacity'],$price,$timeframeDays,$dailyBps,$timeframeDays,$request]);
+   $id=(int)db()->lastInsertId();
++  // Snapshot the package's referral percentage so later package edits never change this Lot's bonus.
++  // Snapshot the package's completion incentive terms.
++  if(array_key_exists('incentive_minor',$p)&&lot_incentive_ensure_schema())cash_query('UPDATE cash_lots SET incentive_minor=?,incentive_invites=? WHERE id=?',[(int)$p['incentive_minor'],(int)$p['incentive_invites'],$id]);
++  if(array_key_exists('referral_bps',$p)&&referral_lot_ensure_schema())cash_query('UPDATE cash_lots SET referral_bps=? WHERE id=?',[$p['referral_bps']===null?null:(int)$p['referral_bps'],$id]);
+   referral_on_lot_purchase($request);
+   return $id;
+  });
+@@ -37,14 +44,15 @@
+  if($bps<0||$bps>10000)throw new DomainException('Daily earnings percentage must be from 0.00% to 100.00%.');
+  return $bps;
+ }
+-function cash_lot_plan_save(int $actor,int $id,string $name,string $price,string $capacity,string $timeframe,string $dailyPercent,string $enabled): void {
+- $amount=cash_amount($price);$name=trim($name);$dailyBps=cash_lot_percentage_bps($dailyPercent);
++function cash_lot_plan_save(int $actor,int $id,string $name,string $price,string $capacity,string $timeframe,string $dailyPercent,string $enabled,string $referralPercent='',string $incentive='',string $incentiveInvites=''): void {
++ $amount=cash_amount($price);$name=trim($name);$dailyBps=cash_lot_percentage_bps($dailyPercent);$referralBps=referral_lot_bps($referralPercent);$incentiveMinor=lot_incentive_amount($incentive);$invites=lot_incentive_invites($incentiveInvites);
+  if($name===''||strlen($name)>100||!ctype_digit($capacity)||(int)$capacity<1||(int)$capacity>1000||!ctype_digit($timeframe)||(int)$timeframe<1||(int)$timeframe>3650||!in_array($enabled,['0','1'],true))throw new DomainException('Enter a name, USD price, 1–1000 product spaces and a 1–3650 day timeframe.');
+  $timeframeDays=(int)$timeframe;
+- cash_atomic(function()use($actor,$id,$name,$amount,$capacity,$timeframeDays,$dailyBps,$enabled){
++ if(!referral_lot_ensure_schema()||!lot_incentive_ensure_schema())throw new RuntimeException('Lot package columns missing.');
++ cash_atomic(function()use($actor,$id,$name,$amount,$capacity,$timeframeDays,$dailyBps,$referralBps,$incentiveMinor,$invites,$enabled){
+   if(!cash_query("SELECT id FROM users WHERE id=? AND role IN ('finance','super_admin') AND status='active'",[$actor])->fetchColumn())throw new DomainException('Finance access required.');
+-  if($id){cash_query('UPDATE cash_lot_plans SET name=?,price_minor=?,capacity=?,timeframe_days=?,daily_earnings_bps=?,enabled=?,updated_by=? WHERE id=?',[$name,$amount,$capacity,$timeframeDays,$dailyBps,$enabled,$actor,$id]);}
+-  else cash_query('INSERT INTO cash_lot_plans(name,price_minor,capacity,timeframe_days,daily_earnings_bps,enabled,updated_by) VALUES(?,?,?,?,?,?,?)',[$name,$amount,$capacity,$timeframeDays,$dailyBps,$enabled,$actor]);
++  if($id){cash_query('UPDATE cash_lot_plans SET name=?,price_minor=?,capacity=?,timeframe_days=?,daily_earnings_bps=?,referral_bps=?,incentive_minor=?,incentive_invites=?,enabled=?,updated_by=? WHERE id=?',[$name,$amount,$capacity,$timeframeDays,$dailyBps,$referralBps,$incentiveMinor,$invites,$enabled,$actor,$id]);}
++  else cash_query('INSERT INTO cash_lot_plans(name,price_minor,capacity,timeframe_days,daily_earnings_bps,referral_bps,incentive_minor,incentive_invites,enabled,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?)',[$name,$amount,$capacity,$timeframeDays,$dailyBps,$referralBps,$incentiveMinor,$invites,$enabled,$actor]);
+  });
+ }
+ 
+diff -ruN zip1/marketplace/includes/cash_lots_panel.php work/marketplace/includes/cash_lots_panel.php
+--- zip1/marketplace/includes/cash_lots_panel.php	2026-10-12 23:47:11.000000000 +0000
++++ work/marketplace/includes/cash_lots_panel.php	2026-10-15 09:52:08.279536442 +0000
+@@ -1,9 +1,21 @@
+ <?php
+ require_once __DIR__.'/cash_insights.php';
++require_once __DIR__.'/lot_incentives.php';
+ if(!$usdLotsReady)return;
+ $spaceCounts=[];$earnedByLot=[];$spacesReady=true;$earningsReady=true;
+ try{foreach(cash_query('SELECT s.lot_id,COUNT(*) AS occupied FROM cash_lot_slots s JOIN cash_lots l ON l.id=s.lot_id WHERE l.user_id=? GROUP BY s.lot_id',[$uid])->fetchAll() as $count)$spaceCounts[(int)$count['lot_id']]=(int)$count['occupied'];}catch(Throwable $e){$spacesReady=false;}
+ try{foreach(cash_query('SELECT lot_id,COALESCE(SUM(amount_minor),0) earned FROM cash_lot_earnings WHERE user_id=? GROUP BY lot_id',[$uid])->fetchAll() as $row)$earnedByLot[(int)$row['lot_id']]=(int)$row['earned'];}catch(Throwable $e){$earningsReady=false;}
++/** Trader-facing incentive status (safe HTML) for one purchased Lot, or '' when the Lot has no incentive. */
++function nex_lot_incentive_note(array $p,int $uid): string {
++ $amount=(int)($p['incentive_minor']??0);if($amount<=0)return '';
++ $status=(string)($p['incentive_status']??'');$required=(int)($p['incentive_invites']??0);
++ if($status==='credited')return cash_money($amount).' incentive credited to Withdrawable Earnings';
++ if($status==='missed')return cash_money($amount).' incentive not earned ('.(int)$p['incentive_invites_counted'].' / '.$required.' invites)';
++ if($required<=0)return cash_money($amount).' incentive on completion';
++ static $counts=[];$until=min(time(),(int)strtotime((string)($p['earnings_ends_at']??'')));$key=date('Y-m-d H:i:s',$until);
++ try{$counts[$key]??=lot_incentive_invite_count($uid,$key);}catch(Throwable $e){return cash_money($amount).' incentive · invite '.$required;}
++ return cash_money($amount).' incentive · '.min($required,$counts[$key]).' / '.$required.' invites';
++}
+ $activeLots=[];$completedLots=[];
+ foreach($purchasedLots as $p){
+  $maxHours=max(0,(int)($p['timeframe_days']??0)*24);$credited=min($maxHours,max(0,(int)($p['credited_hours']??0)));
+@@ -12,7 +24,7 @@
+ }
+ function nex_lot_rows(array $rows,array $spaceCounts,array $earnedByLot,bool $spacesReady,bool $earningsReady,bool $completed=false): void { global $uid; foreach($rows as $p):
+  $bps=(int)($p['daily_earnings_bps']??0);$hourly=(int)round(((int)$p['price_minor']*$bps/10000)/24);$maxHours=(int)($p['timeframe_days']??0)*24;$credited=min($maxHours,(int)($p['credited_hours']??0));$earned=(int)($earnedByLot[(int)$p['id']]??0);$transferred=!empty($p['earnings_transferred_at']); ?>
+-<tr><td>#<?= (int)$p['id'] ?> <?= e($p['plan_name']) ?><small class="table-subtext"><?= $completed?'Completed':'Active' ?></small></td><td><?php if($spacesReady): ?><a class="space-count-link" href="/trader/lot-spaces.php?id=<?= (int)$p['id'] ?>&amp;view=products"><strong><?= (int)($spaceCounts[(int)$p['id']]??0) ?> / <?= (int)$p['capacity'] ?></strong> filled</a><?php else: ?><?= (int)$p['capacity'] ?> spaces<?php endif ?></td><td><?= cash_money((int)$p['price_minor']) ?></td><td><strong><?= (int)($p['timeframe_days']??0) ?> days</strong><small class="table-subtext"><?= $credited ?> / <?= $maxHours ?> hours</small></td><td><strong><?= number_format($bps/100,2) ?>%</strong><small class="table-subtext">per day</small></td><td><?= cash_money($hourly) ?></td><td><strong><?= $earningsReady?cash_money($earned):'Pending' ?></strong><small class="table-subtext"><?= $completed?($transferred?'Transferred':'Ready for transfer'):'Accumulating in this Lot' ?></small></td><td><?= e($p['created_at']) ?><small class="table-subtext">Ends: <?= e((string)($p['earnings_ends_at']??'—')) ?></small></td><td><?php if($completed): ?><?php if($transferred): ?><span class="chip">Transferred</span><small class="table-subtext"><?= e((string)$p['earnings_transferred_at']) ?></small><?php else: ?><form method="post" action="/trader/transfer-lot-earnings.php" class="completed-lot-transfer"><?= csrf_field() ?><input type="hidden" name="lot_id" value="<?= (int)$p['id'] ?>"><input type="hidden" name="request_key" value="<?= e(generate_uuid()) ?>"><button class="button" type="submit" <?= !$earningsReady||$earned<=0?'disabled':'' ?>>Transfer to Withdrawable Earnings</button></form><?php endif ?><?php else: ?><a class="button secondary" href="/trader/lot-spaces.php?id=<?= (int)$p['id'] ?>">Manage Spaces →</a><?php endif ?></td></tr>
++<tr><td>#<?= (int)$p['id'] ?> <?= e($p['plan_name']) ?><small class="table-subtext"><?= $completed?'Completed':'Active' ?></small><?php $incentiveNote=nex_lot_incentive_note($p,(int)$uid); if($incentiveNote!==''): ?><small class="table-subtext"><?= $incentiveNote ?></small><?php endif ?></td><td><?php if($spacesReady): ?><a class="space-count-link" href="/trader/lot-spaces.php?id=<?= (int)$p['id'] ?>&amp;view=products"><strong><?= (int)($spaceCounts[(int)$p['id']]??0) ?> / <?= (int)$p['capacity'] ?></strong> filled</a><?php else: ?><?= (int)$p['capacity'] ?> spaces<?php endif ?></td><td><?= cash_money((int)$p['price_minor']) ?></td><td><strong><?= (int)($p['timeframe_days']??0) ?> days</strong><small class="table-subtext"><?= $credited ?> / <?= $maxHours ?> hours</small></td><td><strong><?= number_format($bps/100,2) ?>%</strong><small class="table-subtext">per day</small></td><td><?= cash_money($hourly) ?></td><td><strong><?= $earningsReady?cash_money($earned):'Pending' ?></strong><small class="table-subtext"><?= $completed?($transferred?'Transferred':'Ready for transfer'):'Accumulating in this Lot' ?></small></td><td><?= e($p['created_at']) ?><small class="table-subtext">Ends: <?= e((string)($p['earnings_ends_at']??'—')) ?></small></td><td><?php if($completed): ?><?php if($transferred): ?><span class="chip">Transferred</span><small class="table-subtext"><?= e((string)$p['earnings_transferred_at']) ?></small><?php else: ?><form method="post" action="/trader/transfer-lot-earnings.php" class="completed-lot-transfer"><?= csrf_field() ?><input type="hidden" name="lot_id" value="<?= (int)$p['id'] ?>"><input type="hidden" name="request_key" value="<?= e(generate_uuid()) ?>"><button class="button" type="submit" <?= !$earningsReady||$earned<=0?'disabled':'' ?>>Transfer to Withdrawable Earnings</button></form><?php endif ?><?php else: ?><a class="button secondary" href="/trader/lot-spaces.php?id=<?= (int)$p['id'] ?>">Manage Spaces →</a><?php endif ?></td></tr>
+ <?php endforeach; }
+ ?>
+ <section class="panel cash-body"><div class="panel-head"><div><h3>Active Lot Plans</h3><p>Daily earnings accumulate inside each Lot. They do not enter Withdrawable Earnings while the Lot is active.</p></div><a class="button" href="/trader/buy-lot.php">Buy Lot</a></div><div class="table-scroll"><table><thead><tr><th>Lot</th><th>Product spaces</th><th>Purchase price</th><th>Timeframe</th><th>Daily %</th><th>Hourly earning</th><th>Accumulated earnings</th><th>Date / End</th><th>Actions</th></tr></thead><tbody><?php nex_lot_rows($activeLots,$spaceCounts,$earnedByLot,$spacesReady,$earningsReady,false); ?><?php if(!$activeLots): ?><tr><td colspan="9">No active Lot Plans.</td></tr><?php endif ?></tbody></table></div></section>
+diff -ruN zip1/marketplace/includes/dashboard_widgets.php work/marketplace/includes/dashboard_widgets.php
+--- zip1/marketplace/includes/dashboard_widgets.php	2026-10-12 23:47:11.000000000 +0000
++++ work/marketplace/includes/dashboard_widgets.php	2026-10-15 09:49:16.319624512 +0000
+@@ -258,6 +258,7 @@
+         'lot_purchase' => ['Lot purchase', 'lots', 't-blue', -1],
+         'lot_transfer', 'earnings_transfer' => ['Earnings transfer', 'transactions', 't-violet', 1],
+         'referral' => ['Referral bonus', 'users', 't-cyan', 1],
++        'incentive' => ['Lot incentive', 'users', 't-green', 1],
+         default => [ucwords(str_replace('_', ' ', $kind)), 'transactions', 't-cyan', 1],
+     };
+ }
+diff -ruN zip1/marketplace/includes/lot_incentives.php work/marketplace/includes/lot_incentives.php
+--- zip1/marketplace/includes/lot_incentives.php	1970-01-01 00:00:00.000000000 +0000
++++ work/marketplace/includes/lot_incentives.php	2026-10-15 09:52:08.277270773 +0000
+@@ -0,0 +1,98 @@
++<?php
++require_once __DIR__.'/cash.php';
++
++// Lot completion incentives ("Choose Your Plan and Get Your Bonus").
++// A package may pay a fixed USD incentive when a purchased Lot matures, optionally requiring a
++// number of invited Traders. Terms are snapshotted onto each purchased Lot.
++// An invite counts when the referred Trader registered through the buyer's referral link, is active,
++// and completed their first Lot purchase on or before the buyer's Lot end date.
++// Evaluated once at maturity: met → credited to Withdrawable Earnings; not met → recorded as missed.
++// Client defaults, seeded once when the columns are created (matched by name, then original price):
++// Lot 4 (60 days) $60 + 3 invites · Lot 5 (75 days) $200 + 8 invites · Lot 6 (90 days) $480, no invites.
++const LOT_INCENTIVE_DEFAULTS=[['Lot 4',48000,6000,3],['Lot 5',100000,20000,8],['Lot 6',180000,48000,0]];
++
++/** Ensure the incentive columns exist even when the SQL migration was missed. Call outside transactions. */
++function lot_incentive_ensure_schema(): bool {
++    static $ok=null; if($ok!==null)return $ok;
++    try {
++        $plan=[];foreach(cash_query('SHOW COLUMNS FROM cash_lot_plans')->fetchAll() as $c)$plan[(string)$c['Field']]=true;
++        if(empty($plan['incentive_minor'])){
++            cash_query('ALTER TABLE cash_lot_plans ADD COLUMN incentive_minor BIGINT UNSIGNED NOT NULL DEFAULT 0, ADD COLUMN incentive_invites INT UNSIGNED NOT NULL DEFAULT 0');
++            foreach(LOT_INCENTIVE_DEFAULTS as [$name,,$amount,$invites])cash_query('UPDATE cash_lot_plans SET incentive_minor=?,incentive_invites=? WHERE name=? AND incentive_minor=0',[$amount,$invites,$name]);
++            foreach(LOT_INCENTIVE_DEFAULTS as [,$price,$amount,$invites])cash_query("UPDATE cash_lot_plans SET incentive_minor=?,incentive_invites=? WHERE price_minor=? AND incentive_minor=0 AND name NOT IN ('Lot 1','Lot 2','Lot 3','Lot 4','Lot 5','Lot 6')",[$amount,$invites,$price]);
++        }
++        $lot=[];foreach(cash_query('SHOW COLUMNS FROM cash_lots')->fetchAll() as $c)$lot[(string)$c['Field']]=true;
++        if(empty($lot['incentive_minor']))cash_query("ALTER TABLE cash_lots ADD COLUMN incentive_minor BIGINT UNSIGNED NOT NULL DEFAULT 0, ADD COLUMN incentive_invites INT UNSIGNED NOT NULL DEFAULT 0, ADD COLUMN incentive_status VARCHAR(12) NULL DEFAULT NULL, ADD COLUMN incentive_invites_counted INT UNSIGNED NULL DEFAULT NULL, ADD COLUMN incentive_request_id BIGINT UNSIGNED NULL DEFAULT NULL, ADD COLUMN incentive_settled_at DATETIME NULL DEFAULT NULL");
++        return $ok=true;
++    } catch(PDOException $e) {
++        error_log('[lot incentives] Incentive columns missing; import migrations/20261015_lot_incentives.sql');
++        return $ok=false;
++    }
++}
++
++/** USD amount (blank or 0 = no incentive) to minor units. */
++function lot_incentive_amount(string $value): int {
++    $value=trim($value);
++    if($value===''||preg_match('/^0+(?:\.0{1,2})?$/D',$value))return 0;
++    if(!preg_match('/^(0|[1-9][0-9]{0,6})(?:\.([0-9]{1,2}))?$/D',$value,$m))throw new DomainException('Enter a valid incentive amount in USD with up to two decimals, or leave it blank.');
++    return (int)$m[1]*100+(int)str_pad($m[2]??'',2,'0');
++}
++
++function lot_incentive_invites(string $value): int {
++    $value=trim($value);
++    if($value==='')return 0;
++    if(!ctype_digit($value)||(int)$value>1000)throw new DomainException('Required invites must be a whole number from 0 to 1000.');
++    return (int)$value;
++}
++
++/** Number of qualifying invites for a referrer, counting first Lot purchases up to $until (Y-m-d H:i:s). */
++function lot_incentive_invite_count(int $referrerId,string $until): int {
++    return (int)cash_query("SELECT COUNT(*) FROM referral_members m JOIN users u ON u.id=m.user_id AND u.role='trader' AND u.status='active' WHERE m.referrer_id=? AND m.user_id<>m.referrer_id AND (SELECT MIN(l.created_at) FROM cash_lots l WHERE l.user_id=m.user_id)<=?",[$referrerId,$until])->fetchColumn();
++}
++
++/** Settle one matured Lot's incentive exactly once. Returns the credited amount (0 if missed or not due). */
++function lot_incentive_settle(int $lotId,?int $now=null): int {
++    $now??=time();
++    return cash_atomic(function()use($lotId,$now){
++        $lot=cash_query('SELECT * FROM cash_lots WHERE id=? FOR UPDATE',[$lotId])->fetch();
++        if(!$lot||(int)$lot['incentive_minor']<=0||$lot['incentive_status']!==null)return 0;
++        $ends=strtotime((string)($lot['earnings_ends_at']??''));
++        if(!$ends||$ends>$now)return 0;
++        $uid=(int)$lot['user_id'];$amount=(int)$lot['incentive_minor'];$required=(int)$lot['incentive_invites'];
++        $counted=$required>0?lot_incentive_invite_count($uid,(string)$lot['earnings_ends_at']):0;
++        $active=cash_query("SELECT id FROM users WHERE id=? AND role='trader' AND status='active'",[$uid])->fetchColumn();
++        if(!$active||$counted<$required){
++            cash_query("UPDATE cash_lots SET incentive_status='missed',incentive_invites_counted=?,incentive_settled_at=CURRENT_TIMESTAMP WHERE id=?",[$counted,$lotId]);
++            return 0;
++        }
++        cash_wallet($uid);
++        cash_query('SELECT user_id FROM cash_wallets WHERE user_id=? FOR UPDATE',[$uid]);
++        // Deterministic key: a Lot can never receive its incentive twice.
++        $key='li-'.substr(hash('sha256','lot-incentive:'.$lotId),0,33);
++        cash_query("INSERT INTO cash_requests(user_id,request_key,kind,amount,method_id,method_snapshot,reference,status,review_reference,reviewed_at) VALUES(?,?,'incentive',?,0,'Lot Completion Incentive',?,'credited','Completed Lot incentive',CURRENT_TIMESTAMP)",[$uid,$key,$amount,'Lot #'.$lotId.' '.$lot['plan_name'].' incentive']);
++        $request=(int)db()->lastInsertId();
++        cash_query("INSERT INTO cash_ledger(user_id,request_id,event,available_delta,reserved_delta,earnings_available_delta,earnings_reserved_delta) VALUES(?,?,'lot_incentive',?,0,?,0)",[$uid,$request,$amount,$amount]);
++        cash_query('UPDATE cash_wallets SET available=available+?,earnings_available=earnings_available+? WHERE user_id=?',[$amount,$amount,$uid]);
++        cash_query("UPDATE cash_lots SET incentive_status='credited',incentive_invites_counted=?,incentive_request_id=?,incentive_settled_at=CURRENT_TIMESTAMP WHERE id=?",[$counted,$request,$lotId]);
++        return $amount;
++    });
++}
++
++function lot_incentive_settle_all_due(?int $now=null): array {
++    $now??=time();$lots=[];$credited=0;$missed=0;$amount=0;$errors=0;
++    if(!lot_incentive_ensure_schema())return ['lots'=>0,'credited'=>0,'missed'=>0,'amount_minor'=>0,'errors'=>1];
++    try{$lots=cash_query('SELECT id FROM cash_lots WHERE incentive_minor>0 AND incentive_status IS NULL AND earnings_ends_at<=FROM_UNIXTIME(?) ORDER BY id',[$now])->fetchAll();}
++    catch(Throwable $e){return ['lots'=>0,'credited'=>0,'missed'=>0,'amount_minor'=>0,'errors'=>1];}
++    foreach($lots as $row){
++        try{$n=lot_incentive_settle((int)$row['id'],$now);if($n>0){$credited++;$amount+=$n;}else $missed++;}
++        catch(Throwable $e){$errors++;error_log('[lot incentives] Lot #'.(int)$row['id'].' failed: '.$e->getMessage());}
++    }
++    return ['lots'=>count($lots),'credited'=>$credited,'missed'=>$missed,'amount_minor'=>$amount,'errors'=>$errors];
++}
++
++/** Short trader-facing description (safe HTML) of a package's incentive terms, or '' when it has none. */
++function lot_incentive_terms(array $plan): string {
++    $amount=(int)($plan['incentive_minor']??0);if($amount<=0)return '';
++    $invites=(int)($plan['incentive_invites']??0);
++    return cash_money($amount).' incentive after '.(int)($plan['timeframe_days']??0).' days'.($invites>0?' · invite '.$invites.' '.($invites===1?'person':'people'):' · no invites needed');
++}
+diff -ruN zip1/marketplace/includes/referral_panel.php work/marketplace/includes/referral_panel.php
+--- zip1/marketplace/includes/referral_panel.php	2026-10-12 23:47:12.000000000 +0000
++++ work/marketplace/includes/referral_panel.php	2026-10-15 09:52:08.279093070 +0000
+@@ -6,10 +6,11 @@
+  $count=(int)cash_query('SELECT COUNT(*) FROM referral_members WHERE referrer_id=?',[$uid])->fetchColumn();
+  $total=(int)cash_query('SELECT COALESCE(SUM(amount_minor),0) FROM referral_rewards WHERE referrer_id=? AND trigger_type="lot_purchase"',[$uid])->fetchColumn();
+  $settings=cash_query('SELECT * FROM referral_settings WHERE id=1')->fetch();
++ $bonusPlans=!referral_lot_ensure_schema()?[]:cash_query('SELECT name,price_minor,referral_bps FROM cash_lot_plans WHERE enabled=1 ORDER BY price_minor,id')->fetchAll();
+ }catch(Throwable $e){error_log('[referrals] Dashboard unavailable');echo '<div class="notice">Referral details are temporarily unavailable.</div>';return;}
+ ?>
+ <section class="panel cash-body"><div class="panel-head"><div><h3>Invite friends. Earn referral bonuses.</h3><p>Share your personal link so new Traders can register through you.</p></div></div>
+ <label for="referral-link">Your referral link</label><div class="cash-actions"><input id="referral-link" type="url" readonly value="<?= e($link) ?>" style="flex:1;min-width:180px"><button class="button" type="button" id="referral-copy">Copy link</button></div><p id="referral-copy-status" role="status" aria-live="polite"></p>
+ <p><strong><?= $count ?></strong> registered referrals · <strong><?= cash_money($total) ?></strong> total Lot Referral Bonuses</p>
+-<p><?php if((int)$settings['enabled'] && $settings['trigger_type']==='lot_purchase'): ?>Lot Referral Bonus: <strong><?= $settings['bonus_type']==='percentage'?e(number_format($settings['value_minor']/100,2)).'% of the USD Lot purchase price':cash_money((int)$settings['value_minor']) ?></strong> on each completed Lot purchase from your referred Trader. Bonuses are credited as withdrawable USD earnings.<?php else: ?>Referral links are active. Bonus payouts are currently disabled by the administrator.<?php endif ?></p><small>Only registrations completed through your link count. The bonus settings in effect when a Lot is purchased apply; past purchases are not recalculated.</small></section>
++<p><?php if((int)$settings['enabled'] && $settings['trigger_type']==='lot_purchase'): ?>Lot Referral Bonus on each completed Lot purchase from your referred Trader<?php if($bonusPlans): ?>, depending on the Lot: <?php foreach($bonusPlans as $i=>$bp): ?><?= $i?' · ':'' ?><strong><?= e($bp['name']) ?> <?= referral_lot_label($bp,$settings) ?></strong><?php endforeach ?>.<?php else: ?>: <strong><?= $settings['bonus_type']==='percentage'?e(number_format($settings['value_minor']/100,2)).'% of the USD Lot purchase price':cash_money((int)$settings['value_minor']) ?></strong>.<?php endif ?> Bonuses are credited as withdrawable USD earnings.<?php else: ?>Referral links are active. Bonus payouts are currently disabled by the administrator.<?php endif ?></p><small>Only registrations completed through your link count. The bonus settings in effect when a Lot is purchased apply; past purchases are not recalculated.</small></section>
+ <script src="/assets/js/referrals.js?v=1" defer></script>
+diff -ruN zip1/marketplace/includes/referrals.php work/marketplace/includes/referrals.php
+--- zip1/marketplace/includes/referrals.php	2026-10-12 23:47:11.000000000 +0000
++++ work/marketplace/includes/referrals.php	2026-10-15 09:52:08.278045474 +0000
+@@ -45,13 +45,50 @@
+         cash_query('INSERT INTO referral_settings_history(actor_id,enabled,bonus_type,value_minor,trigger_type) VALUES(?,?,?,?,?)',[$actor,$enabled,$type,$n,$trigger]);
+     });
+ }
++// Per-Lot referral bonus: NULL means the Lot package uses the global setting.
++// Client Lot referral percentages, used once to seed packages when the column is created:
++// Lot 1=5%, Lot 2=10%, Lot 3=10%, Lot 4=15%, Lot 5=15%, Lot 6=20% (matched by name, then by the original price).
++const REFERRAL_LEGACY_PACKAGE_BPS=[['Lot 1',4000,500],['Lot 2',8000,1000],['Lot 3',18000,1000],['Lot 4',48000,1500],['Lot 5',100000,1500],['Lot 6',180000,2000]];
++/** Ensure the per-Lot referral columns exist even when the SQL migration was missed. Call outside transactions. */
++function referral_lot_ensure_schema(): bool {
++    static $ok=null; if($ok!==null)return $ok;
++    try {
++        $plan=[];foreach(cash_query('SHOW COLUMNS FROM cash_lot_plans')->fetchAll() as $c)$plan[(string)$c['Field']]=true;
++        if(empty($plan['referral_bps'])){
++            cash_query('ALTER TABLE cash_lot_plans ADD COLUMN referral_bps INT UNSIGNED NULL DEFAULT NULL');
++            foreach(REFERRAL_LEGACY_PACKAGE_BPS as [$name,,$bps])cash_query('UPDATE cash_lot_plans SET referral_bps=? WHERE name=? AND referral_bps IS NULL',[$bps,$name]);
++            foreach(REFERRAL_LEGACY_PACKAGE_BPS as [,$price,$bps])cash_query('UPDATE cash_lot_plans SET referral_bps=? WHERE price_minor=? AND referral_bps IS NULL',[$bps,$price]);
++        }
++        $lot=[];foreach(cash_query('SHOW COLUMNS FROM cash_lots')->fetchAll() as $c)$lot[(string)$c['Field']]=true;
++        if(empty($lot['referral_bps']))cash_query('ALTER TABLE cash_lots ADD COLUMN referral_bps INT UNSIGNED NULL DEFAULT NULL');
++        return $ok=true;
++    } catch(PDOException $e) {
++        error_log('[referrals] Per-Lot referral columns missing; import migrations/20261015_lot_referral_bonus.sql');
++        return $ok=false;
++    }
++}
++/** Optional per-Lot referral percentage: blank means use the global setting. */
++function referral_lot_bps(string $value): ?int {
++    $value=trim($value);
++    if($value==='')return null;
++    if(!preg_match('/^(?:0|[1-9][0-9]{0,2})(?:\.([0-9]{1,2}))?$/D',$value,$m))throw new DomainException('Enter a valid referral bonus percentage with up to two decimal places, or leave it blank.');
++    $parts=explode('.',$value,2);$bps=((int)$parts[0])*100+(int)str_pad($parts[1]??'',2,'0');
++    if($bps>10000)throw new DomainException('Referral bonus percentage must be from 0.00% to 100.00%.');
++    return $bps;
++}
++/** Referral bonus for a Lot package as safe HTML, given the global settings row. */
++function referral_lot_label(array $plan,array $settings): string {
++    if(isset($plan['referral_bps'])&&$plan['referral_bps']!==null)return number_format((int)$plan['referral_bps']/100,2).'%';
++    return $settings['bonus_type']==='percentage'?number_format((int)$settings['value_minor']/100,2).'%':cash_money((int)$settings['value_minor']);
++}
+ // Compatibility with older deposit callers: deposits no longer award bonuses.
+ function referral_on_deposit(int $request): void {}
+ // Called in the transaction that pays for and creates a new Lot.
+ function referral_on_lot_purchase(int $request): void {
+     if(!db()->inTransaction())throw new LogicException('Referral credit requires a Lot purchase transaction.');
+     if(!referral_ready())return;
+-    $r=cash_query("SELECT r.* FROM cash_requests r JOIN cash_lots lot ON lot.request_id=r.id AND lot.user_id=r.user_id AND lot.price_minor=r.amount JOIN cash_ledger l ON l.request_id=r.id AND l.user_id=r.user_id AND l.event='lot_purchase' AND l.available_delta=-r.amount WHERE r.id=? AND r.kind='lot_purchase' AND r.status='paid'",[$request])->fetch();
++    $lotBps=referral_lot_ensure_schema()?'lot.referral_bps':'NULL';
++    $r=cash_query("SELECT r.*,$lotBps AS lot_referral_bps FROM cash_requests r JOIN cash_lots lot ON lot.request_id=r.id AND lot.user_id=r.user_id AND lot.price_minor=r.amount JOIN cash_ledger l ON l.request_id=r.id AND l.user_id=r.user_id AND l.event='lot_purchase' AND l.available_delta=-r.amount WHERE r.id=? AND r.kind='lot_purchase' AND r.status='paid'",[$request])->fetch();
+     if(!$r)return;
+     $m=cash_query('SELECT * FROM referral_members WHERE user_id=? FOR UPDATE',[$r['user_id']])->fetch();
+     if(!$m||(int)$m['referrer_id']===(int)$r['user_id'])return;
+@@ -59,12 +96,12 @@
+     $s=cash_query('SELECT * FROM referral_settings WHERE id=1 LOCK IN SHARE MODE')->fetch();
+     if(!$s||!(int)$s['enabled']||$s['trigger_type']!=='lot_purchase')return;
+     if(!cash_query("SELECT id FROM users WHERE id=? AND role='trader' AND status='active'",[$m['referrer_id']])->fetchColumn())return;
+-    // Client package-specific referral percentages: $40=5%, $80=10%, $180=10%, $480=15%, $1,000=15%, $1,800=20%.
+-    $packageReferralBps=[4000=>500,8000=>1000,18000=>1000,48000=>1500,100000=>1500,180000=>2000];
++    // Each Lot snapshots its package's referral percentage at purchase; packages without one use the global setting.
+     $purchaseAmount=(int)$r['amount'];
+-    $effectiveBps=$packageReferralBps[$purchaseAmount]??null;
+-    $amount=$effectiveBps!==null?intdiv($purchaseAmount*$effectiveBps,10000):($s['bonus_type']==='fixed'?(int)$s['value_minor']:intdiv($purchaseAmount*(int)$s['value_minor'],10000));
+-    cash_query('INSERT INTO referral_rewards(source_request_id,user_id,referrer_id,bonus_type,value_minor,trigger_type,amount_minor) VALUES(?,?,?,?,?,?,?)',[$request,$r['user_id'],$m['referrer_id'],$s['bonus_type'],$s['value_minor'],$s['trigger_type'],$amount]);
++    if($r['lot_referral_bps']!==null){$bonusType='percentage';$bonusValue=(int)$r['lot_referral_bps'];}
++    else{$bonusType=(string)$s['bonus_type'];$bonusValue=(int)$s['value_minor'];}
++    $amount=$bonusType==='fixed'?$bonusValue:intdiv($purchaseAmount*$bonusValue,10000);
++    cash_query('INSERT INTO referral_rewards(source_request_id,user_id,referrer_id,bonus_type,value_minor,trigger_type,amount_minor) VALUES(?,?,?,?,?,?,?)',[$request,$r['user_id'],$m['referrer_id'],$bonusType,$bonusValue,$s['trigger_type'],$amount]);
+     $reward=(int)db()->lastInsertId();
+     if($amount===0)return;
+     cash_wallet((int)$m['referrer_id']);
+diff -ruN zip1/marketplace/migrations/20261015_lot_incentives.sql work/marketplace/migrations/20261015_lot_incentives.sql
+--- zip1/marketplace/migrations/20261015_lot_incentives.sql	1970-01-01 00:00:00.000000000 +0000
++++ work/marketplace/migrations/20261015_lot_incentives.sql	2026-10-15 09:50:01.270489300 +0000
+@@ -0,0 +1,24 @@
++-- Lot completion incentives ("Choose Your Plan and Get Your Bonus").
++-- Import after 20261015_lot_referral_bonus.sql.
++-- cash_lot_plans.incentive_minor / incentive_invites: incentive in USD cents paid when a purchased Lot completes,
++--   and the number of invited Traders (registered via the buyer's link and bought a Lot before the buyer's Lot ends) required.
++-- cash_lots: snapshot of those terms at purchase plus the one-time settlement result.
++-- Lots purchased before this update keep 0 incentive (no retroactive credits).
++-- The app also adds these columns automatically if this file is not imported.
++
++ALTER TABLE cash_lot_plans
++  ADD COLUMN IF NOT EXISTS incentive_minor BIGINT UNSIGNED NOT NULL DEFAULT 0,
++  ADD COLUMN IF NOT EXISTS incentive_invites INT UNSIGNED NOT NULL DEFAULT 0;
++
++ALTER TABLE cash_lots
++  ADD COLUMN IF NOT EXISTS incentive_minor BIGINT UNSIGNED NOT NULL DEFAULT 0,
++  ADD COLUMN IF NOT EXISTS incentive_invites INT UNSIGNED NOT NULL DEFAULT 0,
++  ADD COLUMN IF NOT EXISTS incentive_status VARCHAR(12) NULL DEFAULT NULL,
++  ADD COLUMN IF NOT EXISTS incentive_invites_counted INT UNSIGNED NULL DEFAULT NULL,
++  ADD COLUMN IF NOT EXISTS incentive_request_id BIGINT UNSIGNED NULL DEFAULT NULL,
++  ADD COLUMN IF NOT EXISTS incentive_settled_at DATETIME NULL DEFAULT NULL;
++
++-- Client promo: 60 days $60 + invite 3 · 75 days $200 + invite 8 · 90 days $480, no invites.
++UPDATE cash_lot_plans SET incentive_minor=6000,  incentive_invites=3 WHERE incentive_minor=0 AND (name='Lot 4' OR (price_minor=48000  AND name NOT IN ('Lot 1','Lot 2','Lot 3','Lot 5','Lot 6')));
++UPDATE cash_lot_plans SET incentive_minor=20000, incentive_invites=8 WHERE incentive_minor=0 AND (name='Lot 5' OR (price_minor=100000 AND name NOT IN ('Lot 1','Lot 2','Lot 3','Lot 4','Lot 6')));
++UPDATE cash_lot_plans SET incentive_minor=48000, incentive_invites=0 WHERE incentive_minor=0 AND (name='Lot 6' OR (price_minor=180000 AND name NOT IN ('Lot 1','Lot 2','Lot 3','Lot 4','Lot 5')));
+diff -ruN zip1/marketplace/migrations/20261015_lot_referral_bonus.sql work/marketplace/migrations/20261015_lot_referral_bonus.sql
+--- zip1/marketplace/migrations/20261015_lot_referral_bonus.sql	1970-01-01 00:00:00.000000000 +0000
++++ work/marketplace/migrations/20261015_lot_referral_bonus.sql	2026-10-15 09:33:30.816977294 +0000
+@@ -0,0 +1,20 @@
++-- Per-Lot referral bonus percentage.
++-- Import after 20260925_client_adjustments.sql.
++-- cash_lot_plans.referral_bps: referral % for this package in basis points (500 = 5.00%); NULL uses the global referral setting.
++-- cash_lots.referral_bps: snapshot taken at purchase so later package edits never change a bought Lot's bonus.
++-- The app also adds these columns automatically if this file is not imported.
++
++ALTER TABLE cash_lot_plans ADD COLUMN IF NOT EXISTS referral_bps INT UNSIGNED NULL DEFAULT NULL;
++ALTER TABLE cash_lots ADD COLUMN IF NOT EXISTS referral_bps INT UNSIGNED NULL DEFAULT NULL;
++
++-- Client referral bonus per Lot: Lot 1=5%, Lot 2=10%, Lot 3=10%, Lot 4=15%, Lot 5=15%, Lot 6=20%.
++UPDATE cash_lot_plans SET referral_bps = CASE name
++  WHEN 'Lot 1' THEN 500 WHEN 'Lot 2' THEN 1000 WHEN 'Lot 3' THEN 1000
++  WHEN 'Lot 4' THEN 1500 WHEN 'Lot 5' THEN 1500 WHEN 'Lot 6' THEN 2000 END
++WHERE referral_bps IS NULL AND name IN ('Lot 1','Lot 2','Lot 3','Lot 4','Lot 5','Lot 6');
++
++-- Same percentages for packages not named "Lot N" but still at the original Lot prices ($40 … $1,800).
++UPDATE cash_lot_plans SET referral_bps = CASE price_minor
++  WHEN 4000 THEN 500 WHEN 8000 THEN 1000 WHEN 18000 THEN 1000
++  WHEN 48000 THEN 1500 WHEN 100000 THEN 1500 WHEN 180000 THEN 2000 END
++WHERE referral_bps IS NULL AND price_minor IN (4000, 8000, 18000, 48000, 100000, 180000);
+diff -ruN zip1/marketplace/trader/buy-lot.php work/marketplace/trader/buy-lot.php
+--- zip1/marketplace/trader/buy-lot.php	2026-10-12 23:47:12.000000000 +0000
++++ work/marketplace/trader/buy-lot.php	2026-10-15 09:52:08.278412639 +0000
+@@ -10,10 +10,10 @@
+  redirect('/trader/buy-lot.php');
+ }
+ cash_header($user,'Buy a Lot');
+-try{$plans=cash_query('SELECT * FROM cash_lot_plans WHERE enabled=1 ORDER BY id')->fetchAll();$w=cash_wallet($uid);}catch(Throwable $e){echo '<div class="notice">Lot purchases are not configured yet. The Lot timeframe migration may still need to be imported.</div>';cash_footer();exit;}
++try{lot_incentive_ensure_schema();$plans=cash_query('SELECT * FROM cash_lot_plans WHERE enabled=1 ORDER BY id')->fetchAll();$w=cash_wallet($uid);}catch(Throwable $e){echo '<div class="notice">Lot purchases are not configured yet. The Lot timeframe migration may still need to be imported.</div>';cash_footer();exit;}
+ ?>
+ <section class="panel cash-body"><h3>Choose your Lot</h3><p>Available balance: <?= cash_money((int)$w['available']) ?>. Each purchase snapshots its listed timeframe and daily earnings percentage. Earnings are credited after each completed hour, up to the Lot end date.</p><a href="/trader/lots.php">My Lots</a></section>
+-<div class="dashboard-grid"><?php foreach($plans as $p): $daily=(int)$p['price_minor']*(int)($p['daily_earnings_bps']??0)/10000;$hourly=$daily/24; ?><section class="panel cash-body"><h3><?= e($p['name']) ?></h3><p><?= (int)$p['capacity'] ?> product spaces</p><h3><?= cash_money((int)$p['price_minor']) ?></h3><div class="stats-grid"><article class="stat purple"><span>Timeframe</span><strong><?= (int)($p['timeframe_days']??30) ?> days</strong><small>Starts on purchase</small></article><article class="stat blue"><span>Daily earnings</span><strong><?= number_format(((int)($p['daily_earnings_bps']??0))/100,2) ?>%</strong><small>≈ <?= cash_money((int)round($daily)) ?>/day</small></article><article class="stat orchid"><span>Hourly earning</span><strong><?= cash_money((int)round($hourly)) ?></strong><small>Daily amount ÷ 24</small></article></div><form method="post"><?= csrf_field() ?><input type="hidden" name="request_key" value="<?= generate_uuid() ?>"><input type="hidden" name="plan" value="<?= (int)$p['id'] ?>"><input type="hidden" name="price" value="<?= (int)$p['price_minor'] ?>"><label><input type="checkbox" name="confirm" value="1" required style="width:auto"> I confirm this purchase at the listed USD price, timeframe and earnings terms.</label><button class="button" <?= (int)$w['available']<(int)$p['price_minor']?'disabled':'' ?>>Buy Lot</button></form></section><?php endforeach ?></div>
++<div class="dashboard-grid"><?php foreach($plans as $p): $daily=(int)$p['price_minor']*(int)($p['daily_earnings_bps']??0)/10000;$hourly=$daily/24; ?><section class="panel cash-body"><h3><?= e($p['name']) ?></h3><p><?= (int)$p['capacity'] ?> product spaces</p><h3><?= cash_money((int)$p['price_minor']) ?></h3><div class="stats-grid"><article class="stat purple"><span>Timeframe</span><strong><?= (int)($p['timeframe_days']??30) ?> days</strong><small>Starts on purchase</small></article><article class="stat blue"><span>Daily earnings</span><strong><?= number_format(((int)($p['daily_earnings_bps']??0))/100,2) ?>%</strong><small>≈ <?= cash_money((int)round($daily)) ?>/day</small></article><article class="stat orchid"><span>Hourly earning</span><strong><?= cash_money((int)round($hourly)) ?></strong><small>Daily amount ÷ 24</small></article></div><?php $incentiveTerms=lot_incentive_terms($p); if($incentiveTerms!==''): ?><p class="chip">Bonus: <?= $incentiveTerms ?></p><?php endif ?><form method="post"><?= csrf_field() ?><input type="hidden" name="request_key" value="<?= generate_uuid() ?>"><input type="hidden" name="plan" value="<?= (int)$p['id'] ?>"><input type="hidden" name="price" value="<?= (int)$p['price_minor'] ?>"><label><input type="checkbox" name="confirm" value="1" required style="width:auto"> I confirm this purchase at the listed USD price, timeframe and earnings terms.</label><button class="button" <?= (int)$w['available']<(int)$p['price_minor']?'disabled':'' ?>>Buy Lot</button></form></section><?php endforeach ?></div>
+ <?php if(!$plans): ?><section class="panel cash-body">No Lot plans are currently enabled.</section><?php endif ?>
+ <p class="fine-print">Configured earnings are credited by the platform according to the Lot terms. Displayed estimates can vary slightly by cent-level rounding across hourly credits.</p>
+ <?php cash_footer(); ?>
+diff -ruN zip1/marketplace/trader/referrals.php work/marketplace/trader/referrals.php
+--- zip1/marketplace/trader/referrals.php	2026-10-12 23:47:12.000000000 +0000
++++ work/marketplace/trader/referrals.php	2026-10-15 09:52:08.278879714 +0000
+@@ -1,8 +1,8 @@
+ <?php
+-require_once __DIR__.'/../includes/bootstrap.php';require_once __DIR__.'/../includes/cash.php';require_once __DIR__.'/../includes/cash_layout.php';require_once __DIR__.'/../includes/referrals.php';$user=require_role(ROLE_TRADER);$uid=(int)$user['id'];cash_header($user,'Referral Network');
+-try{$referralCode=referral_code($uid);$link=rtrim(APP_URL,'/').'/auth/register.php?ref='.$referralCode;$direct=cash_query('SELECT u.id,u.full_name,u.email,u.created_at FROM referral_members r JOIN users u ON u.id=r.user_id WHERE r.referrer_id=? ORDER BY u.created_at DESC',[$uid])->fetchAll();$all=cash_query('SELECT user_id,referrer_id FROM referral_members')->fetchAll();$users=cash_query("SELECT id,full_name,email FROM users WHERE role='trader'")->fetchAll();$um=[];foreach($users as $u)$um[(int)$u['id']]=$u;$children=[];foreach($all as $r)$children[(int)$r['referrer_id']][]=(int)$r['user_id'];}catch(Throwable $e){$direct=[];$children=[];$um=[];echo '<div class="notice">Referral network is temporarily unavailable.</div>';}
++require_once __DIR__.'/../includes/bootstrap.php';require_once __DIR__.'/../includes/cash.php';require_once __DIR__.'/../includes/cash_layout.php';require_once __DIR__.'/../includes/referrals.php';require_once __DIR__.'/../includes/lot_incentives.php';$user=require_role(ROLE_TRADER);$uid=(int)$user['id'];cash_header($user,'Referral Network');
++try{$referralCode=referral_code($uid);$link=rtrim(APP_URL,'/').'/auth/register.php?ref='.$referralCode;$direct=cash_query('SELECT u.id,u.full_name,u.email,u.created_at FROM referral_members r JOIN users u ON u.id=r.user_id WHERE r.referrer_id=? ORDER BY u.created_at DESC',[$uid])->fetchAll();$all=cash_query('SELECT user_id,referrer_id FROM referral_members')->fetchAll();$users=cash_query("SELECT id,full_name,email FROM users WHERE role='trader'")->fetchAll();$um=[];foreach($users as $u)$um[(int)$u['id']]=$u;$children=[];foreach($all as $r)$children[(int)$r['referrer_id']][]=(int)$r['user_id'];$bonusSettings=cash_query('SELECT * FROM referral_settings WHERE id=1')->fetch();$bonusPlans=$bonusSettings&&(int)$bonusSettings['enabled']&&referral_lot_ensure_schema()?cash_query('SELECT name,price_minor,referral_bps FROM cash_lot_plans WHERE enabled=1 ORDER BY price_minor,id')->fetchAll():[];$incentivePlans=lot_incentive_ensure_schema()?cash_query('SELECT name,price_minor,timeframe_days,incentive_minor,incentive_invites FROM cash_lot_plans WHERE enabled=1 AND incentive_minor>0 ORDER BY price_minor,id')->fetchAll():[];}catch(Throwable $e){$direct=[];$children=[];$um=[];$bonusPlans=[];$incentivePlans=[];echo '<div class="notice">Referral network is temporarily unavailable.</div>';}
+ function nx_ref_tree(int $id,array $children,array $um,int $depth=0):void{if($depth>=5||empty($children[$id]))return;echo '<ul class="ref-tree">';foreach($children[$id] as $cid){$u=$um[$cid]??null;if(!$u)continue;echo '<li><div class="ref-node"><span class="avatar">'.e(mb_substr($u['full_name'],0,1)).'</span><div><strong>'.e($u['full_name']).'</strong><small>'.e($u['email']).'</small></div></div>';nx_ref_tree($cid,$children,$um,$depth+1);echo '</li>';}echo '</ul>';}
+ ?>
+-<section class="panel cash-body referral-share-panel"><div class="referral-section-head"><h3>Your Referral Code</h3><p class="referral-help">Share your code or invitation link with people you invite to NEXMERCE.</p></div><div class="referral-code-card"><div class="referral-code-value"><small>MY REFERRAL CODE</small><strong id="referral-code"><?= e($referralCode??'') ?></strong></div><button class="button secondary referral-copy-button" type="button" id="referral-code-copy">Copy code</button></div><div class="referral-link-block"><h4>Your Referral Link</h4><div class="referral-link-row"><input id="referral-link" readonly value="<?= e($link??'') ?>"><button class="button referral-copy-button" type="button" id="referral-copy">Copy link</button></div><p id="referral-copy-status" class="fine-print referral-copy-status" aria-live="polite"></p></div><div class="referral-count"><strong><?= count($direct) ?></strong><span>direct referrals</span></div><div class="bonus-grid"><span>Lot 1 · 5%</span><span>Lot 2 · 10%</span><span>Lot 3 · 10%</span><span>Lot 4 · 15%</span><span>Lot 5 · 15%</span><span>Lot 6 · 20%</span></div><p class="fine-print">Additional package bonus targets: $60 for 60 days after 3 invites; $200 for 75 days after 8 invites; $480 for 90 days. Qualification is shown for reference and can be reviewed by administration.</p></section>
++<section class="panel cash-body referral-share-panel"><div class="referral-section-head"><h3>Your Referral Code</h3><p class="referral-help">Share your code or invitation link with people you invite to NEXMERCE.</p></div><div class="referral-code-card"><div class="referral-code-value"><small>MY REFERRAL CODE</small><strong id="referral-code"><?= e($referralCode??'') ?></strong></div><button class="button secondary referral-copy-button" type="button" id="referral-code-copy">Copy code</button></div><div class="referral-link-block"><h4>Your Referral Link</h4><div class="referral-link-row"><input id="referral-link" readonly value="<?= e($link??'') ?>"><button class="button referral-copy-button" type="button" id="referral-copy">Copy link</button></div><p id="referral-copy-status" class="fine-print referral-copy-status" aria-live="polite"></p></div><div class="referral-count"><strong><?= count($direct) ?></strong><span>direct referrals</span></div><?php if($bonusPlans): ?><div class="bonus-grid"><?php foreach($bonusPlans as $bp): ?><span><?= e($bp['name']) ?> · <?= referral_lot_label($bp,$bonusSettings) ?></span><?php endforeach ?></div><?php endif ?><?php if($incentivePlans): ?><h4>Choose your plan and get your bonus</h4><div class="bonus-grid"><?php foreach($incentivePlans as $ip): ?><span><?= e($ip['name']) ?> (<?= cash_money((int)$ip['price_minor']) ?>) · <?= lot_incentive_terms($ip) ?></span><?php endforeach ?></div><p class="fine-print">An invite counts when the person registers through your link and buys a Lot before your Lot ends. Incentives are credited automatically to Withdrawable Earnings when the Lot completes.</p><?php endif ?></section>
+ <section class="panel cash-body referral-list-panel"><div class="panel-head"><div><h3>Referral List</h3><p>Members who registered directly using your referral code or referral link.</p></div><span class="chip"><?= count($direct) ?> Direct</span></div><div class="table-scroll"><table><thead><tr><th>#</th><th>Member</th><th>Email</th><th>Date Joined</th><th>Status</th></tr></thead><tbody><?php if(!$direct): ?><tr><td colspan="5">No direct referrals yet. Share your referral code or referral link to invite members.</td></tr><?php else: foreach($direct as $i=>$member): ?><tr><td><?= $i+1 ?></td><td><strong><?= e($member['full_name']) ?></strong></td><td><?= e($member['email']) ?></td><td><?= e(date('M d, Y',strtotime((string)$member['created_at']))) ?><small><?= e(date('h:i A',strtotime((string)$member['created_at']))) ?></small></td><td><span class="chip">Registered</span></td></tr><?php endforeach; endif ?></tbody></table></div></section>
+ <section class="panel cash-body"><h3>Referral Genealogy</h3><p>View members registered under your referral network.</p><div class="ref-root"><div class="ref-node root"><span class="avatar"><?= e(mb_substr($user['full_name'],0,1)) ?></span><div><strong><?= e($user['full_name']) ?></strong><small>You</small></div></div><?php nx_ref_tree($uid,$children,$um); ?></div></section><script src="/assets/js/referrals.js?v=1" defer></script><?php cash_footer(); ?>

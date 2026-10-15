@@ -76,7 +76,7 @@ function referral_lot_bps(string $value): ?int {
     if($bps>10000)throw new DomainException('Referral bonus percentage must be from 0.00% to 100.00%.');
     return $bps;
 }
-/** Human-readable referral bonus for a Lot package, given the global settings row. */
+/** Referral bonus for a Lot package as safe HTML, given the global settings row. */
 function referral_lot_label(array $plan,array $settings): string {
     if(isset($plan['referral_bps'])&&$plan['referral_bps']!==null)return number_format((int)$plan['referral_bps']/100,2).'%';
     return $settings['bonus_type']==='percentage'?number_format((int)$settings['value_minor']/100,2).'%':cash_money((int)$settings['value_minor']);

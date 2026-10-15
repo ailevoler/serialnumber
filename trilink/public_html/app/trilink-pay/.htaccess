@@ -1,0 +1,17 @@
+# TriLink Pay – only the PayMongo webhook is reachable from the web.
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+    Require all denied
+    <Files "webhook.php">
+        Require all granted
+    </Files>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+    <Files "webhook.php">
+        Order deny,allow
+        Allow from all
+    </Files>
+</IfModule>

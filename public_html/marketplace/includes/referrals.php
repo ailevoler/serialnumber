@@ -46,8 +46,9 @@ function referral_save(int $actor,string $enabled,string $type,string $value,str
     });
 }
 // Per-Lot referral bonus: NULL means the Lot package uses the global setting.
-// Former hardcoded package percentages, used once to seed matching packages when the column is created.
-const REFERRAL_LEGACY_PACKAGE_BPS=[4000=>500,8000=>1000,18000=>1000,48000=>1500,100000=>1500,180000=>2000];
+// Client Lot referral percentages, used once to seed packages when the column is created:
+// Lot 1=5%, Lot 2=10%, Lot 3=10%, Lot 4=15%, Lot 5=15%, Lot 6=20% (matched by name, then by the original price).
+const REFERRAL_LEGACY_PACKAGE_BPS=[['Lot 1',4000,500],['Lot 2',8000,1000],['Lot 3',18000,1000],['Lot 4',48000,1500],['Lot 5',100000,1500],['Lot 6',180000,2000]];
 /** Ensure the per-Lot referral columns exist even when the SQL migration was missed. Call outside transactions. */
 function referral_lot_ensure_schema(): bool {
     static $ok=null; if($ok!==null)return $ok;
@@ -55,7 +56,8 @@ function referral_lot_ensure_schema(): bool {
         $plan=[];foreach(cash_query('SHOW COLUMNS FROM cash_lot_plans')->fetchAll() as $c)$plan[(string)$c['Field']]=true;
         if(empty($plan['referral_bps'])){
             cash_query('ALTER TABLE cash_lot_plans ADD COLUMN referral_bps INT UNSIGNED NULL DEFAULT NULL');
-            foreach(REFERRAL_LEGACY_PACKAGE_BPS as $price=>$bps)cash_query('UPDATE cash_lot_plans SET referral_bps=? WHERE price_minor=? AND referral_bps IS NULL',[$bps,$price]);
+            foreach(REFERRAL_LEGACY_PACKAGE_BPS as [$name,,$bps])cash_query('UPDATE cash_lot_plans SET referral_bps=? WHERE name=? AND referral_bps IS NULL',[$bps,$name]);
+            foreach(REFERRAL_LEGACY_PACKAGE_BPS as [,$price,$bps])cash_query('UPDATE cash_lot_plans SET referral_bps=? WHERE price_minor=? AND referral_bps IS NULL',[$bps,$price]);
         }
         $lot=[];foreach(cash_query('SHOW COLUMNS FROM cash_lots')->fetchAll() as $c)$lot[(string)$c['Field']]=true;
         if(empty($lot['referral_bps']))cash_query('ALTER TABLE cash_lots ADD COLUMN referral_bps INT UNSIGNED NULL DEFAULT NULL');

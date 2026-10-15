@@ -104,14 +104,15 @@ diff -ruN zip1/marketplace/includes/referral_panel.php work/marketplace/includes
  <script src="/assets/js/referrals.js?v=1" defer></script>
 diff -ruN zip1/marketplace/includes/referrals.php work/marketplace/includes/referrals.php
 --- zip1/marketplace/includes/referrals.php	2026-10-12 23:47:11.000000000 +0000
-+++ work/marketplace/includes/referrals.php	2026-10-15 09:31:45.401554912 +0000
-@@ -45,13 +45,48 @@
++++ work/marketplace/includes/referrals.php	2026-10-15 09:33:30.815202172 +0000
+@@ -45,13 +45,50 @@
          cash_query('INSERT INTO referral_settings_history(actor_id,enabled,bonus_type,value_minor,trigger_type) VALUES(?,?,?,?,?)',[$actor,$enabled,$type,$n,$trigger]);
      });
  }
 +// Per-Lot referral bonus: NULL means the Lot package uses the global setting.
-+// Former hardcoded package percentages, used once to seed matching packages when the column is created.
-+const REFERRAL_LEGACY_PACKAGE_BPS=[4000=>500,8000=>1000,18000=>1000,48000=>1500,100000=>1500,180000=>2000];
++// Client Lot referral percentages, used once to seed packages when the column is created:
++// Lot 1=5%, Lot 2=10%, Lot 3=10%, Lot 4=15%, Lot 5=15%, Lot 6=20% (matched by name, then by the original price).
++const REFERRAL_LEGACY_PACKAGE_BPS=[['Lot 1',4000,500],['Lot 2',8000,1000],['Lot 3',18000,1000],['Lot 4',48000,1500],['Lot 5',100000,1500],['Lot 6',180000,2000]];
 +/** Ensure the per-Lot referral columns exist even when the SQL migration was missed. Call outside transactions. */
 +function referral_lot_ensure_schema(): bool {
 +    static $ok=null; if($ok!==null)return $ok;
@@ -119,7 +120,8 @@ diff -ruN zip1/marketplace/includes/referrals.php work/marketplace/includes/refe
 +        $plan=[];foreach(cash_query('SHOW COLUMNS FROM cash_lot_plans')->fetchAll() as $c)$plan[(string)$c['Field']]=true;
 +        if(empty($plan['referral_bps'])){
 +            cash_query('ALTER TABLE cash_lot_plans ADD COLUMN referral_bps INT UNSIGNED NULL DEFAULT NULL');
-+            foreach(REFERRAL_LEGACY_PACKAGE_BPS as $price=>$bps)cash_query('UPDATE cash_lot_plans SET referral_bps=? WHERE price_minor=? AND referral_bps IS NULL',[$bps,$price]);
++            foreach(REFERRAL_LEGACY_PACKAGE_BPS as [$name,,$bps])cash_query('UPDATE cash_lot_plans SET referral_bps=? WHERE name=? AND referral_bps IS NULL',[$bps,$name]);
++            foreach(REFERRAL_LEGACY_PACKAGE_BPS as [,$price,$bps])cash_query('UPDATE cash_lot_plans SET referral_bps=? WHERE price_minor=? AND referral_bps IS NULL',[$bps,$price]);
 +        }
 +        $lot=[];foreach(cash_query('SHOW COLUMNS FROM cash_lots')->fetchAll() as $c)$lot[(string)$c['Field']]=true;
 +        if(empty($lot['referral_bps']))cash_query('ALTER TABLE cash_lots ADD COLUMN referral_bps INT UNSIGNED NULL DEFAULT NULL');
@@ -155,7 +157,7 @@ diff -ruN zip1/marketplace/includes/referrals.php work/marketplace/includes/refe
      if(!$r)return;
      $m=cash_query('SELECT * FROM referral_members WHERE user_id=? FOR UPDATE',[$r['user_id']])->fetch();
      if(!$m||(int)$m['referrer_id']===(int)$r['user_id'])return;
-@@ -59,12 +94,12 @@
+@@ -59,12 +96,12 @@
      $s=cash_query('SELECT * FROM referral_settings WHERE id=1 LOCK IN SHARE MODE')->fetch();
      if(!$s||!(int)$s['enabled']||$s['trigger_type']!=='lot_purchase')return;
      if(!cash_query("SELECT id FROM users WHERE id=? AND role='trader' AND status='active'",[$m['referrer_id']])->fetchColumn())return;
@@ -175,10 +177,10 @@ diff -ruN zip1/marketplace/includes/referrals.php work/marketplace/includes/refe
      cash_wallet((int)$m['referrer_id']);
 diff -ruN zip1/marketplace/migrations/20261015_lot_referral_bonus.sql work/marketplace/migrations/20261015_lot_referral_bonus.sql
 --- zip1/marketplace/migrations/20261015_lot_referral_bonus.sql	1970-01-01 00:00:00.000000000 +0000
-+++ work/marketplace/migrations/20261015_lot_referral_bonus.sql	2026-10-15 09:31:27.714173033 +0000
-@@ -0,0 +1,14 @@
++++ work/marketplace/migrations/20261015_lot_referral_bonus.sql	2026-10-15 09:33:30.816977294 +0000
+@@ -0,0 +1,20 @@
 +-- Per-Lot referral bonus percentage.
-+-- Import after 20260923_lot_timeframe_hourly_earnings.sql.
++-- Import after 20260925_client_adjustments.sql.
 +-- cash_lot_plans.referral_bps: referral % for this package in basis points (500 = 5.00%); NULL uses the global referral setting.
 +-- cash_lots.referral_bps: snapshot taken at purchase so later package edits never change a bought Lot's bonus.
 +-- The app also adds these columns automatically if this file is not imported.
@@ -186,7 +188,13 @@ diff -ruN zip1/marketplace/migrations/20261015_lot_referral_bonus.sql work/marke
 +ALTER TABLE cash_lot_plans ADD COLUMN IF NOT EXISTS referral_bps INT UNSIGNED NULL DEFAULT NULL;
 +ALTER TABLE cash_lots ADD COLUMN IF NOT EXISTS referral_bps INT UNSIGNED NULL DEFAULT NULL;
 +
-+-- Carry over the former hardcoded package percentages: $40=5%, $80=10%, $180=10%, $480=15%, $1,000=15%, $1,800=20%.
++-- Client referral bonus per Lot: Lot 1=5%, Lot 2=10%, Lot 3=10%, Lot 4=15%, Lot 5=15%, Lot 6=20%.
++UPDATE cash_lot_plans SET referral_bps = CASE name
++  WHEN 'Lot 1' THEN 500 WHEN 'Lot 2' THEN 1000 WHEN 'Lot 3' THEN 1000
++  WHEN 'Lot 4' THEN 1500 WHEN 'Lot 5' THEN 1500 WHEN 'Lot 6' THEN 2000 END
++WHERE referral_bps IS NULL AND name IN ('Lot 1','Lot 2','Lot 3','Lot 4','Lot 5','Lot 6');
++
++-- Same percentages for packages not named "Lot N" but still at the original Lot prices ($40 … $1,800).
 +UPDATE cash_lot_plans SET referral_bps = CASE price_minor
 +  WHEN 4000 THEN 500 WHEN 8000 THEN 1000 WHEN 18000 THEN 1000
 +  WHEN 48000 THEN 1500 WHEN 100000 THEN 1500 WHEN 180000 THEN 2000 END

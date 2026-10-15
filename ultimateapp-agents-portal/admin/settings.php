@@ -126,6 +126,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setting_save($pdo, 'uride.topup_fee_centavos', $pesoToCentavos(p('topup_fee', '0'), 'Top-up fee'), $aid);
             foreach (['qrph', 'mctc', 'bcash'] as $m) setting_save($pdo, "uride.topup_{$m}_enabled", p("topup_{$m}") === '1' ? '1' : '0', $aid);
             if (p('topup_qrph') !== '1' && p('topup_mctc') !== '1' && p('topup_bcash') !== '1') throw new InvalidArgumentException('Allow at least one driver top-up method.');
+            setting_save($pdo, 'uride.rewards_enabled', p('rewards_enabled') === '1' ? '1' : '0', $aid);
+            $ms = uride_parse_milestones(p('reward_milestones', ''));
+            if (p('rewards_enabled') === '1' && !$ms) throw new InvalidArgumentException('Add at least one trip reward, e.g. 50:100.');
+            setting_save($pdo, 'uride.reward_milestones', implode(', ', array_map(static fn($t, $c) => $t . ':' . rtrim(rtrim(number_format($c / 100, 2, '.', ''), '0'), '.'), array_keys($ms), $ms)), $aid);
             setting_save($pdo, 'uride.payout_min_centavos', $pesoToCentavos(p('payout_min', '500'), 'Minimum payout'), $aid);
             $changed[] = 'uride';
         }
@@ -316,6 +320,11 @@ admin_header('Settings', 'settings');
             <div class="field"><label for="commission_pct">Percentage (%)</label><input type="text" id="commission_pct" name="commission_pct" inputmode="decimal" value="<?= e($num($us['commission_bp'] / 100)) ?>"></div>
             <div class="field"><label for="commission_fixed">Fixed amount (PHP)</label><input type="text" id="commission_fixed" name="commission_fixed" inputmode="decimal" value="<?= e($pesoV($us['commission_fixed'])) ?>"><small>Never more than the fare.</small></div>
             <div class="field"><label for="min_wallet">Minimum wallet to go online (PHP)</label><input type="text" id="min_wallet" name="min_wallet" inputmode="decimal" value="<?= e($pesoV($us['min_wallet'])) ?>"></div>
+        </div>
+        <h3 class="mt">Trip rewards</h3>
+        <div class="form-grid">
+            <div class="field"><label for="rewards_enabled">Driver trip rewards</label><select id="rewards_enabled" name="rewards_enabled"><option value="1"<?= setting('uride.rewards_enabled', '1') === '1' ? ' selected' : '' ?>>On</option><option value="0"<?= setting('uride.rewards_enabled', '1') !== '1' ? ' selected' : '' ?>>Off</option></select></div>
+            <div class="field"><label for="reward_milestones">Milestones (trips:PHP)</label><input id="reward_milestones" name="reward_milestones" maxlength="200" value="<?= e((string) setting('uride.reward_milestones', URIDE_REWARD_DEFAULT)) ?>"><small>e.g. 50:100 = PHP 100 bonus at the 50th completed trip. Added to the driver wallet, paid by Ultimate App.</small></div>
         </div>
         <p class="alert info mt">Current: <?= e(uride_commission_label()) ?>. Credits rides: the fare goes to the driver wallet less commission. Cash rides: the driver keeps the cash and the commission is deducted from the wallet.</p>
     </section>

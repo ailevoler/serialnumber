@@ -209,3 +209,14 @@ details.d-card summary{font-size:13.5px}
 .d-fleet-row input[type=number]{text-align:center;font-weight:700}
 @media(max-width:420px){.d-fleet-row{grid-template-columns:1fr 72px}.d-fleet-row input[type=text]{grid-column:1/-1;grid-row:2}}
 .d-out{display:grid;gap:6px;margin:10px 0}.d-out a{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:#fff8e6;color:inherit;text-decoration:none;font-size:13px}
+
+/* Trip rewards */
+.d-reward{margin:12px 0;padding:14px 16px;border-radius:16px;background:#0b1015;color:#fff}
+.d-reward-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.d-reward-head small{display:block;color:#8fe3bd;font-size:11px;font-weight:700;letter-spacing:.08em}.d-reward-head b{font-size:18px;font-variant-numeric:tabular-nums}
+.d-reward-head strong{font-size:14px;color:#f2a93b;white-space:nowrap}
+.d-reward-bar{height:8px;margin:10px 0 8px;border-radius:99px;background:#243140;overflow:hidden}.d-reward-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#36d15b,#f2a93b)}
+.d-reward p{margin:0 0 10px;color:#b9c4cf;font-size:12.5px}
+.d-reward-steps{display:flex;gap:6px;margin:0;padding:0;list-style:none;overflow-x:auto}
+.d-reward-steps li{flex:1;min-width:56px;padding:6px 4px;border-radius:10px;background:#16212a;border:1px solid #243140;text-align:center;font-size:11.5px;color:#8a97a5}
+.d-reward-steps li b{display:block;color:#fff;font-size:13px}.d-reward-steps li.done{background:#123524;border-color:#1f6b45;color:#8fe3bd}.d-reward-steps li.next{border-color:#f2a93b;color:#f2a93b}

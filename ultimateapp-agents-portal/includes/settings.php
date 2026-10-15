@@ -87,6 +87,8 @@ function settings_schema(): array
         'uride.topup_max_centavos' => ['type' => 'int', 'min' => 100, 'max' => 10000000, 'label' => 'Maximum driver top-up'],
         'uride.topup_fee_centavos' => ['type' => 'int', 'min' => 0, 'max' => 100000, 'label' => 'Driver top-up service fee'],
         'uride.topup_qrph_enabled' => ['type' => 'bool', 'label' => 'Driver top-up with QR Ph'],
+        'uride.rewards_enabled' => ['type' => 'bool', 'label' => 'Driver trip rewards'],
+        'uride.reward_milestones' => ['type' => 'text', 'max' => 200, 'label' => 'Driver trip reward milestones'],
         'ubarangay.enabled' => ['type' => 'bool', 'label' => 'UBarangay enabled'],
         // UBills / ULoad / UCash In via the SUNIWAY Partner API (Admin > Bills & Load).
         'suniway.enabled' => ['type' => 'bool', 'label' => 'UBills, ULoad and UCash In enabled'],

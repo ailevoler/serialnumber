@@ -86,6 +86,15 @@ driver_header('', 'dashboard', 'drive');
     </form>
     <?php if ($lowWallet): ?><div class="alert warn">Your wallet is below ₱<?= peso($s['min_wallet']) ?>. <a href="wallet.php">Top up via QR Ph</a> to <?= $online ? 'keep accepting' : 'go online and accept' ?> rides.</div><?php endif; ?>
 
+    <?php $rw = uride_reward_progress($pdo, $driver); if ($rw['milestones']): ?>
+    <section class="d-reward" aria-label="Trip rewards">
+        <div class="d-reward-head"><span><small>TRIP REWARDS</small><b><?= $rw['next'] ? number_format($rw['trips']) . ' / ' . number_format($rw['next']['trips']) . ' trips' : number_format($rw['trips']) . ' trips · all rewards reached' ?></b></span><?php if ($rw['next']): ?><strong>₱<?= e(rtrim(rtrim(peso($rw['next']['amount']), '0'), '.')) ?> bonus</strong><?php endif; ?></div>
+        <div class="d-reward-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= (int) $rw['pct'] ?>"><i style="width:<?= (int) $rw['pct'] ?>%"></i></div>
+        <p><?= $rw['next'] ? number_format($rw['next']['trips'] - $rw['trips']) . ' more completed trip' . ($rw['next']['trips'] - $rw['trips'] === 1 ? '' : 's') . ' to your next bonus. It goes straight to your wallet.' : 'Thank you for driving with URide!' ?></p>
+        <ol class="d-reward-steps"><?php foreach ($rw['milestones'] as $t => $c): $got = $rw['trips'] >= $t; ?><li class="<?= $got ? 'done' : ($rw['next'] && $rw['next']['trips'] === $t ? 'next' : '') ?>"><b><?= number_format($t) ?></b><span>₱<?= e(rtrim(rtrim(peso($c), '0'), '.')) ?></span></li><?php endforeach; ?></ol>
+    </section>
+    <?php endif; ?>
+
     <section class="d-feed" aria-live="polite">
         <div class="d-feed-head"><h2>Nearby requests</h2><span data-feed-count><?= $online ? '' : 'Offline' ?></span></div>
         <div data-feed>

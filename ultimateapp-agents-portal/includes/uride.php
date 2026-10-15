@@ -125,6 +125,84 @@ function uride_quote(string $vehicle, float $directKm, ?int $hour = null): array
     ];
 }
 
+/* ---------------------------------------------------------------- driver trip rewards */
+
+const URIDE_REWARD_DEFAULT = '50:100, 100:200, 200:500, 500:1500, 1000:3000';
+
+/**
+ * Parses "trips:pesos, trips:pesos" into [trips => centavos], sorted by trips. Throws on a bad list.
+ * Example: "50:100, 100:200" = PHP 100 at 50 trips, PHP 200 at 100 trips.
+ */
+function uride_parse_milestones(string $text): array
+{
+    $out = [];
+    foreach (preg_split('/[\s,;]+/', trim($text), -1, PREG_SPLIT_NO_EMPTY) as $part) {
+        if (!preg_match('/^(\d{1,6}):(\d{1,6}(?:\.\d{1,2})?)$/D', $part, $m) || (int) $m[1] < 1 || (int) $m[1] > 100000 || (float) $m[2] > 100000) {
+            throw new InvalidArgumentException('Write each reward as trips:pesos, e.g. 50:100, 100:200 (up to 100,000 trips and PHP 100,000).');
+        }
+        if (isset($out[(int) $m[1]])) throw new InvalidArgumentException('Each trip milestone can be listed once.');
+        $out[(int) $m[1]] = (int) round((float) $m[2] * 100);
+    }
+    if (count($out) > 20) throw new InvalidArgumentException('Use at most 20 reward milestones.');
+    ksort($out);
+    return $out;
+}
+
+/** Active milestones [trips => centavos]; empty when rewards are off. */
+function uride_reward_milestones(): array
+{
+    if (setting('uride.rewards_enabled', '1') !== '1') return [];
+    try { return array_filter(uride_parse_milestones((string) setting('uride.reward_milestones', URIDE_REWARD_DEFAULT)), static fn(int $c): bool => $c > 0); }
+    catch (InvalidArgumentException) { return []; }
+}
+
+function uride_rewards_ready(PDO $pdo): bool
+{
+    static $ready = null;
+    if ($ready === null) { try { $pdo->query('SELECT 1 FROM uride_driver_rewards LIMIT 0'); $ready = true; } catch (PDOException) { $ready = false; } }
+    return $ready;
+}
+
+/**
+ * Pays the bonus for the milestone this trip reached (inside the completion transaction). A milestone is paid
+ * once per driver, only when the driver's completed-trip count reaches it exactly, so trips made before a
+ * milestone was added never pay it out later. Paid by Ultimate App: driver_reward_expense → driver_wallet.
+ */
+function uride_reward_check(PDO $pdo, int $driverId, ?int $rideId): ?array
+{
+    if (!uride_rewards_ready($pdo)) return null;
+    $milestones = uride_reward_milestones();
+    $trips = (int) $pdo->query('SELECT trips_completed FROM uride_drivers WHERE id = ' . $driverId)->fetchColumn();
+    if (!isset($milestones[$trips])) return null;
+    $amount = $milestones[$trips];
+    $ins = $pdo->prepare('INSERT IGNORE INTO uride_driver_rewards (driver_id, milestone, amount_centavos, ride_id) VALUES (?, ?, ?, ?)');
+    $ins->execute([$driverId, $trips, $amount, $rideId]);
+    if ($ins->rowCount() !== 1) return null;
+    $ref = 'RW-' . $driverId . '-' . $trips;
+    uride_wallet_change($pdo, $driverId, $amount, 'trip_reward', $ref, $rideId, number_format($trips) . '-trip reward');
+    ledger_post($pdo, $ref, 'uride_trip_reward', [['driver_reward_expense', $amount, 0, $trips . '-trip reward'], ['driver_wallet:' . $driverId, 0, $amount, $trips . '-trip reward']]);
+    return ['milestone' => $trips, 'amount' => $amount];
+}
+
+/** Progress for the driver dashboard: trips so far, next milestone and its bonus, and rewards already paid. */
+function uride_reward_progress(PDO $pdo, array $driver): array
+{
+    $trips = (int) $driver['trips_completed'];
+    $ms = uride_reward_milestones();
+    $next = null;
+    foreach ($ms as $t => $c) if ($t > $trips) { $next = ['trips' => $t, 'amount' => $c]; break; }
+    $prev = 0;
+    foreach (array_keys($ms) as $t) if ($t <= $trips) $prev = $t;
+    $paid = [];
+    if (uride_rewards_ready($pdo)) {
+        $s = $pdo->prepare('SELECT milestone, amount_centavos, created_at FROM uride_driver_rewards WHERE driver_id = ? ORDER BY milestone');
+        $s->execute([(int) $driver['id']]);
+        $paid = $s->fetchAll();
+    }
+    return ['trips' => $trips, 'next' => $next, 'from' => $prev, 'milestones' => $ms, 'paid' => $paid,
+        'pct' => $next ? (int) floor(100 * ($trips - $prev) / max(1, $next['trips'] - $prev)) : 100];
+}
+
 /* ---------------------------------------------------------------- Rent a Ride (vehicle with driver, by the hour) */
 
 /** Requests scheduled more than this many minutes ahead are "upcoming": drivers do not see them yet. */
@@ -503,7 +581,7 @@ function uride_barangays(): array
 
 function uride_wallet_types(): array
 {
-    return ['topup' => 'Top-up', 'ride_fare' => 'Ride fare (Credits)', 'commission' => 'Commission', 'payout' => 'Payout', 'payout_returned' => 'Payout returned', 'adjustment' => 'Adjustment', 'late_fee' => 'Self-drive late fee', 'damage_claim' => 'Self-drive damage claim', 'cancel_fee' => 'Cancellation fee'];
+    return ['topup' => 'Top-up', 'ride_fare' => 'Ride fare (Credits)', 'commission' => 'Commission', 'payout' => 'Payout', 'payout_returned' => 'Payout returned', 'adjustment' => 'Adjustment', 'late_fee' => 'Self-drive late fee', 'damage_claim' => 'Self-drive damage claim', 'cancel_fee' => 'Cancellation fee', 'trip_reward' => 'Trip reward'];
 }
 
 function uride_payout_methods(): array
@@ -1072,6 +1150,7 @@ function uride_settle_completed(PDO $pdo, array $driver, array $ride): void
     }
     $pdo->prepare("UPDATE uride_requests SET status = 'completed', completed_at = NOW(), commission_centavos = ? WHERE id = ?")->execute([$commission, $ride['id']]);
     $pdo->prepare('UPDATE uride_drivers SET trips_completed = trips_completed + 1 WHERE id = ?')->execute([$driverId]);
+    uride_reward_check($pdo, $driverId, (int) $ride['id']);
     // Referral agent of the passenger earns on the fare (paid by Ultimate App; the driver's net is unchanged).
     agent_record_commission($pdo, (int) $ride['user_id'], 'URide', 'uride', (int) $ride['id'], $ride['code'], $fare, true);
 }

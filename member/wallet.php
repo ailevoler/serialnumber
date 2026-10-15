@@ -33,17 +33,43 @@ if (is_post() && input('action') === 'transfer' && $transferOn) {
 
 $p = paginate('SELECT COUNT(*) FROM wallet_transactions WHERE user_id = ?', [$uid]);
 $rows = q_all("SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}", [$uid]);
-$in = (float)q_val("SELECT COALESCE(SUM(amount),0) FROM wallet_transactions WHERE user_id = ? AND direction = 'credit'", [$uid]);
-$out = (float)q_val("SELECT COALESCE(SUM(amount),0) FROM wallet_transactions WHERE user_id = ? AND direction = 'debit'", [$uid]);
+$summary = earnings_summary($uid);
 $withdrawn = (float)q_val("SELECT COALESCE(SUM(amount),0) FROM payouts WHERE user_id = ? AND status = 'approved'", [$uid]);
+$pendingWd = (float)q_val("SELECT COALESCE(SUM(amount),0) FROM payouts WHERE user_id = ? AND status = 'pending'", [$uid]);
+$walletIncome = [
+    'pairing'  => 'Pairing / Matching Bonus',
+    'direct'   => 'Direct Referral Bonus',
+    'indirect' => 'Indirect Bonus',
+    'passup'   => 'Pass Up Bonus',
+    'unilevel' => 'Unilevel Bonus',
+];
 
 page_header('E-Wallet', $me, 'Your balance and transactions');
 ?>
-<div class="stats">
-  <?= stat_card('Available Balance', money($me['wallet_balance']), 'wallet', 'dark') ?>
-  <?= stat_card('Total Credits', money($in), 'arrow-up') ?>
-  <?= stat_card('Total Debits', money($out), 'cash', 'gold') ?>
-  <?= stat_card('Total Withdrawn', money($withdrawn), 'download') ?>
+<div class="wallet-hero">
+  <?= stat_card('Available Balance', money($me['wallet_balance']), 'wallet', 'dark', 'Ready for withdrawal') ?>
+  <?= stat_card('Total Earnings', money($me['total_earnings']), 'trending', 'gold', 'All bonuses credited to wallet') ?>
+</div>
+<div class="card">
+  <div class="card-header"><h3><?= icon('chart') ?> Wallet Summary</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('member/earnings.php')) ?>">Income history</a></div></div>
+  <div class="card-body">
+    <div class="earn-grid">
+      <?php foreach ($walletIncome as $k => $label): ?>
+        <a class="earn-item" href="<?= e(url('member/earnings.php?type=' . $k)) ?>">
+          <div class="earn-ic"><?= icon(earning_types()[$k]['icon']) ?></div>
+          <span><?= e($label) ?></span>
+          <strong><?= money($summary[$k]['total']) ?></strong>
+          <span class="small"><?= e(earning_types()[$k]['hint']) ?></span>
+        </a>
+      <?php endforeach; ?>
+      <a class="earn-item withdraw" href="<?= e(url('member/payouts.php')) ?>">
+        <div class="earn-ic"><?= icon('download') ?></div>
+        <span>Withdrawal</span>
+        <strong><?= money($withdrawn) ?></strong>
+        <span class="small"><?= $pendingWd > 0 ? 'Pending: ' . money($pendingWd) : 'Total withdrawn' ?></span>
+      </a>
+    </div>
+  </div>
 </div>
 <div class="grid <?= $transferOn ? 'grid-main' : '' ?>">
   <div class="card">

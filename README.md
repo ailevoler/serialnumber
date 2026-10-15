@@ -7,15 +7,28 @@ Theme: puting base, logo-green na accent, may konting gold.
 
 ## 6 Ways to Earn (+ Wallet)
 
-| # | Income | Paano kinukuwenta | Saan iko-configure |
-|---|--------|-------------------|--------------------|
-| 1 | **Product Discount** | SRP − Member Price sa bawat order (savings / retail profit, hindi pumapasok sa wallet) | Admin → Products |
-| 2 | **Direct Referral Bonus** | Fixed na bonus sa sponsor kapag may na-activate na bagong member | Admin → Packages |
-| 3 | **Indirect Referral** | Fixed na halaga bawat level sa itaas ng sponsor (default `50,30,20,10,10`) | Admin → Settings |
-| 4 | **Pass Up Bonus** | Australian pass-up: ang N-th recruit ng sponsor (default 1st) ay ipinapasa sa upline at kumikita ng pass-up bonus | Admin → Settings |
-| 5 | **Pairing Bonus** | Binary: bawat `pair_pv` sa left + right = 1 pair × `pair_bonus`, may daily cap (sobra ay flush) | Admin → Packages (PV) + Settings |
-| 6 | **Repeat Purchase Unilevel** | % ng PV ng order paakyat sa sponsor line (default `10,5,5,3,2,2,1,1,1,1`) | Admin → Products (PV) + Settings |
-| + | **E-Wallet** | Lahat ng kita → wallet; payout request (may fee), pambili ng produkto, member-to-member transfer | Admin → Settings |
+Lahat ay naka-on/off at nababago sa **Admin → Compensation Plan** (puwedeng mag-add/remove ng levels at mag-set ng fixed o % na bonus).
+
+| # | Income | Paano kinukuwenta |
+|---|--------|-------------------|
+| 1 | **Product Discount** | SRP − Member Price sa bawat order (savings / retail profit, hindi pumapasok sa wallet) |
+| 2 | **Direct Referral Bonus** | Fixed bawat package, o % ng package price — para sa sponsor |
+| 3 | **Indirect Bonus** | Bawat level sa itaas ng sponsor (default 5 levels: `50,30,20,10,10`), fixed o % ng package price; puwedeng magdagdag ng level |
+| 4 | **Pass Up Bonus (Australian Pass Up)** | Ang N-th recruit ng sponsor (hal. `1` o `1,2` para 2-Up) ay ipinapasa sa pass-up upline na kumikita ng bonus (fixed o %). May option kung kikita pa rin ng Direct Referral ang sponsor |
+| 5 | **Pairing / Matching Bonus (Binary)** | Bawat `PV per side` sa left + right = 1 pair × bonus, may daily cap (sobra ay flush), carry-forward ang natirang PV |
+| 6 | **Unilevel Bonus (Repeat Purchase)** | % ng PV o ng halaga ng order bawat level paakyat sa sponsor line; puwedeng magdagdag ng level |
+| + | **E-Wallet** | Available Balance, Total Earnings, breakdown ng bawat bonus at Withdrawal; payout (may fee), pambili ng produkto/codes, member-to-member transfer |
+
+## PayMongo
+
+**Admin → PayMongo Settings**: ilagay ang Public/Secret key (test o live), piliin ang payment methods
+(GCash, Maya, Card, GrabPay, QR Ph, Online Banking, BillEase), i-click ang *Test Connection* at *Register Webhook*
+(kailangang HTTPS ang site). Kapag naka-enable:
+
+- **Checkout ng produkto** — may "PayMongo" na payment option; pagkabayad, awtomatikong *paid* ang order at lumalabas ang commissions.
+- **Buy Codes** — makakabili ang member ng activation codes gamit ang PayMongo o E-Wallet; pumapasok agad sa *My Codes*.
+- Kinukumpirma ang bayad sa dalawang paraan: pagbalik ng member mula sa PayMongo at sa signed webhook (`paymongo_webhook.php`).
+  Ang lahat ng transaksyon ay nasa **Admin → Online Payments** (may "Check PayMongo" at "Cancel").
 
 ## Mga Feature
 
@@ -24,9 +37,9 @@ direct referrals at pass-up status, pag-register ng bagong member gamit ang sari
 shop / cart / orders, earnings history, e-wallet ledger at transfer, payout requests, profile at password.
 
 **Administrator Backoffice** — dashboard at charts, reports (ayon sa petsa, may print), members (search, CSV, edit, status,
-reset password, wallet adjustment), genealogy ng buong network, activation codes (generate paid/free, assign, block, CSV),
+reset password, wallet adjustment), genealogy ng buong network, Code Generator (generate paid/free activation codes, assign, block, CSV),
 packages, products (may image upload), orders (status → paid ay nagre-release ng commission), payout approval/reject
-(auto-refund), commissions report + CSV, wallet ledger, announcements, compensation settings, admin accounts at activity log.
+(auto-refund), commissions report + CSV, wallet ledger, announcements, Compensation Plan editor, PayMongo Settings, Online Payments, General Settings, admin accounts at activity log.
 
 **Security** — PDO prepared statements, `password_hash`, CSRF token sa lahat ng form, session regeneration,
 login throttling, role-based access, output escaping, row locking sa wallet/codes, `.htaccess` na nagba-block sa
@@ -39,6 +52,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
+   Kung naka-install na ang lumang bersyon: `mysql -u root -p xgenlife < database/upgrade_v2.sql`
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.
@@ -54,9 +68,10 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
 | Company head (root ng genealogy) | `xgenlife` | `Xgen@123` |
 
 ### Unang hakbang ng admin
-1. Settings → i-set ang final compensation plan values.
+1. Compensation Plan → i-set ang final na bonuses, levels at commissions.
 2. Packages / Products → ilagay ang tamang presyo, PV at bonus.
-3. Activation Codes → mag-generate ng codes at i-assign sa `xgenlife` o sa mga distributor.
+3. Code Generator → mag-generate ng codes at i-assign sa `xgenlife` o sa mga distributor.
+4. PayMongo Settings → ilagay ang API keys kung tatanggap ng online payment.
 
 Local test: `php -S 127.0.0.1:8080` sa project folder.
 

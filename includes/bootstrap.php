@@ -28,4 +28,5 @@ require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/wallet.php';
 require_once __DIR__ . '/compensation.php';
+require_once __DIR__ . '/paymongo.php';
 require_once __DIR__ . '/layout.php';

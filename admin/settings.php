@@ -9,23 +9,6 @@ $fields = [
         'currency'             => ['Currency Symbol', 'text'],
         'company_payment_info' => ['Company Payment Instructions (shown at checkout)', 'text'],
     ],
-    'Indirect Referral' => [
-        'indirect_levels' => ['Amount per level above the sponsor (comma-separated, level 1 first)', 'list', 'e.g. 50,30,20,10,10 → 5 levels'],
-    ],
-    'Pass Up Bonus (Australian Pass-up)' => [
-        'passup_enabled'   => ['Enable Pass Up', 'bool'],
-        'passup_positions' => ["Which of a sponsor's recruits are passed up (comma-separated)", 'list', 'e.g. 1 = 1st recruit; 1,2 = 1st and 2nd (2-up)'],
-        'passup_bonus'     => ['Pass-up bonus amount', 'number'],
-    ],
-    'Pairing Bonus (Binary)' => [
-        'pair_pv'        => ['PV per side to form 1 pair', 'number'],
-        'pair_bonus'     => ['Bonus per pair', 'number'],
-        'pair_daily_cap' => ['Max pairs per day (0 = unlimited)', 'number', 'Excess pairs are flushed'],
-    ],
-    'Repeat Purchase Unilevel' => [
-        'unilevel_percent'        => ['Percent of order PV per level (comma-separated)', 'list', 'e.g. 10,5,5,3,2 → 5 levels'],
-        'unilevel_require_active' => ['Only active members earn unilevel', 'bool'],
-    ],
     'Wallet & Payouts' => [
         'payout_min'              => ['Minimum payout', 'number'],
         'payout_fee_percent'      => ['Payout fee (%)', 'number'],
@@ -33,7 +16,11 @@ $fields = [
         'payout_methods'          => ['Payout methods (comma-separated)', 'list'],
         'wallet_transfer_enabled' => ['Allow member-to-member wallet transfer', 'bool'],
         'wallet_transfer_min'     => ['Minimum wallet transfer', 'number'],
-        'order_payment_methods'   => ['Order payment methods (wallet, cash, bank, gcash, maya)', 'list'],
+        'order_payment_methods'   => ['Manual order payment methods (wallet, cash, bank, gcash, maya)', 'list', 'PayMongo is added automatically when enabled'],
+    ],
+    'Activation Code Purchase' => [
+        'code_purchase_enabled' => ['Members can buy activation codes online', 'bool'],
+        'code_purchase_wallet'  => ['Allow paying for codes with the e-wallet', 'bool', 'PayMongo is also offered when enabled'],
     ],
 ];
 
@@ -53,14 +40,14 @@ if (is_post()) {
             save_setting($key, $v);
         }
     }
-    log_activity((int)$me['id'], 'Updated compensation/settings');
+    log_activity((int)$me['id'], 'Updated general settings');
     flash('success', 'Settings saved.');
     redirect('admin/settings.php');
 }
 
-page_header('Compensation & Settings', $me, 'Configure the 6 ways to earn');
+page_header('General Settings', $me, 'Company, wallet and payout options');
 ?>
-<div class="alert alert-info">Direct Referral Bonus and binary PV are set per package under <a href="<?= e(url('admin/packages.php')) ?>"><strong>Packages</strong></a>. Product Discount comes from SRP vs. Member Price under <a href="<?= e(url('admin/products.php')) ?>"><strong>Products</strong></a>. Changes apply to new transactions only.</div>
+<div class="alert alert-info">Bonuses, levels and commissions are set in <a href="<?= e(url('admin/compensation.php')) ?>"><strong>Compensation Plan</strong></a>. Online payments are set in <a href="<?= e(url('admin/paymongo.php')) ?>"><strong>PayMongo Settings</strong></a>.</div>
 <form method="post">
   <?= csrf_field() ?>
   <div class="grid grid-2">

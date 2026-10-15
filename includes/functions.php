@@ -28,6 +28,16 @@ function url(string $path = ''): string
     return base_url() . '/' . ltrim($path, '/');
 }
 
+function absolute_url(string $path = ''): string
+{
+    $u = url($path);
+    if (preg_match('#^https?://#', $u)) {
+        return $u;
+    }
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    return ($https ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost') . $u;
+}
+
 function asset(string $path): string
 {
     $file = APP_ROOT . '/assets/' . ltrim($path, '/');
@@ -254,12 +264,12 @@ function random_string(int $len, string $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ234567
 function earning_types(): array
 {
     return [
-        'discount' => ['label' => 'Product Discount',        'icon' => 'tag'],
-        'direct'   => ['label' => 'Direct Referral Bonus',   'icon' => 'user-plus'],
-        'indirect' => ['label' => 'Indirect Referral',       'icon' => 'users'],
-        'passup'   => ['label' => 'Pass Up Bonus',           'icon' => 'arrow-up'],
-        'pairing'  => ['label' => 'Pairing Bonus',           'icon' => 'git-merge'],
-        'unilevel' => ['label' => 'Repeat Purchase Unilevel','icon' => 'repeat'],
+        'discount' => ['label' => 'Product Discount',          'icon' => 'tag',       'hint' => 'Savings / retail profit'],
+        'direct'   => ['label' => 'Direct Referral Bonus',     'icon' => 'user-plus', 'hint' => 'Personally sponsored'],
+        'indirect' => ['label' => 'Indirect Bonus',            'icon' => 'users',     'hint' => 'Up to ' . count(setting_list('indirect_levels')) . ' levels'],
+        'passup'   => ['label' => 'Pass Up Bonus',             'icon' => 'arrow-up',  'hint' => 'Australian Pass Up'],
+        'pairing'  => ['label' => 'Pairing / Matching Bonus',  'icon' => 'git-merge', 'hint' => 'Binary'],
+        'unilevel' => ['label' => 'Unilevel Bonus',            'icon' => 'repeat',    'hint' => 'Repeat purchase'],
     ];
 }
 
@@ -297,6 +307,7 @@ function icon(string $name, int $size = 18): string
         'shield'    => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
         'package'   => '<path d="M16.5 9.4L7.5 4.21M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>',
         'eye'       => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+        'card'      => '<rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>',
         'trending'  => '<path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/>',
     ];
     $p = $paths[$name] ?? $paths['list'];

@@ -4,7 +4,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS activity_logs, announcements, settings, payouts, wallet_transactions,
+DROP TABLE IF EXISTS payments, activity_logs, announcements, settings, payouts, wallet_transactions,
   earnings, order_items, orders, products, codes, users, packages;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -96,7 +96,7 @@ CREATE TABLE orders (
   discount DECIMAL(12,2) NOT NULL DEFAULT 0,
   total DECIMAL(12,2) NOT NULL DEFAULT 0,
   total_pv DECIMAL(12,2) NOT NULL DEFAULT 0,
-  payment_method ENUM('wallet','cash','bank','gcash','maya') NOT NULL DEFAULT 'wallet',
+  payment_method ENUM('wallet','cash','bank','gcash','maya','paymongo') NOT NULL DEFAULT 'wallet',
   payment_ref VARCHAR(100) NULL,
   shipping_address VARCHAR(255) NULL,
   status ENUM('pending','paid','shipped','completed','cancelled') NOT NULL DEFAULT 'pending',
@@ -142,7 +142,7 @@ CREATE TABLE wallet_transactions (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNSIGNED NOT NULL,
   direction ENUM('credit','debit') NOT NULL,
-  category ENUM('earning','payout','payout_refund','purchase','purchase_refund','transfer_in','transfer_out','adjustment') NOT NULL,
+  category ENUM('earning','payout','payout_refund','purchase','purchase_refund','transfer_in','transfer_out','adjustment','code_purchase') NOT NULL,
   amount DECIMAL(12,2) NOT NULL,
   balance_after DECIMAL(14,2) NOT NULL,
   reference VARCHAR(60) NULL,
@@ -168,6 +168,26 @@ CREATE TABLE payouts (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_status (status),
   CONSTRAINT fk_payout_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Online payments (PayMongo checkout sessions) for product orders and code purchases
+CREATE TABLE payments (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  reference VARCHAR(30) NOT NULL UNIQUE,
+  user_id INT UNSIGNED NOT NULL,
+  purpose ENUM('order','codes') NOT NULL,
+  order_id INT UNSIGNED NULL,
+  package_id INT UNSIGNED NULL,
+  qty INT UNSIGNED NOT NULL DEFAULT 0,
+  amount DECIMAL(12,2) NOT NULL,
+  provider VARCHAR(20) NOT NULL DEFAULT 'paymongo',
+  checkout_id VARCHAR(80) NULL UNIQUE,
+  checkout_url TEXT NULL,
+  status ENUM('pending','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+  paid_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_user (user_id),
+  CONSTRAINT fk_pay_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE settings (
@@ -217,15 +237,28 @@ INSERT INTO settings (skey, svalue) VALUES
  ('site_name', 'XGEN LIFE Intl'),
  ('site_tagline', 'Better Health • Brighter Future. Together.'),
  ('currency', '₱'),
+ -- Compensation plan (all editable in Admin → Compensation Plan)
+ ('discount_enabled', '1'),
+ ('direct_enabled', '1'),
+ ('direct_mode', 'fixed'),
+ ('direct_percent', '10'),
+ ('indirect_enabled', '1'),
+ ('indirect_mode', 'fixed'),
  ('indirect_levels', '50,30,20,10,10'),
  ('passup_enabled', '1'),
  ('passup_positions', '1'),
+ ('passup_mode', 'fixed'),
  ('passup_bonus', '100'),
+ ('passup_sponsor_keeps_direct', '1'),
+ ('pairing_enabled', '1'),
  ('pair_pv', '100'),
  ('pair_bonus', '200'),
  ('pair_daily_cap', '10'),
+ ('unilevel_enabled', '1'),
+ ('unilevel_base', 'pv'),
  ('unilevel_percent', '10,5,5,3,2,2,1,1,1,1'),
  ('unilevel_require_active', '1'),
+ -- Wallet & payouts
  ('payout_min', '500'),
  ('payout_fee_percent', '10'),
  ('payout_fee_fixed', '0'),
@@ -233,7 +266,17 @@ INSERT INTO settings (skey, svalue) VALUES
  ('wallet_transfer_enabled', '1'),
  ('wallet_transfer_min', '100'),
  ('order_payment_methods', 'wallet,cash,bank,gcash,maya'),
- ('company_payment_info', 'GCash/Maya: 09XX-XXX-XXXX (XGEN LIFE Intl)');
+ ('company_payment_info', 'GCash/Maya: 09XX-XXX-XXXX (XGEN LIFE Intl)'),
+ ('code_purchase_enabled', '1'),
+ ('code_purchase_wallet', '1'),
+ -- PayMongo
+ ('paymongo_enabled', '0'),
+ ('paymongo_mode', 'test'),
+ ('paymongo_public_key', ''),
+ ('paymongo_secret_key', ''),
+ ('paymongo_webhook_secret', ''),
+ ('paymongo_webhook_id', ''),
+ ('paymongo_methods', 'gcash,paymaya,card');
 
 INSERT INTO announcements (title, body) VALUES
  ('Welcome to XGEN LIFE Intl!', 'Better Health • Brighter Future. Together. Start building your team by sharing your referral link.');

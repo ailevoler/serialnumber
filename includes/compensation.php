@@ -28,6 +28,12 @@ function credit_earning(int $userId, string $type, float $amount, ?int $sourceId
     }
 }
 
+/** Is an income type (direct, indirect, passup, pairing, unilevel, discount) switched on? */
+function plan_on(string $type): bool
+{
+    return setting($type . '_enabled', '1') === '1';
+}
+
 function find_member_by_username(string $username): ?array
 {
     return q_row("SELECT * FROM users WHERE username = ? AND role = 'member'", [$username]);
@@ -127,7 +133,7 @@ function register_member(array $d): int
             throw new RuntimeException('Username is already taken.');
         }
 
-        $code = q_row("SELECT c.*, p.name AS package_name, p.pv, p.direct_bonus FROM codes c JOIN packages p ON p.id = c.package_id
+        $code = q_row("SELECT c.*, p.name AS package_name, p.pv, p.price, p.direct_bonus FROM codes c JOIN packages p ON p.id = c.package_id
                        WHERE c.code = ? FOR UPDATE", [strtoupper(trim($d['code'] ?? ''))]);
         if (!$code || !hash_equals((string)$code['pin'], strtoupper(trim($d['pin'] ?? '')))) {
             throw new RuntimeException('Invalid activation code or PIN.');
@@ -180,46 +186,60 @@ function register_member(array $d): int
 
         $newName = $username;
         $paid = $code['code_type'] === 'paid';
+        $price = (float)$code['price'];
 
-        // ---- 2. Direct Referral Bonus
-        if ($paid) {
-            credit_earning($sponsorId, 'direct', (float)$code['direct_bonus'], $newId, "Direct referral bonus from {$newName} ({$code['package_name']})");
-        }
-
-        // ---- 3. Indirect Referral (levels above the sponsor)
-        if ($paid) {
-            $levels = array_map('floatval', setting_list('indirect_levels'));
-            $up = (int)$sponsor['sponsor_id'];
-            foreach ($levels as $i => $amt) {
-                if (!$up) {
-                    break;
-                }
-                $row = q_row('SELECT id, sponsor_id, status FROM users WHERE id = ?', [$up]);
-                if (!$row) {
-                    break;
-                }
-                if ($row['status'] === 'active') {
-                    credit_earning((int)$row['id'], 'indirect', $amt, $newId, 'Indirect referral L' . ($i + 1) . " from {$newName}", null, $i + 1);
-                }
-                $up = (int)$row['sponsor_id'];
-            }
-        }
-
-        // ---- 4. Pass Up Bonus (Australian pass-up)
+        // ---- 4. Pass Up (Australian): decided first because it can affect the sponsor's direct bonus
         $passupTo = $sponsorId;
+        $passedUp = false;
         $positions = array_map('intval', setting_list('passup_positions'));
-        if (setting('passup_enabled', '1') === '1' && in_array($directCount, $positions, true)) {
+        if (plan_on('passup') && in_array($directCount, $positions, true)) {
             $receiverId = (int)($sponsor['passup_upline_id'] ?: $sponsor['sponsor_id']);
             if ($receiverId) {
                 $passupTo = $receiverId;
-                $receiver = q_row('SELECT status FROM users WHERE id = ?', [$receiverId]);
-                if ($paid && $receiver && $receiver['status'] === 'active') {
-                    credit_earning($receiverId, 'passup', (float)setting('passup_bonus', 0), $newId,
+                $passedUp = true;
+            }
+        }
+        q('UPDATE users SET passup_upline_id = ? WHERE id = ?', [$passupTo, $newId]);
+
+        if ($paid) {
+            // ---- 2. Direct Referral Bonus
+            if (plan_on('direct') && (!$passedUp || setting('passup_sponsor_keeps_direct', '1') === '1')) {
+                $amt = setting('direct_mode', 'fixed') === 'percent'
+                    ? $price * (float)setting('direct_percent', 0) / 100
+                    : (float)$code['direct_bonus'];
+                credit_earning($sponsorId, 'direct', $amt, $newId, "Direct referral bonus from {$newName} ({$code['package_name']})");
+            }
+
+            // ---- 3. Indirect Referral (levels above the sponsor)
+            if (plan_on('indirect')) {
+                $isPct = setting('indirect_mode', 'fixed') === 'percent';
+                $up = (int)$sponsor['sponsor_id'];
+                foreach (array_map('floatval', setting_list('indirect_levels')) as $i => $val) {
+                    if (!$up) {
+                        break;
+                    }
+                    $row = q_row('SELECT id, sponsor_id, status FROM users WHERE id = ?', [$up]);
+                    if (!$row) {
+                        break;
+                    }
+                    if ($row['status'] === 'active') {
+                        credit_earning((int)$row['id'], 'indirect', $isPct ? $price * $val / 100 : $val, $newId,
+                            'Indirect referral L' . ($i + 1) . " from {$newName}", null, $i + 1);
+                    }
+                    $up = (int)$row['sponsor_id'];
+                }
+            }
+
+            // ---- 4. Pass Up Bonus
+            if ($passedUp) {
+                $receiver = q_row('SELECT status FROM users WHERE id = ?', [$passupTo]);
+                $val = (float)setting('passup_bonus', 0);
+                if ($receiver && $receiver['status'] === 'active') {
+                    credit_earning($passupTo, 'passup', setting('passup_mode', 'fixed') === 'percent' ? $price * $val / 100 : $val, $newId,
                         "Pass-up bonus: {$newName} (#{$directCount} recruit of {$sponsor['username']})");
                 }
             }
         }
-        q('UPDATE users SET passup_upline_id = ? WHERE id = ?', [$passupTo, $newId]);
 
         // ---- 5. Binary points & pairing
         add_binary_points($newId, $paid ? (float)$code['pv'] : 0.0);
@@ -238,7 +258,7 @@ function add_binary_points(int $newId, float $pv): void
         $parentId = (int)$node['placement_id'];
         $side = $node['position'] === 'L' ? 'left' : 'right';
         q("UPDATE users SET {$side}_count = {$side}_count + 1, {$side}_points = {$side}_points + ? WHERE id = ?", [$pv, $parentId]);
-        if ($pv > 0) {
+        if ($pv > 0 && plan_on('pairing')) {
             process_pairing($parentId, $newId);
         }
         $node = q_row('SELECT id, placement_id, position FROM users WHERE id = ?', [$parentId]);
@@ -283,13 +303,14 @@ function process_order_commission(int $orderId): void
         }
 
         // 1. Discount – retail profit (SRP - member price). Recorded as income, not a wallet credit.
-        if ((float)$o['discount'] > 0) {
+        if (plan_on('discount') && (float)$o['discount'] > 0) {
             credit_earning((int)$o['user_id'], 'discount', (float)$o['discount'], (int)$o['user_id'],
                 "Member discount on order {$o['order_no']}", $orderId, null, 0, false);
         }
 
         // 6. Repeat Purchase Unilevel
-        $pcts = array_map('floatval', setting_list('unilevel_percent'));
+        $pcts = plan_on('unilevel') ? array_map('floatval', setting_list('unilevel_percent')) : [];
+        $base = setting('unilevel_base', 'pv') === 'amount' ? (float)$o['total'] : (float)$o['total_pv'];
         $requireActive = setting('unilevel_require_active', '1') === '1';
         $up = (int)$o['sponsor_id'];
         foreach ($pcts as $i => $pct) {
@@ -301,7 +322,7 @@ function process_order_commission(int $orderId): void
                 break;
             }
             if (!$requireActive || $row['status'] === 'active') {
-                credit_earning((int)$row['id'], 'unilevel', (float)$o['total_pv'] * $pct / 100, (int)$o['user_id'],
+                credit_earning((int)$row['id'], 'unilevel', $base * $pct / 100, (int)$o['user_id'],
                     'Unilevel L' . ($i + 1) . " ({$pct}%) – {$o['username']} order {$o['order_no']}", $orderId, $i + 1);
             }
             $up = (int)$row['sponsor_id'];
@@ -377,6 +398,9 @@ function generate_codes(int $packageId, int $qty, string $type, ?int $ownerId): 
 function create_order(int $userId, array $cart, string $method, string $address, string $paymentRef = ''): int
 {
     $allowed = setting_list('order_payment_methods');
+    if (paymongo_enabled()) {
+        $allowed[] = 'paymongo';
+    }
     if (!in_array($method, $allowed, true)) {
         throw new RuntimeException('Invalid payment method.');
     }
@@ -439,5 +463,21 @@ function cancel_order(int $orderId): void
             wallet_credit((int)$o['user_id'], 'purchase_refund', (float)$o['total'], "Refund for cancelled order {$o['order_no']}", $o['order_no']);
         }
         q("UPDATE orders SET status = 'cancelled' WHERE id = ?", [$orderId]);
+    });
+}
+
+/** Buy activation codes using the e-wallet. Returns the generated codes. */
+function purchase_codes_wallet(int $userId, int $packageId, int $qty): array
+{
+    $pkg = q_row("SELECT * FROM packages WHERE id = ? AND status = 'active'", [$packageId]);
+    if (!$pkg || $qty < 1 || $qty > 100) {
+        throw new RuntimeException('Choose a package and quantity (1-100).');
+    }
+    return tx(function () use ($userId, $pkg, $qty) {
+        $ref = 'CP' . date('ymdHis') . random_string(3, '0123456789');
+        wallet_debit($userId, 'code_purchase', (float)$pkg['price'] * $qty, "Bought {$qty} {$pkg['name']} code(s)", $ref);
+        $codes = generate_codes((int)$pkg['id'], $qty, 'paid', $userId);
+        log_activity($userId, "Bought {$qty} {$pkg['name']} code(s) via wallet");
+        return $codes;
     });
 }

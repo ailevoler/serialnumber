@@ -21,8 +21,20 @@ if (is_post()) {
         unset($_SESSION['cart'][input_int('product_id')]);
     } elseif ($action === 'checkout') {
         try {
-            $orderId = create_order($uid, $cart, input('payment_method'), input('shipping_address'), input('payment_ref'));
+            $method = input('payment_method');
+            $orderId = create_order($uid, $cart, $method, input('shipping_address'), input('payment_ref'));
             $_SESSION['cart'] = [];
+            if ($method === 'paymongo') {
+                $o = q_row('SELECT * FROM orders WHERE id = ?', [$orderId]);
+                $items = array_map(fn($it) => ['name' => $it['product_name'], 'amount' => (float)$it['price'], 'quantity' => (int)$it['qty']],
+                    q_all('SELECT * FROM order_items WHERE order_id = ?', [$orderId]));
+                try {
+                    redirect(paymongo_start_checkout($uid, 'order', $items, "XGEN LIFE order {$o['order_no']}", $orderId));
+                } catch (RuntimeException $ex) {
+                    cancel_order($orderId);
+                    throw $ex;
+                }
+            }
             $o = q_row('SELECT order_no, status FROM orders WHERE id = ?', [$orderId]);
             flash('success', "Order {$o['order_no']} placed" . ($o['status'] === 'paid' ? ' and paid from your wallet.' : '. Waiting for payment confirmation.'));
             redirect('member/orders.php');
@@ -46,7 +58,10 @@ if ($cart) {
     }
 }
 $methods = setting_list('order_payment_methods');
-$labels = ['wallet' => 'E-Wallet', 'cash' => 'Cash / Pick-up', 'bank' => 'Bank Deposit', 'gcash' => 'GCash', 'maya' => 'Maya'];
+if (paymongo_enabled()) {
+    $methods[] = 'paymongo';
+}
+$labels = ['paymongo' => 'PayMongo (GCash / Maya / Card)', 'wallet' => 'E-Wallet', 'cash' => 'Cash / Pick-up', 'bank' => 'Bank Deposit', 'gcash' => 'GCash', 'maya' => 'Maya'];
 
 page_header('My Cart', $me, 'Review items and checkout');
 ?>

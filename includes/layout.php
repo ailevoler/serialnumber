@@ -12,7 +12,7 @@ function nav_items(string $role): array
             'Network' => [
                 ['admin/members.php', 'Members', 'users'],
                 ['admin/genealogy.php', 'Genealogy', 'tree'],
-                ['admin/codes.php', 'Activation Codes', 'key'],
+                ['admin/codes.php', 'Code Generator', 'key'],
                 ['admin/packages.php', 'Packages', 'package'],
             ],
             'Commerce' => [
@@ -23,10 +23,13 @@ function nav_items(string $role): array
                 ['admin/payouts.php', 'Payout Requests', 'cash'],
                 ['admin/earnings.php', 'Commissions', 'trending'],
                 ['admin/wallet.php', 'Wallet Ledger', 'wallet'],
+                ['admin/payments.php', 'Online Payments', 'card'],
             ],
             'System' => [
                 ['admin/announcements.php', 'Announcements', 'megaphone'],
-                ['admin/settings.php', 'Compensation & Settings', 'settings'],
+                ['admin/compensation.php', 'Compensation Plan', 'trending'],
+                ['admin/paymongo.php', 'PayMongo Settings', 'card'],
+                ['admin/settings.php', 'General Settings', 'settings'],
                 ['admin/profile.php', 'My Account', 'shield'],
             ],
         ];
@@ -41,6 +44,7 @@ function nav_items(string $role): array
             ['member/referrals.php', 'Direct Referrals', 'users'],
             ['member/register.php', 'Register Member', 'user-plus'],
             ['member/codes.php', 'My Codes', 'key'],
+            ['member/buy_codes.php', 'Buy Codes', 'card'],
         ],
         'Shop' => [
             ['member/shop.php', 'Products', 'box'],
@@ -162,9 +166,9 @@ function auth_header(string $title): void
     <ul class="hero-points">
       <li><?= icon('tag', 16) ?> Product Discounts</li>
       <li><?= icon('user-plus', 16) ?> Direct &amp; Indirect Referral</li>
-      <li><?= icon('arrow-up', 16) ?> Pass Up Bonus</li>
-      <li><?= icon('git-merge', 16) ?> Pairing Bonus</li>
-      <li><?= icon('repeat', 16) ?> Repeat Purchase Unilevel</li>
+      <li><?= icon('arrow-up', 16) ?> Australian Pass Up</li>
+      <li><?= icon('git-merge', 16) ?> Pairing / Matching (Binary)</li>
+      <li><?= icon('repeat', 16) ?> Unilevel Bonus</li>
       <li><?= icon('wallet', 16) ?> E-Wallet &amp; Payouts</li>
     </ul>
   </div>

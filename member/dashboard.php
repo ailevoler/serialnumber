@@ -22,7 +22,7 @@ foreach (q_all('SELECT DATE(created_at) d, SUM(amount) t FROM earnings WHERE use
     $days[$r['d']] = (float)$r['t'];
 }
 $maxDay = max(1, max($days));
-$refLink = (isset($_SERVER['HTTP_HOST']) ? ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' : 'http://') . $_SERVER['HTTP_HOST']) : '') . url('register.php?ref=' . urlencode($me['username']));
+$refLink = absolute_url('register.php?ref=' . urlencode($me['username']));
 
 page_header('Dashboard', $me, 'Overview of your business');
 ?>
@@ -57,7 +57,7 @@ page_header('Dashboard', $me, 'Overview of your business');
           <div class="earn-ic"><?= icon($s['icon']) ?></div>
           <span><?= e($s['label']) ?></span>
           <strong><?= money($s['total']) ?></strong>
-          <?php if ($k === 'discount'): ?><span class="small">Savings / retail profit</span><?php endif; ?>
+          <span class="small"><?= e($s['hint']) ?></span>
         </a>
       <?php endforeach; ?>
     </div>

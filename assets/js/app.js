@@ -85,10 +85,49 @@
   if (pm.length && refBox) {
     var toggle = function () {
       var sel = document.querySelector('input[name="payment_method"]:checked');
-      refBox.style.display = sel && sel.value !== 'wallet' ? '' : 'none';
+      refBox.style.display = sel && sel.value !== 'wallet' && sel.value !== 'paymongo' ? '' : 'none';
     };
     pm.forEach(function (r) { r.addEventListener('change', toggle); }); toggle();
   }
+
+  // Compensation plan: add / remove level rows
+  document.querySelectorAll('[data-levels]').forEach(function (ed) {
+    var rows = ed.querySelector('.level-rows');
+    var max = parseInt(ed.getAttribute('data-max'), 10) || 30;
+    var name = ed.getAttribute('data-name');
+    var count = ed.querySelector('[data-level-count]');
+    var refresh = function () {
+      var n = rows.children.length;
+      Array.prototype.forEach.call(rows.children, function (r, i) { r.querySelector('.level-label').textContent = 'Level ' + (i + 1); });
+      count.textContent = n + ' level(s)';
+      ed.querySelector('[data-level-add]').disabled = n >= max;
+      ed.querySelector('[data-level-remove]').disabled = n <= 1;
+    };
+    ed.querySelector('[data-level-add]').addEventListener('click', function () {
+      if (rows.children.length >= max) { return; }
+      var row = document.createElement('div');
+      row.className = 'level-row';
+      row.innerHTML = '<span class="level-label"></span><input class="input" type="number" step="0.01" min="0" required value="0"><span class="level-suffix"></span>';
+      row.querySelector('input').name = name + '[]';
+      row.querySelector('.level-suffix').textContent = ed.getAttribute('data-suffix');
+      rows.appendChild(row);
+      refresh();
+      row.querySelector('input').focus();
+    });
+    ed.querySelector('[data-level-remove]').addEventListener('click', function () {
+      if (rows.children.length > 1) { rows.removeChild(rows.lastElementChild); refresh(); }
+    });
+    refresh();
+  });
+  document.querySelectorAll('[data-suffix-target]').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      var ed = document.querySelector('[data-levels][data-name="' + sel.getAttribute('data-suffix-target') + '"]');
+      if (!ed) { return; }
+      var suffix = sel.value === 'percent' ? '%' : sel.getAttribute('data-currency');
+      ed.setAttribute('data-suffix', suffix);
+      ed.querySelectorAll('.level-suffix').forEach(function (s) { s.textContent = suffix; });
+    });
+  });
 
   // Check/uncheck all
   var all = document.querySelector('[data-check-all]');

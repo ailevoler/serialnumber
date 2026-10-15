@@ -135,6 +135,9 @@ img { max-width: 100%; }
 .earn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 .earn-item { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: linear-gradient(180deg, #fff, var(--green-50)); }
 .earn-item .earn-ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--white); color: var(--green-600); border: 1px solid var(--green-100); margin-bottom: 8px; }
+a.earn-item:hover { border-color: var(--green); }
+.earn-item.withdraw { background: linear-gradient(180deg, #fff, var(--gold-50)); }
+.earn-item.withdraw .earn-ic { color: var(--gold-600); border-color: #f1e0a6; }
 .earn-item:nth-child(even) .earn-ic { color: var(--gold-600); border-color: #f1e0a6; }
 .earn-item span { display: block; font-size: 12px; color: var(--muted); }
 .earn-item strong { font-family: var(--font-head); font-size: 17px; color: var(--green-900); }
@@ -155,8 +158,8 @@ table.table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .table tr:last-child td { border-bottom: 0; }
 .table tbody tr:hover { background: #fbfdfc; }
 .table td.empty { text-align: center; color: var(--muted); padding: 30px; }
-.amount-plus { color: var(--green-600); font-weight: 600; }
-.amount-minus { color: var(--danger); font-weight: 600; }
+.amount-plus { color: var(--green-600); font-weight: 600; white-space: nowrap; }
+.amount-minus { color: var(--danger); font-weight: 600; white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 10px; }
 .user-cell .avatar { width: 32px; height: 32px; font-size: 11px; border-width: 1.5px; }
 .user-cell small { display: block; color: var(--muted); }
@@ -290,6 +293,29 @@ a.node:hover { border-color: var(--green); color: var(--text); }
 .tabs a { padding: 7px 14px; border-radius: 30px; background: #fff; border: 1px solid var(--border); color: var(--text); font-size: 13px; font-weight: 500; }
 .tabs a.active { background: var(--green); color: #fff; border-color: var(--green); }
 .code-chip { background: var(--green-50); border: 1px dashed var(--green); border-radius: 8px; padding: 2px 8px; font-weight: 600; color: var(--green-700); }
+
+/* Compensation plan editor */
+.level-rows { display: grid; gap: 8px; }
+.level-row { display: grid; grid-template-columns: 80px 1fr 34px; align-items: center; gap: 10px; }
+.level-label { font-size: 12.5px; font-weight: 600; color: var(--green-700); background: var(--green-50); border-radius: 8px; padding: 6px 8px; text-align: center; }
+.level-suffix { color: var(--gold-600); font-weight: 600; }
+.toggle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.toggle-card { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; margin: 0; background: #fff; }
+.toggle-card small { display: block; color: var(--muted); font-weight: 400; font-size: 11.5px; }
+.toggle-card .icon { color: var(--green-600); }
+.toggle-card input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle-ui { flex-shrink: 0; width: 40px; height: 22px; border-radius: 22px; background: #d5ded8; position: relative; transition: background .2s; }
+.toggle-ui::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.toggle-card input:checked + .toggle-ui { background: var(--green); }
+.toggle-card input:checked + .toggle-ui::after { transform: translateX(18px); }
+.toggle-card:has(input:checked) { border-color: var(--green-100); background: var(--green-50); }
+.sticky-save { position: sticky; bottom: 0; background: rgba(246, 248, 247, .95); padding: 12px 0; border-top: 1px solid var(--border); z-index: 5; }
+.pkg-pick { cursor: pointer; position: relative; }
+.pkg-pick input { position: absolute; top: 12px; right: 12px; accent-color: var(--green); width: 18px; height: 18px; }
+.pkg-pick:has(input:checked) { border-color: var(--green); box-shadow: 0 0 0 3px rgba(22, 163, 74, .15); }
+.radio-pill input[type=checkbox]:checked + span { background: var(--green); border-color: var(--green); color: #fff; }
+.wallet-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+@media (max-width: 720px) { .wallet-hero { grid-template-columns: 1fr; gap: 10px; } .level-row { grid-template-columns: 70px 1fr 28px; } }
 
 /* ---------- Auth pages ---------- */
 body.auth { background: #fff; }

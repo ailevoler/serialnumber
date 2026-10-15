@@ -15,9 +15,18 @@ if (is_post()) {
             }
             if ($action === 'approve') {
                 q("UPDATE payouts SET status = 'approved', admin_note = ?, processed_by = ?, processed_at = NOW() WHERE id = ?", [$note, $me['id'], $id]);
+                erp_post('ZP', "Payout #{$id} released via {$po['method']}" . ($note ? " ({$note})" : ''), [
+                    ['acct_payouts_payable', $po['amount'], 0, null, $po['user_id']],
+                    ['acct_payout_source', 0, $po['net_amount'], null, $po['user_id']],
+                    ['acct_payout_fees', 0, $po['fee'], null, $po['user_id']],
+                ], 'payout', $id);
             } elseif ($action === 'reject') {
                 q("UPDATE payouts SET status = 'rejected', admin_note = ?, processed_by = ?, processed_at = NOW() WHERE id = ?", [$note ?: 'Rejected', $me['id'], $id]);
                 wallet_credit((int)$po['user_id'], 'payout_refund', (float)$po['amount'], 'Refund: payout request #' . $id . ' rejected', 'PO' . $id);
+                erp_post('ZP', "Payout #{$id} rejected – returned to wallet", [
+                    ['acct_payouts_payable', $po['amount'], 0, null, $po['user_id']],
+                    ['acct_wallet_payable', 0, $po['amount'], null, $po['user_id']],
+                ], 'payout', $id);
             } else {
                 throw new RuntimeException('Invalid action.');
             }

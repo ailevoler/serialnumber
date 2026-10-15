@@ -23,8 +23,10 @@ function credit_earning(int $userId, string $type, float $amount, ?int $sourceId
     q('INSERT INTO earnings (user_id, type, amount, source_user_id, order_id, level, pairs, credited, description) VALUES (?,?,?,?,?,?,?,?,?)',
         [$userId, $type, $amount, $sourceId, $orderId, $level, $pairs, $toWallet ? 1 : 0, mb_substr($desc, 0, 255)]);
     if ($toWallet) {
+        $earningId = (int)db()->lastInsertId();
         q('UPDATE users SET total_earnings = total_earnings + ? WHERE id = ?', [$amount, $userId]);
         wallet_credit($userId, 'earning', $amount, $desc, strtoupper($type));
+        erp_post_commission($earningId, $userId, $type, $amount, $desc);
     }
 }
 
@@ -328,6 +330,7 @@ function process_order_commission(int $orderId): void
             $up = (int)$row['sponsor_id'];
         }
 
+        erp_post_order_sale($o);
         q('UPDATE orders SET commission_processed = 1 WHERE id = ?', [$orderId]);
     });
 }
@@ -477,6 +480,7 @@ function purchase_codes_wallet(int $userId, int $packageId, int $qty): array
         $ref = 'CP' . date('ymdHis') . random_string(3, '0123456789');
         wallet_debit($userId, 'code_purchase', (float)$pkg['price'] * $qty, "Bought {$qty} {$pkg['name']} code(s)", $ref);
         $codes = generate_codes((int)$pkg['id'], $qty, 'paid', $userId);
+        erp_post_code_sale('wallet', (float)$pkg['price'] * $qty, "Code sale {$ref}: {$qty} × {$pkg['name']} (E-Wallet)", $userId, 'codes', null);
         log_activity($userId, "Bought {$qty} {$pkg['name']} code(s) via wallet");
         return $codes;
     });

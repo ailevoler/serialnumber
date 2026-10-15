@@ -129,6 +129,41 @@
     });
   });
 
+  // Manual journal entry: add lines, live totals, balance check
+  var je = document.querySelector('[data-je-form]');
+  if (je) {
+    var body = je.querySelector('[data-je-lines]');
+    var status = je.querySelector('[data-je-status]');
+    var submit = je.querySelector('[data-je-submit]');
+    var n = body.children.length;
+    var fmt2 = function (v) { return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var recalc = function () {
+      var dr = 0, cr = 0;
+      body.querySelectorAll('[data-je-dr]').forEach(function (i) { dr += parseFloat(i.value) || 0; });
+      body.querySelectorAll('[data-je-cr]').forEach(function (i) { cr += parseFloat(i.value) || 0; });
+      je.querySelector('[data-je-total-dr]').textContent = fmt2(dr);
+      je.querySelector('[data-je-total-cr]').textContent = fmt2(cr);
+      var ok = dr > 0 && Math.abs(dr - cr) < 0.005;
+      status.textContent = ok ? '✓ Balanced' : 'Difference: ' + fmt2(dr - cr) + ' — debits must equal credits';
+      status.className = 'small mt-1 ' + (ok ? 'text-green' : 'text-danger');
+      submit.disabled = !ok;
+    };
+    body.addEventListener('input', recalc);
+    je.querySelector('[data-je-add]').addEventListener('click', function () {
+      var row = body.children[0].cloneNode(true);
+      row.querySelectorAll('input, select').forEach(function (f) {
+        f.name = f.name.replace(/line\[\d+\]/, 'line[' + n + ']');
+        f.value = '';
+      });
+      n++;
+      body.appendChild(row);
+    });
+    body.addEventListener('click', function (e) {
+      if (e.target.closest('[data-je-remove]') && body.children.length > 2) { e.target.closest('tr').remove(); recalc(); }
+    });
+    recalc();
+  }
+
   // Check/uncheck all
   var all = document.querySelector('[data-check-all]');
   if (all) {

@@ -29,6 +29,11 @@ if (is_post()) {
             wallet_debit($uid, 'payout', $amount, "Payout request via {$method}");
             q('INSERT INTO payouts (user_id, amount, fee, net_amount, method, account_name, account_number) VALUES (?,?,?,?,?,?,?)',
                 [$uid, $amount, $fee, $amount - $fee, $method, $accName, $accNo]);
+            $poId = (int)db()->lastInsertId();
+            erp_post('ZP', "Payout request #{$poId} via {$method}", [
+                ['acct_wallet_payable', $amount, 0, null, $uid],
+                ['acct_payouts_payable', 0, $amount, null, $uid],
+            ], 'payout', $poId);
             q('UPDATE users SET payout_method = ?, payout_account_name = ?, payout_account_number = ? WHERE id = ?', [$method, $accName, $accNo, $uid]);
         });
         log_activity($uid, "Requested payout {$amount}");

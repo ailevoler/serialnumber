@@ -21,7 +21,14 @@ if (is_post()) {
                 $owner = (int)$o['id'];
             }
             $type = input('code_type') === 'free' ? 'free' : 'paid';
-            $codes = generate_codes((int)$pkg['id'], $qty, $type, $owner);
+            $saleMethod = input('sale_method');
+            $codes = tx(function () use ($pkg, $qty, $type, $owner, $saleMethod) {
+                $codes = generate_codes((int)$pkg['id'], $qty, $type, $owner);
+                if ($type === 'paid' && in_array($saleMethod, ['cash', 'bank', 'gcash'], true)) {
+                    erp_post_code_sale($saleMethod, (float)$pkg['price'] * $qty, "Code sale: {$qty} × {$pkg['name']} (" . strtoupper($saleMethod) . ')' . ($owner ? ' to @' . input('owner') : ''), $owner, 'codes', null);
+                }
+                return $codes;
+            });
             log_activity((int)$me['id'], "Generated {$qty} {$type} {$pkg['name']} code(s)" . ($owner ? ' for ' . input('owner') : ''));
             flash('success', count($codes) . " {$pkg['name']} code(s) generated.");
         } elseif ($action === 'assign' || $action === 'block' || $action === 'unblock') {
@@ -87,6 +94,7 @@ page_header('Activation Codes', $me, 'Generate and distribute serial codes');
       <div><label>Quantity</label><input class="input" type="number" name="qty" min="1" max="500" value="10" required></div>
       <div><label>Type</label><select class="input" name="code_type"><option value="paid">Paid (earns bonuses)</option><option value="free">Free (no bonuses / PV)</option></select></div>
       <div><label>Assign to (username)</label><input class="input" name="owner" placeholder="optional"></div>
+      <div><label>Payment received (ERP)</label><select class="input" name="sale_method"><option value="">Not yet / record later</option><option value="cash">Cash on Hand</option><option value="bank">Bank Deposit</option><option value="gcash">GCash / Maya</option></select></div>
       <button class="btn btn-primary" type="submit"><?= icon('key', 15) ?> Generate</button>
     </form>
   </div>

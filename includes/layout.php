@@ -25,6 +25,18 @@ function nav_items(string $role): array
                 ['admin/wallet.php', 'Wallet Ledger', 'wallet'],
                 ['admin/payments.php', 'Online Payments', 'card'],
             ],
+            'Support & CRM' => [
+                ['admin/support.php', 'Live Chat Support', 'message'],
+                ['admin/crm.php', 'CRM Leads & Pipeline', 'briefcase'],
+            ],
+            'ERP Finance' => [
+                ['admin/erp.php', 'Finance Dashboard', 'layers'],
+                ['admin/erp_journal.php', 'Journal Entries', 'book'],
+                ['admin/erp_ledger.php', 'General Ledger', 'list'],
+                ['admin/erp_reports.php', 'Financial Statements', 'chart'],
+                ['admin/erp_expenses.php', 'Expenses', 'cash'],
+                ['admin/erp_accounts.php', 'Chart of Accounts', 'settings'],
+            ],
             'System' => [
                 ['admin/announcements.php', 'Announcements', 'megaphone'],
                 ['admin/compensation.php', 'Compensation Plan', 'trending'],
@@ -55,6 +67,10 @@ function nav_items(string $role): array
             ['member/wallet.php', 'E-Wallet', 'wallet'],
             ['member/payouts.php', 'Payouts', 'cash'],
         ],
+        'Support' => [
+            ['member/prospects.php', 'My Prospects (CRM)', 'briefcase'],
+            ['member/support.php', 'Live Chat Support', 'message'],
+        ],
         'Account' => [
             ['member/profile.php', 'My Profile', 'user'],
         ],
@@ -65,7 +81,16 @@ function page_header(string $title, ?array $user = null, string $subtitle = ''):
 {
     $role = $user['role'] ?? 'member';
     $current = ltrim(str_replace(base_url(), '', parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? ''), '/');
-    $cartCount = array_sum($_SESSION['cart'] ?? []);
+    $badges = ['member/cart.php' => (int)array_sum($_SESSION['cart'] ?? [])];
+    if ($user && $role === 'admin') {
+        $badges['admin/support.php'] = chat_unread_threads_admin();
+        $badges['admin/payouts.php'] = (int)q_val("SELECT COUNT(*) FROM payouts WHERE status = 'pending'");
+        $badges['admin/orders.php'] = (int)q_val("SELECT COUNT(*) FROM orders WHERE status = 'pending'");
+        $badges['admin/crm.php'] = (int)q_val("SELECT COUNT(*) FROM crm_leads WHERE owner_user_id IS NULL AND next_follow_up <= CURDATE() AND status NOT IN ('converted','lost')");
+    } elseif ($user) {
+        $badges['member/support.php'] = chat_unread_member((int)$user['id']);
+        $badges['member/prospects.php'] = (int)q_val("SELECT COUNT(*) FROM crm_leads WHERE owner_user_id = ? AND next_follow_up <= CURDATE() AND status NOT IN ('converted','lost')", [$user['id']]);
+    }
     ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -96,7 +121,7 @@ function page_header(string $title, ?array $user = null, string $subtitle = ''):
       <?php foreach ($items as [$href, $label, $ic]): ?>
         <a href="<?= e(url($href)) ?>" class="nav-link <?= $current === $href ? 'active' : '' ?>">
           <?= icon($ic) ?><span><?= e($label) ?></span>
-          <?php if ($href === 'member/cart.php' && $cartCount): ?><em class="nav-count"><?= (int)$cartCount ?></em><?php endif; ?>
+          <?php if (!empty($badges[$href])): ?><em class="nav-count" <?= $href === 'member/support.php' || $href === 'admin/support.php' ? 'data-chat-navbadge' : '' ?>><?= (int)$badges[$href] ?></em><?php endif; ?>
         </a>
       <?php endforeach; ?>
     <?php endforeach; ?>
@@ -133,9 +158,11 @@ function page_footer(): void
 {
     ?>
   </main>
+  <?php if (($u = current_user()) && !str_ends_with(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '', '/member/support.php')) echo chat_widget($u); ?>
   <footer class="footer">&copy; <?= date('Y') ?> <?= e(setting('site_name', 'XGEN LIFE Intl')) ?> · <?= e(setting('site_tagline')) ?></footer>
 </div>
 <script src="<?= e(asset('js/app.js')) ?>"></script>
+<script src="<?= e(asset('js/chat.js')) ?>"></script>
 </body>
 </html>
 <?php

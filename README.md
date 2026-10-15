@@ -30,6 +30,48 @@ Lahat ay naka-on/off at nababago sa **Admin → Compensation Plan** (puwedeng ma
 - Kinukumpirma ang bayad sa dalawang paraan: pagbalik ng member mula sa PayMongo at sa signed webhook (`paymongo_webhook.php`).
   Ang lahat ng transaksyon ay nasa **Admin → Online Payments** (may "Check PayMongo" at "Cancel").
 
+## Live Chat Support
+
+- **Member**: chat bubble sa lahat ng pages (may unread badge) at buong **Live Chat Support** page na may history ng conversations.
+- **Admin → Live Chat Support**: inbox ng open/closed conversations na auto-refresh, quick replies, *Assign to me*, *Close / Reopen*,
+  at **Member 360** sa gilid (package, wallet, contact, CRM notes).
+- **Chat Settings**: on/off, welcome message, support hours at quick replies.
+- Polling ang gamit (bawat 3–4 segundo kapag bukas ang chat), kaya gumagana sa kahit anong PHP hosting at walang kailangang WebSocket server.
+
+## CRM
+
+- **Admin → CRM Leads & Pipeline**: Kanban board (New → Contacted → Presented → Follow-up → Converted / Lost) o list view,
+  filter ng company leads o prospects ng members, follow-ups due today, CSV export, at nae-edit na lead sources.
+- **Lead page**: details, Call/SMS/Email buttons, activity timeline (note, call, SMS, email, meeting, task), next follow-up,
+  *Mark as converted* na naka-link sa registered member.
+- **Member 360**: CRM notes at activities sa bawat member profile at sa live chat.
+- **Member → My Prospects**: personal CRM ng bawat distributor, may follow-up reminders at "Send invite (SMS)" kasama ang referral link.
+
+## ERP Finance (SAP-style)
+
+Double-entry general ledger na may 10-digit document numbers at document types:
+`SA` G/L journal · `DR` sales · `CM` commission · `ZP` payout · `WA` wallet adjustment · `KR` expense · `AB` reversal.
+
+**Awtomatikong posting** (puwedeng i-off at baguhin ang account mapping):
+
+| Event | Debit | Credit |
+|-------|-------|--------|
+| Benta ng produkto / codes | Cash, Bank, GCash/Maya, PayMongo o Members' Wallet Payable | Product Sales / Package Sales |
+| Commission (lahat ng 5 bonus) | Commission Expense (bawat uri) | Members' Wallet Payable |
+| Payout request | Members' Wallet Payable | Payouts Payable |
+| Payout released | Payouts Payable | Cash in Bank + Payout Fee Income |
+| Payout rejected | Payouts Payable | Members' Wallet Payable |
+| Wallet adjustment (credit / debit) | Wallet Adjustments / Wallet Payable | Wallet Payable / Other Income |
+| Expense | Expense account | Cash / Bank / Accounts Payable |
+
+Mga page sa **Admin → ERP Finance**: Finance Dashboard (cash position, revenue/expenses, net income, **reconciliation**
+ng wallet at payouts), Journal Entries (manual entry na may balance check, reversal, CSV), General Ledger (running balance),
+Financial Statements (Income Statement, Balance Sheet, Trial Balance, may print at CSV), Expenses, at Chart of Accounts
+(32 default accounts, account mapping, period lock date).
+
+Kapag na-generate ng admin ang codes na nabayaran na nang cash/bank/GCash, piliin ang *Payment received (ERP)* sa Code Generator
+para mai-post ang benta.
+
 ## Mga Feature
 
 **Member Dashboard** — dashboard ng kita (6 ways), referral link, binary genealogy (may "+ Add" sa bakanteng slot),
@@ -52,7 +94,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon: `mysql -u root -p xgenlife < database/upgrade_v2.sql`
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql` at `database/upgrade_v3.sql`.
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.
@@ -72,13 +114,15 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
 2. Packages / Products → ilagay ang tamang presyo, PV at bonus.
 3. Code Generator → mag-generate ng codes at i-assign sa `xgenlife` o sa mga distributor.
 4. PayMongo Settings → ilagay ang API keys kung tatanggap ng online payment.
+5. ERP Finance → Chart of Accounts → i-check ang account mapping; mag-post ng opening balances (hal. Owner's Capital) sa Journal Entries.
 
 Local test: `php -S 127.0.0.1:8080` sa project folder.
 
 ## Structure
 
 ```
-admin/        Administrator Backoffice pages
+admin/        Administrator Backoffice pages (incl. support, crm, erp_*)
+api/          JSON endpoint for live chat
 member/       Member Dashboard pages
 includes/     bootstrap, db, auth, wallet, compensation engine, layout
 config/       config.php (+ config.local.php, git-ignored)

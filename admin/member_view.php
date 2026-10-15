@@ -30,11 +30,19 @@ if (is_post()) {
             q('UPDATE users SET password = ? WHERE id = ?', [password_hash($pw, PASSWORD_DEFAULT), $id]);
             log_activity((int)$me['id'], "Reset password of {$m['username']}");
             flash('success', 'Password has been reset.');
+        } elseif ($action === 'crm') {
+            crm_add_activity(null, $id, (int)$me['id'], input('type'), input('body'), input('due_date') ?: null);
+            flash('success', 'CRM activity saved.');
         } elseif ($action === 'wallet') {
             $amount = round(input_float('amount'), 2);
             $dir = input('direction') === 'debit' ? 'debit' : 'credit';
             $note = input('note') ?: 'Admin adjustment';
-            wallet_post($id, $dir, 'adjustment', $amount, $note, 'ADMIN#' . $me['id']);
+            tx(function () use ($id, $dir, $amount, $note, $me) {
+                wallet_post($id, $dir, 'adjustment', $amount, $note, 'ADMIN#' . $me['id']);
+                erp_post('WA', 'Wallet adjustment: ' . $note, $dir === 'credit'
+                    ? [['acct_wallet_adjust', $amount, 0, null, $id], ['acct_wallet_payable', 0, $amount, null, $id]]
+                    : [['acct_wallet_payable', $amount, 0, null, $id], ['acct_other_income', 0, $amount, null, $id]], 'user', $id);
+            });
             log_activity((int)$me['id'], "Wallet {$dir} {$amount} for {$m['username']}: {$note}");
             flash('success', 'Wallet ' . $dir . 'ed ' . money($amount) . '.');
         }
@@ -93,6 +101,21 @@ page_header('Member: @' . $m['username'], $me, full_name($m));
           </div>
           <button class="btn btn-primary mt-2" type="submit">Save</button>
         </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3><?= icon('briefcase') ?> CRM — Notes &amp; Activities</h3>
+        <div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('admin/support.php?status=open')) ?>"><?= icon('message', 14) ?> Live chat</a></div></div>
+      <div class="card-body">
+        <form method="post" class="mb-2"><?= csrf_field() ?><input type="hidden" name="action" value="crm">
+          <div class="form-grid">
+            <div class="form-group"><label>Type</label><select class="input" name="type"><?php foreach (crm_activity_types() as $k => $t): ?><option value="<?= $k ?>"><?= e($t) ?></option><?php endforeach; ?></select></div>
+            <div class="form-group"><label>Due date (tasks)</label><input class="input" type="date" name="due_date"></div>
+            <div class="form-group full"><textarea class="input" name="body" rows="2" placeholder="Call notes, concerns, agreements…" required></textarea></div>
+          </div>
+          <button class="btn btn-outline btn-sm mt-1" type="submit">Save Activity</button>
+        </form>
+        <?= crm_timeline(crm_activities('member_id', $id, 20)) ?>
       </div>
     </div>
     <div class="card">

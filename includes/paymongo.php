@@ -142,6 +142,7 @@ function fulfill_payment(int $paymentId): bool
             process_order_commission((int)$pay['order_id']);
         } elseif ($pay['purpose'] === 'codes' && $pay['package_id']) {
             generate_codes((int)$pay['package_id'], (int)$pay['qty'], 'paid', (int)$pay['user_id']);
+            erp_post_code_sale('paymongo', (float)$pay['amount'], "Code sale {$pay['reference']} (PayMongo)", (int)$pay['user_id'], 'payment', (int)$pay['id']);
         }
         log_activity((int)$pay['user_id'], "PayMongo payment {$pay['reference']} paid (" . $pay['amount'] . ')');
         return true;

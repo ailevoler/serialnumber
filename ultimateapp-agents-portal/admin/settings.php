@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setting_save($pdo, 'uride.dispatch_radius_km', trim(p('radius', '3')), $aid);
             setting_save($pdo, 'uride.request_timeout_min', (string) (int) p('timeout', '5'), $aid);
             setting_save($pdo, 'uride.min_wallet_centavos', $pesoToCentavos(p('min_wallet', '50'), 'Minimum wallet'), $aid);
-            $tmin = $pesoToCentavos(p('topup_min', '100'), 'Minimum top-up'); $tmax = $pesoToCentavos(p('topup_max', '10000'), 'Maximum top-up');
+            $tmin = $pesoToCentavos(p('topup_min', '50'), 'Minimum top-up'); $tmax = $pesoToCentavos(p('topup_max', '10000'), 'Maximum top-up');
             if ((int) $tmin >= (int) $tmax) throw new InvalidArgumentException('Minimum top-up must be lower than the maximum.');
             setting_save($pdo, 'uride.topup_min_centavos', $tmin, $aid);
             setting_save($pdo, 'uride.topup_max_centavos', $tmax, $aid);

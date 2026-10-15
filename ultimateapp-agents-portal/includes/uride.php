@@ -70,13 +70,13 @@ function uride_settings(): array
         'night_bp' => setting_int('uride.night_surcharge_bp', 0),
         'night_start' => setting_int('uride.night_start', 22),
         'night_end' => setting_int('uride.night_end', 5),
-        'commission_type' => setting('uride.commission_type', 'percent') === 'fixed' ? 'fixed' : 'percent',
+        'commission_type' => setting('uride.commission_type', 'fixed') === 'percent' ? 'percent' : 'fixed',
         'commission_bp' => setting_int('uride.commission_percent_bp', 1000),
-        'commission_fixed' => setting_int('uride.commission_fixed_centavos', 0),
+        'commission_fixed' => setting_int('uride.commission_fixed_centavos', 1000),
         'radius_km' => $f('uride.dispatch_radius_km', 3.0),
         'timeout_min' => setting_int('uride.request_timeout_min', 5),
         'min_wallet' => setting_int('uride.min_wallet_centavos', 5000),
-        'topup_min' => setting_int('uride.topup_min_centavos', 10000),
+        'topup_min' => setting_int('uride.topup_min_centavos', 5000),
         'topup_max' => setting_int('uride.topup_max_centavos', 1000000),
         'topup_fee' => setting_int('uride.topup_fee_centavos', 0),
         'payout_min' => setting_int('uride.payout_min_centavos', 50000),
@@ -87,11 +87,11 @@ function uride_settings(): array
 function uride_fare_rule(string $vehicle): array
 {
     if (!isset(uride_vehicles()[$vehicle])) throw new InvalidArgumentException('Unknown vehicle type.');
-    $defaults = ['e_bike' => [3000, 1000, 3000], 'e_trike' => [3000, 1500, 3000], 'motorcycle' => [4000, 1200, 4000], 'car' => [10000, 2500, 10000], 'van' => [30000, 4000, 30000], 'boat' => [50000, 10000, 50000]][$vehicle];
+    $defaults = ['e_bike' => [3000, 1000, 3000], 'e_trike' => [5000, 2500, 5000], 'motorcycle' => [5000, 2500, 5000], 'car' => [10000, 2500, 10000], 'van' => [30000, 4000, 30000], 'boat' => [50000, 10000, 50000]][$vehicle];
     return [
         'enabled' => uride_vehicles()[$vehicle]['ride'] && setting("uride.$vehicle.enabled", '1') === '1',
         'base' => setting_int("uride.$vehicle.base_centavos", $defaults[0]),
-        'included_km' => is_numeric(setting("uride.$vehicle.included_km")) ? (float) setting("uride.$vehicle.included_km") : 1.0,
+        'included_km' => is_numeric(setting("uride.$vehicle.included_km")) ? (float) setting("uride.$vehicle.included_km") : (in_array($vehicle, ['motorcycle', 'e_trike'], true) ? 2.0 : 1.0),
         'per_km' => setting_int("uride.$vehicle.per_km_centavos", $defaults[1]),
         'minimum' => setting_int("uride.$vehicle.minimum_centavos", $defaults[2]),
     ];

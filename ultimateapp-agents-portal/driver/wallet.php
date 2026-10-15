@@ -81,7 +81,7 @@ driver_header('Wallet', 'wallet');
             <label class="d-method"><input type="radio" name="method" value="<?= e($m) ?>"<?= $m === $sel ? ' checked' : '' ?>><span class="d-method-ic <?= e($m) ?>"><?= $m === 'qrph' ? 'QR' : ($m === 'mctc' ? 'MC' : 'BC') ?></span><span><b><?= e($label) ?></b><small><?= e($sub) ?><?= $fee > 0 ? ' · ₱' . peso($fee) . ' fee' : ' · no fee' ?></small></span></label>
         <?php endforeach; ?>
     </div>
-    <div class="d-chips"><?php foreach ([100, 200, 500, 1000] as $a): if ($a * 100 < $s['topup_min'] || $a * 100 > $s['topup_max']) continue; ?><button type="button" class="chip" data-amount="<?= $a ?>">₱<?= number_format($a) ?></button><?php endforeach; ?></div>
+    <div class="d-chips"><?php foreach ([50, 100, 200, 500, 1000] as $a): if ($a * 100 < $s['topup_min'] || $a * 100 > $s['topup_max']) continue; ?><button type="button" class="chip" data-amount="<?= $a ?>">₱<?= number_format($a) ?></button><?php endforeach; ?></div>
     <div class="field"><label for="amount">Amount (PHP)</label><input id="amount" name="amount" type="number" inputmode="numeric" min="<?= intdiv($s['topup_min'], 100) ?>" max="<?= intdiv($s['topup_max'], 100) ?>" step="1" required placeholder="<?= intdiv($s['topup_min'], 100) ?>"></div>
     <p class="table-meta" data-method-help></p>
     <button class="btn grad" type="submit" data-method-submit>Continue</button>

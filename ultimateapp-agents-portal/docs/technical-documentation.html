@@ -97,7 +97,7 @@ html.cover-only body > section:not(.cover) { display:none; }
   <div class="band">
     <dl>
       <dt>Document</dt><dd>Technical Documentation, edition 2026.10</dd>
-      <dt>Date</dt><dd>13 October 2026</dd>
+      <dt>Date</dt><dd>15 October 2026</dd>
       <dt>Platform</dt><dd>PHP 8.1+ · MySQL / MariaDB (InnoDB) · Progressive Web App</dd>
       <dt>Hosting</dt><dd>Hostinger (shared hosting, HTTPS required)</dd>
       <dt>Source</dt><dd>ailevoler/serialnumber · <span class="mono">ultimateapp-agents-portal/</span></dd>
@@ -137,7 +137,7 @@ html.cover-only body > section:not(.cover) { display:none; }
     <div><b>227</b><span>PHP files (excluding tests and vendor)</span></div>
     <div><b>~20,100</b><span>lines of PHP</span></div>
     <div><b>58</b><span>database tables</span></div>
-    <div><b>23</b><span>automated test suites</span></div>
+    <div><b>24</b><span>automated test suites</span></div>
   </div>
 
   <h2>1.1 Applications and users</h2>
@@ -346,15 +346,15 @@ html.cover-only body > section:not(.cover) { display:none; }
   <div class="note"><b>Boat rules</b>Boat appears only in Book a Ride. Rental and self-drive quotes are always disabled, <code>uride_book_rental()</code> refuses it ("Boat is for point-to-point rides only"), fleet units ignore it, and Admin's rental and self-drive tables skip it. Only drivers registered with vehicle type Boat receive Boat requests. Operators enter their MARINA / boat captain license and the boat registration number.</div>
 
   <h2>5.2 Fares (Book a Ride)</h2>
-  <p>Upfront and fixed at booking: <b>fare = max(minimum, base + per-km × (road km − km in base) + night surcharge)</b>, rounded up to the peso. Road km = straight-line distance × road factor (default 1.3). Set in <b>Admin › Settings › URide › Fare matrix</b>. Code defaults (placeholders):</p>
+  <p>Upfront and fixed at booking: <b>fare = max(minimum, base + per-km × (road km − km in base) + night surcharge)</b>, rounded up to the peso. Road km = straight-line distance × road factor (default 1.3). Set in <b>Admin › Settings › URide › Fare matrix</b>. Motorcycle and E-Trike use the October 2026 pricing (₱50 for the first 2 km, then ₱25 per km, so 4 km = ₱100; <code>uride_pricing_2026_10_migration.sql</code>); the other rows are code defaults:</p>
   <table>
-    <thead><tr><th>Vehicle</th><th class="num">Base (1 km incl.)</th><th class="num">Per km after</th><th class="num">Minimum</th></tr></thead>
+    <thead><tr><th>Vehicle</th><th class="num">Base (km incl.)</th><th class="num">Per km after</th><th class="num">Minimum</th></tr></thead>
     <tbody>
-      <tr><td>Motorcycle</td><td class="num">₱40</td><td class="num">₱12</td><td class="num">₱40</td></tr>
-      <tr><td>E-Trike</td><td class="num">₱30</td><td class="num">₱15</td><td class="num">₱30</td></tr>
-      <tr><td>Car</td><td class="num">₱100</td><td class="num">₱25</td><td class="num">₱100</td></tr>
-      <tr><td>Van</td><td class="num">₱300</td><td class="num">₱40</td><td class="num">₱300</td></tr>
-      <tr><td>Boat</td><td class="num">₱500</td><td class="num">₱100</td><td class="num">₱500</td></tr>
+      <tr><td>Motorcycle</td><td class="num">₱50 (2 km)</td><td class="num">₱25</td><td class="num">₱50</td></tr>
+      <tr><td>E-Trike</td><td class="num">₱50 (2 km)</td><td class="num">₱25</td><td class="num">₱50</td></tr>
+      <tr><td>Car</td><td class="num">₱100 (1 km)</td><td class="num">₱25</td><td class="num">₱100</td></tr>
+      <tr><td>Van</td><td class="num">₱300 (1 km)</td><td class="num">₱40</td><td class="num">₱300</td></tr>
+      <tr><td>Boat</td><td class="num">₱500 (1 km)</td><td class="num">₱100</td><td class="num">₱500</td></tr>
     </tbody>
   </table>
 
@@ -368,8 +368,8 @@ html.cover-only body > section:not(.cover) { display:none; }
   </div>
   <ul>
     <li>Unaccepted requests expire after the timeout (default 5 min; rentals 10 min) and are refunded.</li>
-    <li>Drivers need the minimum wallet (default ₱50) to go online; cash rides deduct the commission from the wallet.</li>
-    <li>Commission: percentage (default 10%) or a fixed amount per trip, never more than the fare.</li>
+    <li>Drivers need ₱50 in the wallet to go online, and the minimum top-up is ₱50; cash rides deduct the trip fee from the wallet.</li>
+    <li>Trip fee: a fixed <b>₱10 per completed trip</b> (default), or a percentage of the fare; never more than the fare.</li>
     <li>Passengers rate the driver 1–5 stars. Drivers can skip a request or give an accepted ride back before pick-up.</li>
   </ul>
 
@@ -674,6 +674,7 @@ html.cover-only body > section:not(.cover) { display:none; }
       <tr><td>13</td><td class="mono">pay_methods</td><td>Pay Cash switch, BCash payments</td></tr>
       <tr><td>14</td><td class="mono">cancellation</td><td>Cancellation fees and reasons</td></tr>
       <tr><td>15</td><td class="mono">uride_boat</td><td>Boat vehicle type and fares</td></tr>
+      <tr><td>16</td><td class="mono">uride_pricing_2026_10</td><td>₱50/2 km + ₱25/km (Motorcycle, E-Trike), ₱10 trip fee, ₱50 top-up</td></tr>
     </tbody>
   </table>
 
@@ -701,6 +702,7 @@ html.cover-only body > section:not(.cover) { display:none; }
       <tr><td class="mono">uride_test.php</td><td>Fares, night surcharge, commission, top-ups (QR Ph, MCTC, BCash), dispatch radius, first-accept-wins, refunds, payouts, reconciliation</td></tr>
       <tr><td class="mono">uride_rental_test.php · uride_selfdrive_test.php</td><td>Rentals, scheduling, licenses, deposits, late fees, damage claims</td></tr>
       <tr><td class="mono">uride_fleet_test.php · uride_places_test.php</td><td>Fleets and availability; place search</td></tr>
+      <tr><td class="mono">uride_pricing_test.php</td><td>October 2026 fares, ₱10 trip fee, ₱50 top-up and wallet minimum</td></tr>
       <tr><td class="mono">uride_boat_test.php</td><td>Boat ride-only rules, fares, dispatch to boat operators, payment</td></tr>
       <tr><td class="mono">cancellation_test.php</td><td>Fee rules, free windows, reasons, ledger for URide, bookings, UEat</td></tr>
       <tr><td class="mono">pay_methods_test.php</td><td>Pay Cash switch, BCash payments and refunds</td></tr>
@@ -718,7 +720,7 @@ html.cover-only body > section:not(.cover) { display:none; }
 <pre><code># fake provider servers for local tests
 php -S 127.0.0.1:8098 tests/suniway_fake_api.php &amp;
 php -S 127.0.0.1:8097 tests/fx_fake_api.php &amp;</code></pre>
-  <div class="note"><b>Status at this edition</b>All 23 suites passed on 11–13 October 2026 (PHP 8.3, MariaDB), together with browser checks of the admin settings, URide booking (including Boat), and the cancel forms.</div>
+  <div class="note"><b>Status at this edition</b>All 24 suites passed between 11 and 15 October 2026 (PHP 8.3, MariaDB), together with browser checks of the admin settings, URide booking (including Boat), and the cancel forms.</div>
 </section>
 
 <!-- ============================================================ 15 -->

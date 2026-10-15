@@ -6,6 +6,12 @@ $dId = (int)$_SESSION['tl_driver_id'];
 $oId = (int)($_POST['order_id'] ?? 0);
 
 // A driver can only handle one job at a time
+// Terminal mode drivers only take rides assigned by the terminal dispatcher
+require_once __DIR__ . '/../../trilink-dispatch/lib/Dispatch.php';
+if (Dispatch::inTerminalMode($dId)) {
+    jsonResponse(false, 'Naka-Terminal mode ka. Lumipat sa "Not in Terminal" para tumanggap ng requests sa labas.');
+}
+
 $active = getDriverActiveTrip($dId);
 if ($active) {
     jsonResponse(false, "May kasalukuyan ka nang aktibong trip (#{$active['code']}). Kumpletuhin muna ito.");

@@ -16,6 +16,10 @@ $lastDeliveryId = (int)($_GET['last_delivery_id'] ?? 0);
 // they need to finish (or the page will redirect them back to) that job first.
 $activeTrip = getDriverActiveTrip($driverId);
 
+// Terminal mode: only the dispatcher assigns rides → no street requests at all
+$work = Dispatch::driverMode($driverId);
+$streetOff = $activeTrip || $work['mode'] === 'terminal';
+
 $driver = DB::row("SELECT vehicle_type, is_online FROM tl_drivers WHERE id=?", [$driverId]);
 if (!$driver) { jsonResponse(false, 'Driver not found'); }
 
@@ -23,7 +27,7 @@ $vtype    = $driver['vehicle_type'] ?? 'tricycle';
 $isOnline = (bool)$driver['is_online'];
 
 // Get ALL current searching requests (excluding ones this driver already declined)
-$requests = $activeTrip ? [] : DB::all(
+$requests = $streetOff ? [] : DB::all(
     "SELECT b.id, b.booking_code, b.pickup_address, b.dropoff_address,
             b.fare_total, b.payment_method, b.distance_km, b.vehicle_type,
             u.full_name AS passenger_name, u.phone AS passenger_phone
@@ -61,7 +65,7 @@ if ($hasNew) {
 }
 
 // ── MERCHANT ORDERS ready for pickup (no vehicle_type restriction) ──
-$orderRequests = $activeTrip ? [] : DB::all(
+$orderRequests = $streetOff ? [] : DB::all(
     "SELECT o.id, o.order_code, o.total, o.delivery_fee, o.payment_method, o.delivery_address,
             m.store_name, m.address AS pickup_address,
             u.full_name AS customer_name, u.phone AS customer_phone
@@ -88,7 +92,7 @@ if ($hasNewOrder) {
 }
 
 // ── PACKAGE DELIVERY requests (no vehicle_type restriction) ──
-$deliveryRequests = $activeTrip ? [] : DB::all(
+$deliveryRequests = $streetOff ? [] : DB::all(
     "SELECT d.id, d.delivery_code, d.pickup_address, d.dropoff_address,
             d.fee_total, d.payment_method, d.distance_km, d.package_type,
             u.full_name AS sender_name, u.phone AS sender_phone
@@ -131,6 +135,7 @@ jsonResponse(true, 'OK', [
     'latest_delivery_id'    => $latestDeliveryId,
     'delivery_pickup_preview' => $deliveryPreview,
     'delivery_requests'      => $deliveryRequests,
-    'queue'              => Dispatch::driverQueue($driverId), // terminal pila position
+    'queue'              => $work['queue'], // terminal pila position
+    'work'               => $work,          // Terminal / Not in Terminal
     'server_time'        => time(), // For debugging
 ]);

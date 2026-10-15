@@ -4,6 +4,12 @@ driverCheck();
 if(!Session::verifyCsrf($_POST[CSRF_TOKEN_NAME]??'')) { jsonResponse(false,'Invalid token'); }
 $dId=(int)$_SESSION['tl_driver_id']; $bId=(int)($_POST['booking_id']??0);
 
+// Terminal mode drivers only take rides assigned by the terminal dispatcher
+require_once __DIR__ . '/../../trilink-dispatch/lib/Dispatch.php';
+if (Dispatch::inTerminalMode($dId)) {
+    jsonResponse(false, 'Naka-Terminal mode ka. Lumipat sa "Not in Terminal" para tumanggap ng requests sa labas.');
+}
+
 // A driver can only handle one job at a time
 $active = getDriverActiveTrip($dId);
 if ($active) {

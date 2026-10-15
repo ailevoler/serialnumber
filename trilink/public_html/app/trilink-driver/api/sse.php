@@ -1,6 +1,7 @@
 <?php
 // Server-Sent Events endpoint for driver real-time updates
 require_once __DIR__ . '/../includes/core.php';
+require_once __DIR__ . '/../../trilink-dispatch/lib/Dispatch.php';
 driverCheck();
 
 $driverId = (int)$_SESSION['tl_driver_id'];
@@ -41,6 +42,8 @@ while (time() - $start < $maxTime) {
 
     // If a job is already active, don't surface new requests
     $activeTrip = getDriverActiveTrip($driverId);
+    // Terminal mode: no street requests (the dispatcher assigns rides)
+    if (!$activeTrip && Dispatch::inTerminalMode($driverId)) $activeTrip = true;
 
     // Check for new booking requests
     $requests = $activeTrip ? [] : DB::all(

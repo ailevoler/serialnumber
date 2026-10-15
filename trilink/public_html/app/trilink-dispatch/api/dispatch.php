@@ -33,8 +33,8 @@ try {
         case 'add_driver':
             $driver = Dispatch::findDriver((string)($_POST['q'] ?? ''));
             if (!$driver) jsonResponse(false, 'Walang driver na tugma sa code / phone / plate na iyan.');
-            $pos = Dispatch::join($terminalId, (int)$driver['id'], true);
-            jsonResponse(true, "{$driver['full_name']} — #{$pos['position']} sa pila.");
+            $m = Dispatch::setMode((int)$driver['id'], 'terminal', $terminalId, true);
+            jsonResponse(true, "{$driver['full_name']} — #{$m['queue']['position']} sa pila.");
 
         case 'remove':
             Dispatch::removeFromQueue((int)($_POST['queue_id'] ?? 0), $terminalId);

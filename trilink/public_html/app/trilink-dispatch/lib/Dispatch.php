@@ -138,6 +138,65 @@ class Dispatch {
         return self::driverQueue($driverId);
     }
 
+    // ── Driver work mode (Terminal / Not in Terminal) ───────────
+    /** ['mode' => street|terminal, 'terminal_id', 'terminal_name', 'queue' => driverQueue()] */
+    public static function driverMode(int $driverId): array {
+        $d = self::row(
+            "SELECT d.work_mode, d.work_terminal_id, t.name AS terminal_name, t.is_active
+             FROM tl_drivers d LEFT JOIN tl_terminals t ON t.id=d.work_terminal_id WHERE d.id=?",
+            [$driverId]
+        );
+        $terminal = $d && $d['work_mode'] === 'terminal' && $d['work_terminal_id'] && (int)$d['is_active'];
+        return [
+            'mode'          => $terminal ? 'terminal' : 'street',
+            'terminal_id'   => $terminal ? (int)$d['work_terminal_id'] : null,
+            'terminal_name' => $terminal ? $d['terminal_name'] : null,
+            'queue'         => self::driverQueue($driverId),
+        ];
+    }
+
+    /** True when the driver only takes dispatched terminal rides (no street requests). */
+    public static function inTerminalMode(int $driverId): bool {
+        return self::driverMode($driverId)['mode'] === 'terminal';
+    }
+
+    /**
+     * Switches the driver between Terminal and Not in Terminal.
+     *  street   → leaves any pila.
+     *  terminal → joins the terminal's pila (GPS radius check unless the
+     *             dispatcher adds them). A driver can switch terminals; a
+     *             dispatcher cannot pull a driver out of another terminal.
+     * The mode only changes if joining the pila succeeds.
+     */
+    public static function setMode(int $driverId, string $mode, int $terminalId = 0, bool $byDispatcher = false): array {
+        if ($mode === 'street') {
+            self::leave($driverId);
+            self::run("UPDATE tl_drivers SET work_mode='street', work_terminal_id=NULL WHERE id=?", [$driverId]);
+            return self::driverMode($driverId);
+        }
+        if ($mode !== 'terminal') throw new DispatchException('Invalid mode.');
+
+        $current = self::driverQueue($driverId);
+        if (!$current || (int)$current['terminal_id'] !== $terminalId) {
+            if ($current && !$byDispatcher) {
+                // Moving to another terminal: check the new one first, then give up the old spot
+                if (!self::terminal($terminalId)) throw new DispatchException('Hindi active ang terminal na ito.');
+                self::leave($driverId);
+                try {
+                    self::join($terminalId, $driverId, false);
+                } catch (DispatchException $e) {
+                    // Couldn't join the new terminal → keep the old spot
+                    self::run("UPDATE tl_terminal_queue SET status='waiting', ended_at=NULL WHERE id=?", [$current['queue_id']]);
+                    throw $e;
+                }
+            } else {
+                self::join($terminalId, $driverId, $byDispatcher);
+            }
+        }
+        self::run("UPDATE tl_drivers SET work_mode='terminal', work_terminal_id=? WHERE id=?", [$terminalId, $driverId]);
+        return self::driverMode($driverId);
+    }
+
     /** Removes the driver from any pila (driver left, went offline, or took another job). */
     public static function leave(int $driverId): void {
         self::run("UPDATE tl_terminal_queue SET status='left', ended_at=NOW() WHERE driver_id=? AND status='waiting'", [$driverId]);

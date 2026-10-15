@@ -42,6 +42,7 @@ if ($action === 'toggle_terminal') {
         // Closing a terminal empties its pila; waiting passengers go to nearby street drivers
         DB::run("UPDATE tl_terminal_queue SET status='left', ended_at=NOW() WHERE terminal_id=? AND status='waiting'", [$id]);
         DB::run("UPDATE tl_bookings SET booking_mode='street' WHERE terminal_id=? AND booking_mode='terminal' AND status='searching' AND driver_id IS NULL", [$id]);
+        DB::run("UPDATE tl_drivers SET work_mode='street', work_terminal_id=NULL WHERE work_terminal_id=?", [$id]);
     }
     logActivity('update', 'terminals', "Set terminal {$t['name']} " . ($active ? 'active' : 'inactive'));
     jsonResponse(true, 'Terminal status updated.');

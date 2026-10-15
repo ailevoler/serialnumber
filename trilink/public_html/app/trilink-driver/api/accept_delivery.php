@@ -6,6 +6,12 @@ if (!Session::verifyCsrf($_POST[CSRF_TOKEN_NAME] ?? '')) { jsonResponse(false, '
 $dId = (int)$_SESSION['tl_driver_id'];
 $delId = (int)($_POST['delivery_id'] ?? 0);
 
+// Terminal mode drivers only take rides assigned by the terminal dispatcher
+require_once __DIR__ . '/../../trilink-dispatch/lib/Dispatch.php';
+if (Dispatch::inTerminalMode($dId)) {
+    jsonResponse(false, 'Naka-Terminal mode ka. Lumipat sa "Not in Terminal" para tumanggap ng requests sa labas.');
+}
+
 // A driver can only handle one job at a time — block accepting a new
 // delivery while a ride/delivery/order is still in progress.
 $active = getDriverActiveTrip($dId);

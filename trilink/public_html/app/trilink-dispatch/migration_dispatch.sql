@@ -66,5 +66,12 @@ ALTER TABLE `tl_bookings`
   ADD COLUMN IF NOT EXISTS `dispatched_at` datetime DEFAULT NULL AFTER `dispatcher_id`;
 ALTER TABLE `tl_bookings` ADD INDEX IF NOT EXISTS `idx_booking_terminal` (`terminal_id`,`status`);
 
+-- Driver work mode, toggled in the driver app:
+--   street   = Not in Terminal (gets nearby ride/delivery/order requests)
+--   terminal = waits in a terminal pila; only the dispatcher assigns rides
+ALTER TABLE `tl_drivers`
+  ADD COLUMN IF NOT EXISTS `work_mode` enum('street','terminal') NOT NULL DEFAULT 'street' AFTER `is_online`,
+  ADD COLUMN IF NOT EXISTS `work_terminal_id` int(10) UNSIGNED DEFAULT NULL AFTER `work_mode`;
+
 INSERT IGNORE INTO `tl_settings` (`key`,`value`,`description`) VALUES
 ('terminal_join_radius_m', '500', 'Driver must be within this many meters of the terminal to join the pila himself (0 = no check)');

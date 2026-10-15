@@ -25,8 +25,14 @@ $earningsBase      = (float)($todayStats['total'] ?? 0) * 0.85;
 $earningsIncentive = (float)($todayStats['total'] ?? 0) * 0.10;
 $earningsTips      = (float)($todayStats['total'] ?? 0) * 0.05;
 
+// Work mode: Terminal (pila, dispatcher assigns) or Not in Terminal (street requests)
+require_once __DIR__ . '/../trilink-dispatch/lib/Dispatch.php';
+$work = ['mode' => 'street', 'terminal_id' => null, 'terminal_name' => null, 'queue' => null];
+try { $work = Dispatch::driverMode((int)$driver['id']); } catch (Exception $e) { /* dispatch migration not run yet */ }
+$streetOff = $work['mode'] === 'terminal';
+
 // Pending ride requests (excluding ones this driver already declined)
-$pendingRequests = DB::all(
+$pendingRequests = $streetOff ? [] : DB::all(
     "SELECT b.*, u.full_name AS passenger_name, u.phone AS passenger_phone
      FROM tl_bookings b JOIN tl_users u ON b.user_id=u.id
      WHERE b.status='searching' AND b.driver_id IS NULL AND b.vehicle_type=?
@@ -37,7 +43,7 @@ $pendingRequests = DB::all(
 );
 
 // Pending merchant order pickups (excluding ones this driver already declined)
-$pendingOrders = DB::all(
+$pendingOrders = $streetOff ? [] : DB::all(
     "SELECT o.id, o.order_code, o.total, o.delivery_fee, o.payment_method, o.delivery_address,
             m.store_name, m.address AS pickup_address,
             u.full_name AS customer_name, u.phone AS customer_phone
@@ -51,7 +57,7 @@ $pendingOrders = DB::all(
 );
 
 // Pending package delivery requests (excluding ones this driver already declined)
-$pendingDeliveries = DB::all(
+$pendingDeliveries = $streetOff ? [] : DB::all(
     "SELECT d.id, d.delivery_code, d.pickup_address, d.dropoff_address,
             d.fee_total, d.payment_method, d.distance_km, d.package_type,
             u.full_name AS sender_name, u.phone AS sender_phone
@@ -76,13 +82,9 @@ $firstName = explode(' ', $driver['full_name'])[0];
 $csrfToken = Session::csrfToken();
 $requestTimeoutSecs = (int)setting('driver_request_timeout_secs', 30);
 
-// Terminal pila
-$terminals = []; $myQueue = null;
-try {
-    require_once __DIR__ . '/../trilink-dispatch/lib/Dispatch.php';
-    $terminals = Dispatch::activeTerminals();
-    $myQueue   = Dispatch::driverQueue((int)$driver['id']);
-} catch (Exception $e) { /* dispatch migration not run yet */ }
+$terminals = [];
+try { $terminals = Dispatch::activeTerminals(); } catch (Exception $e) { /* dispatch migration not run yet */ }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -161,13 +163,55 @@ try {
       <div class="online-toggle-row">
         <div class="ot-left">
           <div class="ot-label" id="onlineLabel"><?= $isOnline?'You are Online':'You are Offline' ?></div>
-          <div class="ot-sub" id="onlineSub"><?= $isOnline?'Receiving ride requests':'Go online to receive rides' ?></div>
+          <div class="ot-sub" id="onlineSub"><?= $isOnline ? ($streetOff ? 'Terminal mode – hintayin ang dispatcher' : 'Receiving ride requests') : 'Go online to receive rides' ?></div>
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="onlineToggle" <?= $isOnline?'checked':'' ?>>
           <span class="toggle-slider"></span>
         </label>
       </div>
+
+      <?php if (!empty($terminals)): ?>
+      <!-- WORK MODE: Terminal / Not in Terminal -->
+      <style>
+        .mode-card { margin:12px 0 4px; background:#fff; border-radius:16px; padding:12px; box-shadow:0 4px 14px rgba(0,0,0,.15); color:#202124; }
+        .mode-seg { display:grid; grid-template-columns:1fr 1fr; gap:6px; background:#F1F3F4; padding:4px; border-radius:12px; }
+        .mode-seg button { border:none; background:transparent; padding:10px 6px; border-radius:9px; font-weight:800; font-size:13px; color:#5F6368; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px; }
+        .mode-seg button.on { background:#fff; color:#1A2B5E; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+        .mode-seg button.on[data-mode=terminal] { color:#E65100; }
+        .mode-seg button.on[data-mode=street] { color:#2E7D32; }
+        .mode-pane { margin-top:10px; }
+        .mode-row { display:flex; gap:8px; align-items:center; }
+        .mode-row select { flex:1; min-width:0; padding:11px; border-radius:11px; border:1.5px solid #EAECF0; font-size:13px; font-family:inherit; background:#fff; }
+        .mode-btn { padding:11px 14px; border-radius:11px; border:none; font-weight:800; font-size:13px; cursor:pointer; font-family:inherit; background:linear-gradient(135deg,#E65100,#FB8C00); color:#fff; white-space:nowrap; }
+        .mode-status { display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px 12px; border-radius:12px; background:#FFF3E0; }
+        .mode-status .pos { font-family:'Plus Jakarta Sans',sans-serif; font-size:26px; font-weight:800; color:#E65100; line-height:1; }
+        .mode-status .txt { font-size:12px; color:#5D4037; line-height:1.4; }
+        .mode-status.out { background:#FFEBEE; }
+        .mode-status.out .txt { color:#C62828; }
+        .mode-note { font-size:12px; color:#5F6368; line-height:1.45; }
+      </style>
+      <div class="mode-card" id="modeCard">
+        <div class="mode-seg">
+          <button type="button" data-mode="terminal" onclick="pickMode('terminal')"><i class="fas fa-warehouse"></i> Terminal</button>
+          <button type="button" data-mode="street" onclick="pickMode('street')"><i class="fas fa-map-marker-alt"></i> Not in Terminal</button>
+        </div>
+        <div class="mode-pane" id="paneTerminal" style="display:none;">
+          <div class="mode-row">
+            <select id="modeTerminal" onchange="renderModeCard()">
+              <?php foreach ($terminals as $t): ?>
+              <option value="<?= (int)$t['id'] ?>"><?= htmlspecialchars($t['name']) ?> (<?= (int)$t['queue_count'] ?> nakapila)</option>
+              <?php endforeach; ?>
+            </select>
+            <button type="button" class="mode-btn" id="modeJoinBtn" onclick="joinTerminal()"><i class="fas fa-sign-in-alt"></i> Pumila</button>
+          </div>
+          <div class="mode-status" id="modeStatus" style="display:none;"></div>
+        </div>
+        <div class="mode-pane mode-note" id="paneStreet" style="display:none;">
+          <i class="fas fa-satellite-dish" style="color:#2E7D32;"></i> Tumatanggap ka ng ride, delivery at order requests sa paligid mo.
+        </div>
+      </div>
+      <?php endif; ?>
 
       <!-- Earnings -->
       <div class="today-earnings">
@@ -189,45 +233,6 @@ try {
       <div class="stat-card"><i class="fas fa-clock" style="color:#1565C0;"></i><div class="sc-val">–</div><div class="sc-label">Online Time</div></div>
       <div class="stat-card"><i class="fas fa-road" style="color:#E65100;"></i><div class="sc-val"><?= number_format((float)($todayStats['total_km']??0),1) ?> km</div><div class="sc-label">Distance</div></div>
     </div>
-
-    <?php if (!empty($terminals)): ?>
-    <!-- TERMINAL PILA -->
-    <style>
-      .pila-card { margin:0 16px 14px; background:#fff; border-radius:16px; border:1.5px solid #EAECF0; padding:14px; box-shadow:0 1px 4px rgba(0,0,0,.05); }
-      .pila-head { display:flex; align-items:center; gap:10px; }
-      .pila-ic { width:40px; height:40px; border-radius:12px; background:#FFF3E0; color:#E65100; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
-      .pila-title { font-size:14px; font-weight:800; color:#1A2B5E; }
-      .pila-sub { font-size:12px; color:#9AA0A6; }
-      .pila-pos { margin-left:auto; text-align:center; font-family:'Plus Jakarta Sans',sans-serif; }
-      .pila-pos b { display:block; font-size:26px; font-weight:800; color:#2E7D32; line-height:1; }
-      .pila-pos small { font-size:10px; color:#9AA0A6; font-family:'Inter',sans-serif; }
-      .pila-row { display:flex; gap:8px; margin-top:12px; }
-      .pila-row select { flex:1; min-width:0; padding:11px; border-radius:11px; border:1.5px solid #EAECF0; font-size:13px; font-family:inherit; background:#fff; }
-      .pila-btn { padding:11px 14px; border-radius:11px; border:none; font-weight:800; font-size:13px; cursor:pointer; font-family:inherit; background:linear-gradient(135deg,#E65100,#FB8C00); color:#fff; }
-      .pila-btn.leave { width:100%; background:#fff; color:#C62828; border:1.5px solid #F5C6C6; }
-    </style>
-    <div class="pila-card" id="pilaCard">
-      <div class="pila-head">
-        <div class="pila-ic"><i class="fas fa-list-ol"></i></div>
-        <div>
-          <div class="pila-title" id="pilaTitle">Pila sa Terminal</div>
-          <div class="pila-sub" id="pilaSub">Pumila para ma-dispatch ng terminal dispatcher</div>
-        </div>
-        <div class="pila-pos" id="pilaPos" style="display:none;"><b id="pilaPosNum">–</b><small id="pilaPosOf">sa pila</small></div>
-      </div>
-      <div class="pila-row" id="pilaJoinRow">
-        <select id="pilaTerminal">
-          <?php foreach ($terminals as $t): ?>
-          <option value="<?= (int)$t['id'] ?>"><?= htmlspecialchars($t['name']) ?> (<?= (int)$t['queue_count'] ?> nakapila)</option>
-          <?php endforeach; ?>
-        </select>
-        <button type="button" class="pila-btn" id="pilaJoinBtn" onclick="joinPila()"><i class="fas fa-sign-in-alt"></i> Pumila</button>
-      </div>
-      <div class="pila-row" id="pilaLeaveRow" style="display:none;">
-        <button type="button" class="pila-btn leave" onclick="leavePila()"><i class="fas fa-sign-out-alt"></i> Umalis sa Pila</button>
-      </div>
-    </div>
-    <?php endif; ?>
 
     <!-- INCENTIVE BANNER -->
     <div class="incentive-banner">
@@ -419,50 +424,75 @@ document.getElementById('drawerClose')?.addEventListener('click',closeDrawer);
 document.getElementById('drawerOverlay')?.addEventListener('click',closeDrawer);
 function closeDrawer(){document.getElementById('sideDrawer').classList.add('hidden');document.getElementById('drawerOverlay').classList.add('hidden');}
 
-// Terminal pila
-function updatePilaCard(q) {
-  if (!document.getElementById('pilaCard')) return;
-  const inQ = !!q;
-  document.getElementById('pilaJoinRow').style.display  = inQ ? 'none' : 'flex';
-  document.getElementById('pilaLeaveRow').style.display = inQ ? 'flex' : 'none';
-  document.getElementById('pilaPos').style.display      = inQ ? 'block' : 'none';
-  document.getElementById('pilaTitle').textContent = inQ ? q.terminal_name : 'Pila sa Terminal';
-  document.getElementById('pilaSub').textContent   = inQ
-    ? (q.position === 1 ? 'Ikaw ang susunod! Abangan ang dispatcher.' : 'Nakapila ka. Hintayin ang dispatcher.')
-    : 'Pumila para ma-dispatch ng terminal dispatcher';
-  if (inQ) {
-    document.getElementById('pilaPosNum').textContent = '#' + q.position;
-    document.getElementById('pilaPosOf').textContent  = 'sa ' + q.waiting_count + ' nakapila';
+// Work mode: Terminal (pila) / Not in Terminal (street)
+let WORK = <?= json_encode($work) ?>;
+let modeView = WORK.mode;            // which tab is showing (may differ before joining)
+function renderModeCard() {
+  if (!document.getElementById('modeCard')) return;
+  document.querySelectorAll('.mode-seg button').forEach(b => b.classList.toggle('on', b.dataset.mode === modeView));
+  document.getElementById('paneTerminal').style.display = modeView === 'terminal' ? 'block' : 'none';
+  document.getElementById('paneStreet').style.display   = modeView === 'street' ? 'block' : 'none';
+  if (modeView !== 'terminal') return;
+  const sel = document.getElementById('modeTerminal');
+  const btn = document.getElementById('modeJoinBtn');
+  const st  = document.getElementById('modeStatus');
+  const q   = WORK.queue;
+  const inThisPila = q && String(q.terminal_id) === sel.value;
+  btn.style.display = inThisPila ? 'none' : '';
+  btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ' + (q ? 'Lumipat dito' : (WORK.mode === 'terminal' ? 'Pumila ulit' : 'Pumila'));
+  if (q) {
+    st.className = 'mode-status'; st.style.display = 'flex';
+    st.innerHTML = '<div class="pos">#' + q.position + '</div><div class="txt"><b>' + q.terminal_name + '</b> · ' + q.waiting_count + ' nakapila<br>'
+      + (q.position === 1 ? 'Ikaw ang susunod! Abangan ang dispatcher.' : 'Nakapila ka. Ang dispatcher ang magbibigay ng pasahero.') + '</div>';
+  } else if (WORK.mode === 'terminal') {
+    st.className = 'mode-status out'; st.style.display = 'flex';
+    st.innerHTML = '<i class="fas fa-exclamation-circle" style="color:#C62828;font-size:20px;"></i><div class="txt">Terminal mode ka pero <b>wala ka sa pila</b>. Bumalik sa terminal at pindutin ang <b>Pumila ulit</b>.</div>';
+  } else {
+    st.style.display = 'none';
   }
 }
-function pilaPost(data) {
+function updateModeCard(work) {
+  const changedMode = work.mode !== WORK.mode;
+  WORK = work;
+  if (changedMode) modeView = work.mode;   // e.g. admin closed the terminal
+  renderModeCard();
+}
+function modePost(data) {
   const body = new URLSearchParams(Object.assign({ [CSRF_NAME]: CSRF_TOK }, data));
   return fetch(APP_URL + '/api/queue.php', { method: 'POST', body }).then(r => r.json());
 }
-function joinPila() {
-  const btn = document.getElementById('pilaJoinBtn');
-  const terminal_id = document.getElementById('pilaTerminal').value;
+function pickMode(mode) {
+  if (mode === modeView) return;
+  if (mode === 'street') {
+    if (WORK.mode === 'terminal') {
+      if (WORK.queue && !confirm('Lumipat sa Not in Terminal? Mawawala ang puwesto mo sa pila.')) return;
+      modePost({ action: 'set_mode', mode: 'street' }).then(res => {
+        showToast(res.message, res.success ? 'success' : 'error');
+        if (res.success) setTimeout(() => location.reload(), 700);
+      });
+      return;
+    }
+    modeView = 'street'; renderModeCard(); return;
+  }
+  modeView = 'terminal'; renderModeCard();   // choose terminal, then press Pumila
+}
+function joinTerminal() {
+  const btn = document.getElementById('modeJoinBtn');
+  const terminal_id = document.getElementById('modeTerminal').value;
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-  const send = (lat, lng) => pilaPost({ action: 'join', terminal_id, lat: lat || '', lng: lng || '' })
+  const send = (lat, lng) => modePost({ action: 'set_mode', mode: 'terminal', terminal_id, lat: lat || '', lng: lng || '' })
     .then(res => {
       showToast(res.message, res.success ? 'success' : 'error');
-      if (res.success) {
-        updatePilaCard(res.data.queue);
-        const t = document.getElementById('onlineToggle');
-        if (t && !t.checked) { t.checked = true; document.getElementById('onlineLabel').textContent = 'You are Online'; }
-      }
+      if (res.success) setTimeout(() => location.reload(), 700);
     })
     .catch(() => showToast('Network error. Subukan ulit.', 'error'))
-    .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Pumila'; });
+    .finally(() => { btn.disabled = false; renderModeCard(); });
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(p => send(p.coords.latitude, p.coords.longitude), () => send(), { enableHighAccuracy: true, timeout: 8000 });
   } else { send(); }
 }
-function leavePila() {
-  if (!confirm('Umalis sa pila? Mawawala ang puwesto mo.')) return;
-  pilaPost({ action: 'leave' }).then(res => { showToast(res.message, res.success ? 'success' : 'error'); if (res.success) updatePilaCard(null); });
-}
-updatePilaCard(<?= json_encode($myQueue) ?>);
+if (WORK.terminal_id && document.getElementById('modeTerminal')) document.getElementById('modeTerminal').value = WORK.terminal_id;
+renderModeCard();
 
 // Online toggle
 document.getElementById('onlineToggle')?.addEventListener('change',function(){
@@ -471,7 +501,7 @@ document.getElementById('onlineToggle')?.addEventListener('change',function(){
   .then(r=>r.json()).then(res=>{
     if(res.success){
       document.getElementById('onlineLabel').textContent=on?'You are Online':'You are Offline';
-      document.getElementById('onlineSub').textContent=on?'Receiving ride requests':'Go online to receive rides';
+      document.getElementById('onlineSub').textContent=on?(WORK.mode==='terminal'?'Terminal mode – hintayin ang dispatcher':'Receiving ride requests'):'Go online to receive rides';
       document.querySelector('.dh-status-dot').className='dh-status-dot '+(on?'online':'offline');
       showToast(on?'You are now Online!':'You are now Offline.',on?'success':'info');
       setTimeout(()=>location.reload(),1200);
@@ -986,7 +1016,7 @@ function showToast(msg,type='info'){
       // jsonResponse() nests the payload under "data" — read from there, not from res directly
       var d = res.data || {};
 
-      if (typeof updatePilaCard === 'function') updatePilaCard(d.queue || null);
+      if (typeof updateModeCard === 'function' && d.work) updateModeCard(d.work);
 
       // If a job got accepted (e.g. on another device/tab), stop polling and jump to it
       if (d.active_trip) {

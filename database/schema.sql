@@ -475,3 +475,15 @@ INSERT IGNORE INTO settings (skey, svalue) VALUES
  ('acct_comm_unilevel', '5040'),
  ('acct_wallet_adjust', '5100'),
  ('acct_payout_source', '1010');
+
+-- v5: Coming Soon page
+INSERT IGNORE INTO settings (skey, svalue) VALUES
+ ('coming_soon_enabled', '1'),
+ ('launch_date', '2026-11-15 18:00'),
+ ('coming_soon_headline', 'Something healthy is coming.'),
+ ('coming_soon_text', 'XGEN LIFE International is preparing a new way to live healthier and earn together. Be the first to know when we launch.'),
+ ('contact_email', 'support@xgenlife.com'),
+ ('contact_mobile', ''),
+ ('social_facebook', ''),
+ ('social_tiktok', ''),
+ ('social_youtube', '');

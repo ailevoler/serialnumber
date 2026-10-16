@@ -30,6 +30,14 @@ Lahat ay naka-on/off at nababago sa **Admin → Compensation Plan** (puwedeng ma
 - Kinukumpirma ang bayad sa dalawang paraan: pagbalik ng member mula sa PayMongo at sa signed webhook (`paymongo_webhook.php`).
   Ang lahat ng transaksyon ay nasa **Admin → Online Payments** (may "Check PayMongo" at "Cancel").
 
+## Coming Soon Landing Page
+
+Habang naka-on ang **Coming Soon** (Admin → General Settings → Coming Soon Page), ang home page (`/`) ay nagpapakita ng
+landing page na may logo, countdown hanggang sa launch date, at "Notify Me" form. Ang bawat nag-sign up ay pumapasok sa
+**CRM** bilang company lead (source: *Website*). Mababago ang headline, description, launch date, contact at social links.
+Gumagana pa rin ang `/login.php`, `/register.php?ref=...` at `/admin/login.php`; laging bukas din ang `/coming-soon.php`.
+I-off lang ang setting para bumalik ang home page sa member login.
+
 ## Live Chat Support
 
 - **Member**: chat bubble sa lahat ng pages (may unread badge) at buong **Live Chat Support** page na may history ng conversations.
@@ -94,7 +102,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql` at `database/upgrade_v4.sql` (QR Ph bilang PayMongo method).
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method) at `database/upgrade_v5.sql` (Coming Soon page).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.

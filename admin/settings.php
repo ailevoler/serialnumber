@@ -9,6 +9,17 @@ $fields = [
         'currency'             => ['Currency Symbol', 'text'],
         'company_payment_info' => ['Company Payment Instructions (shown at checkout)', 'text'],
     ],
+    'Coming Soon Page' => [
+        'coming_soon_enabled'  => ['Show the Coming Soon page on the home page', 'bool', 'Members and admins can still log in via /login.php and /admin/login.php'],
+        'launch_date'          => ['Launch date & time', 'datetime', 'Countdown target (Philippine time)'],
+        'coming_soon_headline' => ['Headline', 'text'],
+        'coming_soon_text'     => ['Short description', 'text'],
+        'contact_email'        => ['Contact email', 'text'],
+        'contact_mobile'       => ['Contact mobile', 'text'],
+        'social_facebook'      => ['Facebook page URL', 'text'],
+        'social_tiktok'        => ['TikTok URL', 'text'],
+        'social_youtube'       => ['YouTube URL', 'text'],
+    ],
     'Wallet & Payouts' => [
         'payout_min'              => ['Minimum payout', 'number'],
         'payout_fee_percent'      => ['Payout fee (%)', 'number'],
@@ -29,6 +40,11 @@ if (is_post()) {
     foreach ($fields as $group) {
         foreach ($group as $key => [$label, $type]) {
             $v = $type === 'bool' ? (isset($_POST[$key]) ? '1' : '0') : input($key);
+            if ($type === 'datetime') {
+                $v = $v !== '' && strtotime($v) ? date('Y-m-d H:i', strtotime($v)) : '';
+            } elseif (str_starts_with($key, 'social_') && $v !== '' && !preg_match('#^https?://#i', $v)) {
+                $v = 'https://' . ltrim($v, '/');
+            }
             if ($type === 'number') {
                 $v = (string)max(0, (float)$v);
             } elseif ($type === 'list') {
@@ -61,7 +77,7 @@ page_header('General Settings', $me, 'Company, wallet and payout options');
               <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="<?= e($key) ?>" value="1" <?= setting($key) === '1' ? 'checked' : '' ?>> <?= e($label) ?></label>
             <?php else: ?>
               <label for="<?= e($key) ?>"><?= e($label) ?></label>
-              <input class="input" id="<?= e($key) ?>" name="<?= e($key) ?>" value="<?= e(setting($key, '')) ?>" <?= $type === 'number' ? 'type="number" step="0.01" min="0"' : '' ?>>
+              <input class="input" id="<?= e($key) ?>" name="<?= e($key) ?>" value="<?= e($type === 'datetime' && setting($key) ? date('Y-m-d\TH:i', strtotime((string)setting($key))) : setting($key, '')) ?>" <?= $type === 'number' ? 'type="number" step="0.01" min="0"' : ($type === 'datetime' ? 'type="datetime-local"' : '') ?>>
             <?php endif; ?>
             <?php if ($hint): ?><div class="help"><?= e($hint) ?></div><?php endif; ?>
           </div>

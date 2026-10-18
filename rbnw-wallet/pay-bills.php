@@ -13,8 +13,23 @@ $local = array_map(function (array $b): array {
     return $b;
 }, $local);
 
-$national = national_billers();
-$categories = array_values(array_unique(array_column($national, 1)));
+// Featured row: the three main Aklan billers, shown with their logos.
+// Every other local biller joins the searchable list under "Aklan & Boracay".
+$featuredSlugs = ['pantelco', 'kalibo-cable', 'aklan-electric-cooperative'];
+$featured = [];
+$directory = [];
+foreach ($local as $b) {
+    $slug = biller_slug($b['short']);
+    if (in_array($slug, $featuredSlugs, true)) {
+        $featured[array_search($slug, $featuredSlugs, true)] = $b;
+    } else {
+        $directory[] = [$b['short'], 'Aklan & Boracay', ['Local']];
+    }
+}
+ksort($featured);
+
+$directory = array_merge($directory, national_billers());
+$categories = array_values(array_unique(array_column($directory, 1)));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,14 +75,22 @@ $categories = array_values(array_unique(array_column($national, 1)));
 .biller-logo.has-img { background: #fff; padding: 6px; }
 .biller-logo img { width: 100%; height: 100%; object-fit: contain; }
 
-/* Local billers: logo grid */
-.local-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 8px; }
-.local-tile {
-  display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center;
-  background: none; border: none; padding: 0; color: inherit;
+/* Featured billers: one row of three logo cards */
+.featured-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.featured-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  background: #fff; border: 1px solid rgba(13, 27, 51, 0.06); border-radius: var(--radius-md);
+  padding: 12px 8px 12px; box-shadow: var(--shadow-soft); color: inherit;
+  transition: transform .1s, box-shadow .15s;
 }
-.local-tile .biller-logo { width: 60px; height: 60px; border-radius: 18px; font-size: 17px; box-shadow: var(--shadow-soft); }
-.local-tile span.name { font-size: 11.5px; font-weight: 600; line-height: 1.25; color: var(--text-dark); }
+.featured-tile:active { transform: scale(0.97); }
+.featured-tile .biller-logo {
+  width: 100%; height: auto; aspect-ratio: 1; max-width: 92px;
+  border: none; border-radius: 12px; margin-bottom: 4px; font-size: 22px;
+}
+.featured-tile .biller-logo.has-img { padding: 0; }
+.featured-tile .name { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+.featured-tile .cat { font-size: 11px; color: var(--text-muted); }
 
 /* National directory list */
 .biller-list { background: #fff; border-radius: var(--radius-md); box-shadow: var(--shadow-soft); overflow: hidden; }
@@ -88,6 +111,7 @@ $categories = array_values(array_unique(array_column($national, 1)));
   background: var(--rbnw-blue-50); color: var(--rbnw-blue);
 }
 .via span.bayad { background: #e7f6ec; color: #1b7a3b; }
+.via span.local { background: #fdf3d6; color: #8a5a00; }
 .cat-head {
   padding: 10px 14px 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.6px;
   text-transform: uppercase; color: var(--text-muted); background: #fafbfd;
@@ -118,25 +142,26 @@ $categories = array_values(array_unique(array_column($national, 1)));
 
   <div class="bills-body">
     <section id="localSection">
-      <div class="bills-section-title">Aklan &amp; Boracay billers <small>Partner billers</small></div>
-      <div class="local-grid">
-        <?php foreach ($local as $b): ?>
-          <button type="button" class="local-tile biller-pick"
+      <div class="bills-section-title">Aklan billers <small>Partner billers</small></div>
+      <div class="featured-grid">
+        <?php foreach ($featured as $b): ?>
+          <button type="button" class="featured-tile biller-pick"
                   data-name="<?= htmlspecialchars($b['short']) ?>"
-                  data-search="<?= htmlspecialchars(strtolower($b['name'] . ' ' . $b['category'])) ?>">
+                  data-search="<?= htmlspecialchars(strtolower($b['name'] . ' ' . $b['category'] . ' akelco')) ?>">
             <?= biller_logo_html($b['short'], $b['logo']) ?>
-            <span class="name"><?= htmlspecialchars($b['short']) ?></span>
+            <span class="name"><?= htmlspecialchars(['pantelco' => 'PANTELCO', 'kalibo-cable' => 'Kalibo Cable', 'aklan-electric-cooperative' => 'AKELCO'][biller_slug($b['short'])] ?? $b['short']) ?></span>
+            <span class="cat"><?= htmlspecialchars($b['category']) ?></span>
           </button>
         <?php endforeach; ?>
       </div>
     </section>
 
     <section>
-      <div class="bills-section-title">All billers <small id="billerCount"><?= count($national) ?> billers</small></div>
+      <div class="bills-section-title">All billers <small id="billerCount"><?= count($directory) ?> billers</small></div>
       <div class="biller-list" id="billerList">
         <?php foreach ($categories as $cat): ?>
           <div class="cat-head" data-cat="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></div>
-          <?php foreach ($national as [$name, $c, $via]): if ($c !== $cat) continue; ?>
+          <?php foreach ($directory as [$name, $c, $via]): if ($c !== $cat) continue; ?>
             <button type="button" class="biller-row biller-pick"
                     data-name="<?= htmlspecialchars($name) ?>" data-cat="<?= htmlspecialchars($cat) ?>"
                     data-via="<?= htmlspecialchars(implode(',', $via)) ?>"
@@ -166,7 +191,7 @@ $categories = array_values(array_unique(array_column($national, 1)));
   const search = document.getElementById('billerSearch');
   const rows = [...document.querySelectorAll('#billerList .biller-row')];
   const heads = [...document.querySelectorAll('#billerList .cat-head')];
-  const tiles = [...document.querySelectorAll('#localSection .local-tile')];
+  const tiles = [...document.querySelectorAll('#localSection .featured-tile')];
   const localSection = document.getElementById('localSection');
   const count = document.getElementById('billerCount');
   const empty = document.getElementById('noResults');
@@ -189,7 +214,7 @@ $categories = array_values(array_unique(array_column($national, 1)));
       t.classList.toggle('hidden', !ok);
       if (ok) localShown++;
     });
-    // local billers are paid directly through RBNW, not ECPay/Bayad
+    // featured billers are paid directly through RBNW, not ECPay/Bayad
     localSection.classList.toggle('hidden', network !== 'all' || localShown === 0);
     count.textContent = shown + (shown === 1 ? ' biller' : ' billers');
     empty.classList.toggle('hidden', shown > 0);

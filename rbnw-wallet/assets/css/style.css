@@ -602,11 +602,7 @@ input, select, textarea { font-family: inherit; }
    Balance card
    --------------------------------------------------------- */
 .balance-card {
-  /* blue at the top fading to green at the bottom, with a soft white
-     glow rising from the bottom edge */
-  background:
-    radial-gradient(120% 55% at 50% 118%, rgba(255, 255, 255, 0.30) 0%, rgba(255, 255, 255, 0) 70%),
-    linear-gradient(0deg, #2a9a55 0%, #1f8a73 22%, #17679f 52%, #0f4c92 76%, #0a3570 100%);
+  background: var(--rbnw-gradient);
   border-radius: var(--radius-lg);
   padding: 20px;
   color: #fff;
@@ -614,16 +610,33 @@ input, select, textarea { font-family: inherit; }
   box-shadow: var(--shadow-card);
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .balance-card::after {
-  /* thin white highlight line along the bottom */
   content: '';
   position: absolute;
-  left: 18%; right: 18%; bottom: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.7), rgba(255,255,255,0));
+  width: 180px; height: 180px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 50%;
+  top: -80px; right: -60px;
+  z-index: -1;
+}
+
+/* RBNW logo watermark: the brand mark turned into a faint white silhouette */
+.balance-card::before {
+  content: '';
+  position: absolute;
+  right: -28px;
+  top: 50%;
+  width: 230px;
+  height: 230px;
+  transform: translateY(-50%) rotate(-12deg);
+  background: url('../img/rbnw-logo.png') center / contain no-repeat;
+  filter: brightness(0) invert(1);
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: -1;
 }
 
 .balance-toggle {
@@ -671,7 +684,6 @@ input, select, textarea { font-family: inherit; }
   background: transparent;
   border: none;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(5, 40, 30, 0.25);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -694,8 +706,8 @@ input, select, textarea { font-family: inherit; }
 }
 
 .balance-action-icon.cash-in {
-  background: #fff;
-  color: var(--rbnw-green);
+  background: var(--rbnw-green);
+  color: #fff;
 }
 
 /* ---------------------------------------------------------

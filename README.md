@@ -108,7 +108,7 @@ para mai-post ang benta.
 direct referrals at pass-up status, pag-register ng bagong member gamit ang sariling activation code, My Codes (transfer),
 shop / cart / orders, earnings history, e-wallet ledger at transfer, payout requests, profile at password.
 
-**Administrator Backoffice** — dashboard at charts, reports (ayon sa petsa, may print), members (search, CSV, edit, status,
+**Administrator Backoffice** — dashboard at charts, **Register Member** (may "+ Add" sa bawat bakanteng Left/Right slot sa Genealogy; puwedeng gumawa ng bagong activation code o gumamit ng dati), reports (ayon sa petsa, may print), members (search, CSV, edit, status,
 reset password, wallet adjustment), genealogy ng buong network, Code Generator (generate paid/free activation codes, assign, block, CSV),
 packages, products (may image upload), orders (status → paid ay nagre-release ng commission), payout approval/reject
 (auto-refund), commissions report + CSV, wallet ledger, announcements, Compensation Plan editor, PayMongo Settings, Online Payments, General Settings, admin accounts at activity log.

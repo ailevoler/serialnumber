@@ -23,6 +23,7 @@ function nav_items(string $role): array
             'Network' => [
                 ['admin/members.php', 'Members', 'users'],
                 ['admin/genealogy.php', 'Genealogy', 'tree'],
+                ['admin/register_member.php', 'Register Member', 'user-plus'],
                 ['admin/codes.php', 'Code Generator', 'key'],
                 ['admin/packages.php', 'Packages', 'package'],
             ],
@@ -242,12 +243,14 @@ function empty_row(int $cols, string $msg = 'No records found.'): string
 }
 
 /** Recursive binary genealogy renderer. $linkBase: page to re-root the tree on click. */
-function render_tree_node(?array $n, string $linkBase, ?array $parent = null, string $side = '', bool $allowRegister = false, int $depth = 0): string
+/** $register: false, or the page that registers a new member into an empty slot (e.g. 'member/register.php'). */
+function render_tree_node(?array $n, string $linkBase, ?array $parent = null, string $side = '', bool|string $register = false, int $depth = 0): string
 {
     if (!$n) {
         $inner = '<div class="node node-empty"><span>' . ($side === 'L' ? 'Left' : 'Right') . '</span>';
-        if ($allowRegister && $parent) {
-            $inner .= '<a class="btn btn-xs btn-outline" href="' . e(url('member/register.php?placement=' . urlencode($parent['username']) . '&position=' . $side)) . '">+ Add</a>';
+        if ($register && $parent) {
+            $page = is_string($register) ? $register : 'member/register.php';
+            $inner .= '<a class="btn btn-xs btn-outline" href="' . e(url($page . '?placement=' . urlencode($parent['username']) . '&position=' . $side)) . '">+ Add</a>';
         }
         return '<li>' . $inner . '</div></li>';
     }
@@ -259,8 +262,8 @@ function render_tree_node(?array $n, string $linkBase, ?array $parent = null, st
         . '<span class="node-stats"><b>L ' . (int)$n['left_count'] . '</b><b>R ' . (int)$n['right_count'] . '</b></span>'
         . '</a>';
     if ($depth < 3) {
-        $h .= '<ul>' . render_tree_node($n['children']['L'] ?? null, $linkBase, $n, 'L', $allowRegister, $depth + 1)
-            . render_tree_node($n['children']['R'] ?? null, $linkBase, $n, 'R', $allowRegister, $depth + 1) . '</ul>';
+        $h .= '<ul>' . render_tree_node($n['children']['L'] ?? null, $linkBase, $n, 'L', $register, $depth + 1)
+            . render_tree_node($n['children']['R'] ?? null, $linkBase, $n, 'R', $register, $depth + 1) . '</ul>';
     }
     return $h . '</li>';
 }

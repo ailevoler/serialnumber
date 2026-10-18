@@ -26,6 +26,7 @@ page_header('Genealogy', $me, 'Binary tree of the whole network');
       </form>
       <?php if ($tree && $tree['placement_id']): ?><a class="btn btn-light btn-sm" href="?root=<?= (int)$tree['placement_id'] ?>">&uarr; Up</a><a class="btn btn-outline btn-sm" href="?">Top</a><?php endif; ?>
       <?php if ($tree): ?><a class="btn btn-light btn-sm" href="<?= e(url('admin/member_view.php?id=' . $tree['id'])) ?>">Manage</a><?php endif; ?>
+      <a class="btn btn-gold btn-sm" href="<?= e(url('admin/register_member.php' . ($tree ? '?placement=' . urlencode($tree['username']) : ''))) ?>"><?= icon('user-plus', 14) ?> Register Member</a>
     </div>
   </div>
   <?php if ($tree): ?>
@@ -34,7 +35,7 @@ page_header('Genealogy', $me, 'Binary tree of the whole network');
       <div class="leg left"><span>Left: <?= num($tree['left_count']) ?> members</span><strong><?= num($tree['left_points']) ?> PV</strong></div>
       <div class="leg right"><span>Right: <?= num($tree['right_count']) ?> members</span><strong><?= num($tree['right_points']) ?> PV</strong></div>
     </div>
-    <div class="tree-wrap"><div class="tree"><ul><?= render_tree_node($tree, url('admin/genealogy.php')) ?></ul></div></div>
+    <div class="tree-wrap"><div class="tree"><ul><?= render_tree_node($tree, url('admin/genealogy.php'), null, '', 'admin/register_member.php') ?></ul></div></div>
   </div>
   <?php endif; ?>
 </div>

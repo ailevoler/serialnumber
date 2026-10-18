@@ -1,10 +1,12 @@
 <?php
 /**
  * Shared registration form fields.
- * Expects: $form (array of old values), $lockSponsor (bool), $codeOptions (array of codes or null)
+ * Expects: $form (array of old values), $lockSponsor (bool), $codeOptions (array of codes or null),
+ *          optional $hideCodeSection (bool) when the page renders its own activation code fields.
  */
 $v = fn($k, $d = '') => e($form[$k] ?? $d);
 ?>
+<?php if (empty($hideCodeSection)): ?>
 <div class="section-title">Activation Code</div>
 <div class="form-grid">
   <div class="form-group">
@@ -29,6 +31,7 @@ $v = fn($k, $d = '') => e($form[$k] ?? $d);
   <?php endif; ?>
 </div>
 
+<?php endif; ?>
 <div class="section-title">Sponsor &amp; Placement</div>
 <div class="form-grid">
   <div class="form-group">

@@ -2,7 +2,7 @@
 require __DIR__ . '/includes/bootstrap.php';
 
 if ($u = current_user()) {
-    redirect($u['role'] === 'admin' ? 'admin/dashboard.php' : 'member/dashboard.php');
+    redirect(home_for($u));
 }
 
 $error = null;

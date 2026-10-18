@@ -32,4 +32,5 @@ require_once __DIR__ . '/paymongo.php';
 require_once __DIR__ . '/erp.php';
 require_once __DIR__ . '/chat.php';
 require_once __DIR__ . '/crm.php';
+require_once __DIR__ . '/cms.php';
 require_once __DIR__ . '/layout.php';

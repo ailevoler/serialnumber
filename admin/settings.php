@@ -10,7 +10,7 @@ $fields = [
         'company_payment_info' => ['Company Payment Instructions (shown at checkout)', 'text'],
     ],
     'Coming Soon Page' => [
-        'coming_soon_enabled'  => ['Show the Coming Soon page on the home page', 'bool', 'Members and admins can still log in via /login.php and /admin/login.php'],
+        'coming_soon_enabled'  => ['Show the Coming Soon page on the home page', 'bool', 'Turning this off shows the corporate website. You can also choose the home page in Website CMS.'],
         'launch_date'          => ['Launch date & time', 'datetime', 'Countdown target (Philippine time)'],
         'coming_soon_headline' => ['Headline', 'text'],
         'coming_soon_text'     => ['Short description', 'text'],
@@ -55,6 +55,10 @@ if (is_post()) {
             }
             save_setting($key, $v);
         }
+    }
+    // Keep the home page mode in sync with the Coming Soon switch.
+    if (setting('coming_soon_enabled') === '1' || isset($_POST['coming_soon_enabled'])) {
+        save_setting('home_mode', isset($_POST['coming_soon_enabled']) ? 'coming_soon' : (home_mode() === 'coming_soon' ? 'landing' : home_mode()));
     }
     log_activity((int)$me['id'], 'Updated general settings');
     flash('success', 'Settings saved.');

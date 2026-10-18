@@ -17,6 +17,7 @@ function current_user(bool $refresh = false): ?array
     return $user;
 }
 
+/** $role: 'member', or 'admin' (which also accepts Content Manager accounts). */
 function attempt_login(string $username, string $password, string $role): ?string
 {
     $key = 'login_fail_' . md5(strtolower($username) . client_ip());
@@ -25,7 +26,9 @@ function attempt_login(string $username, string $password, string $role): ?strin
         return 'Too many failed attempts. Please wait 5 minutes and try again.';
     }
 
-    $u = q_row('SELECT * FROM users WHERE (username = ? OR email = ?) AND role = ? LIMIT 1', [$username, $username, $role]);
+    $roles = $role === 'admin' ? ['admin', 'cms'] : [$role];
+    $u = q_row('SELECT * FROM users WHERE (username = ? OR email = ?) AND role IN (' . implode(',', array_fill(0, count($roles), '?')) . ') LIMIT 1',
+        array_merge([$username, $username], $roles));
     if (!$u || !password_verify($password, $u['password'])) {
         $_SESSION[$key] = ['n' => $fails['n'] + 1, 't' => time()];
         return 'Invalid username or password.';
@@ -60,13 +63,36 @@ function require_role(string $role): array
 {
     $u = current_user();
     if (!$u) {
-        redirect($role === 'admin' ? 'admin/login.php' : 'login.php');
+        redirect($role === 'member' ? 'login.php' : 'admin/login.php');
     }
     if ($u['role'] !== $role) {
+        if ($u['role'] === 'cms') {
+            flash('error', 'Your Content Manager account can only access the Website CMS.');
+            redirect('admin/cms.php');
+        }
         http_response_code(403);
         exit('Access denied.');
     }
     return $u;
+}
+
+/** Website CMS pages: administrators and Content Manager accounts. */
+function require_cms(): array
+{
+    $u = current_user();
+    if (!$u) {
+        redirect('admin/login.php');
+    }
+    if (!in_array($u['role'], ['admin', 'cms'], true)) {
+        http_response_code(403);
+        exit('Access denied.');
+    }
+    return $u;
+}
+
+function home_for(array $u): string
+{
+    return ['admin' => 'admin/dashboard.php', 'cms' => 'admin/cms.php'][$u['role']] ?? 'member/dashboard.php';
 }
 
 function require_member(): array

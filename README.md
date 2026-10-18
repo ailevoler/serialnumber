@@ -30,6 +30,25 @@ Lahat ay naka-on/off at nababago sa **Admin → Compensation Plan** (puwedeng ma
 - Kinukumpirma ang bayad sa dalawang paraan: pagbalik ng member mula sa PayMongo at sa signed webhook (`paymongo_webhook.php`).
   Ang lahat ng transaksyon ay nasa **Admin → Online Payments** (may "Check PayMongo" at "Cancel").
 
+## Corporate Website + CMS
+
+**Website (`/home.php`)** — corporate, minimalist na landing page: header na may menu, hero, stats, About, Products
+(kinukuha sa product catalog), Why XGEN LIFE, Business Opportunity (awtomatikong sumusunod sa naka-on na ways to earn sa
+Compensation Plan), Testimonials, FAQ, call-to-action at Contact form. Ang mga mensahe sa Contact form ay pumapasok sa
+**CRM** bilang Website lead, kasama ang mensahe sa activity timeline. Responsive sa phone, tablet at desktop.
+
+**Admin → Website CMS**
+- **Website Overview** — piliin kung ano ang makikita sa home page (`/`): *Corporate website*, *Coming Soon* o *Member login*;
+  i-show/hide ang bawat section; preview ng website.
+- **Page Sections** — i-edit ang texts, buttons, links at images ng bawat section (kasama ang SEO title/description,
+  announcement bar, contact details at social links).
+- **Lists & Testimonials** — stats, "Why XGEN" items (may icon), testimonials (may photo) at FAQ; may Draft/Published at ayos ng order.
+- **Media Library** — upload at pamamahala ng mga larawan.
+- **Content Managers** (admin lang) — gumawa, i-block o i-reset ang password ng **Content Manager** accounts.
+
+**Content Manager account** — nagla-login sa `/admin/login.php` pero **Website CMS at sariling account lang** ang nakikita;
+hindi nila mabubuksan ang members, wallets, payouts, orders, compensation, ERP, CRM o settings.
+
 ## Coming Soon Landing Page
 
 Habang naka-on ang **Coming Soon** (Admin → General Settings → Coming Soon Page), ang home page (`/`) ay nagpapakita ng
@@ -102,7 +121,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method) at `database/upgrade_v5.sql` (Coming Soon page).
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.
@@ -122,7 +141,8 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
 2. Packages / Products → ilagay ang tamang presyo, PV at bonus.
 3. Code Generator → mag-generate ng codes at i-assign sa `xgenlife` o sa mga distributor.
 4. PayMongo Settings → ilagay ang API keys kung tatanggap ng online payment.
-5. ERP Finance → Chart of Accounts → i-check ang account mapping; mag-post ng opening balances (hal. Owner's Capital) sa Journal Entries.
+5. Website CMS → palitan ang texts, images at contact details; magdagdag ng totoong testimonials.
+6. ERP Finance → Chart of Accounts → i-check ang account mapping; mag-post ng opening balances (hal. Owner's Capital) sa Journal Entries.
 
 Local test: `php -S 127.0.0.1:8080` sa project folder.
 

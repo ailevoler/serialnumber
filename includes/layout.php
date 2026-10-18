@@ -3,7 +3,18 @@ declare(strict_types=1);
 
 function nav_items(string $role): array
 {
+    $cms = [
+        ['admin/cms.php', 'Website Overview', 'home'],
+        ['admin/cms_section.php', 'Page Sections', 'layers'],
+        ['admin/cms_items.php', 'Lists & Testimonials', 'list'],
+        ['admin/cms_media.php', 'Media Library', 'box'],
+        ['home.php', 'View Website', 'eye'],
+    ];
+    if ($role === 'cms') {
+        return ['Website CMS' => $cms, 'Account' => [['admin/cms_account.php', 'My Account', 'shield']]];
+    }
     if ($role === 'admin') {
+        $cms[] = ['admin/cms_users.php', 'Content Managers', 'users'];
         return [
             'Overview' => [
                 ['admin/dashboard.php', 'Dashboard', 'home'],
@@ -37,6 +48,7 @@ function nav_items(string $role): array
                 ['admin/erp_expenses.php', 'Expenses', 'cash'],
                 ['admin/erp_accounts.php', 'Chart of Accounts', 'settings'],
             ],
+            'Website CMS' => $cms,
             'System' => [
                 ['admin/announcements.php', 'Announcements', 'megaphone'],
                 ['admin/compensation.php', 'Compensation Plan', 'trending'],
@@ -87,7 +99,7 @@ function page_header(string $title, ?array $user = null, string $subtitle = ''):
         $badges['admin/payouts.php'] = (int)q_val("SELECT COUNT(*) FROM payouts WHERE status = 'pending'");
         $badges['admin/orders.php'] = (int)q_val("SELECT COUNT(*) FROM orders WHERE status = 'pending'");
         $badges['admin/crm.php'] = (int)q_val("SELECT COUNT(*) FROM crm_leads WHERE owner_user_id IS NULL AND next_follow_up <= CURDATE() AND status NOT IN ('converted','lost')");
-    } elseif ($user) {
+    } elseif ($user && $role === 'member') {
         $badges['member/support.php'] = chat_unread_member((int)$user['id']);
         $badges['member/prospects.php'] = (int)q_val("SELECT COUNT(*) FROM crm_leads WHERE owner_user_id = ? AND next_follow_up <= CURDATE() AND status NOT IN ('converted','lost')", [$user['id']]);
     }
@@ -111,7 +123,7 @@ function page_header(string $title, ?array $user = null, string $subtitle = ''):
     <img src="<?= e(asset('img/logo-256.png')) ?>" alt="XGEN LIFE Intl logo">
     <div>
       <strong>XGEN <span>LIFE</span></strong>
-      <small><?= $role === 'admin' ? 'Administrator Backoffice' : 'Member Portal' ?></small>
+      <small><?= ['admin' => 'Administrator Backoffice', 'cms' => 'Content Manager'][$role] ?? 'Member Portal' ?></small>
     </div>
     <button class="icon-btn sidebar-close" data-close-sidebar aria-label="Close menu"><?= icon('x') ?></button>
   </div>
@@ -125,7 +137,7 @@ function page_header(string $title, ?array $user = null, string $subtitle = ''):
         </a>
       <?php endforeach; ?>
     <?php endforeach; ?>
-    <a href="<?= e(url($role === 'admin' ? 'admin/logout.php' : 'logout.php')) ?>" class="nav-link nav-logout"><?= icon('logout') ?><span>Logout</span></a>
+    <a href="<?= e(url($role === 'member' ? 'logout.php' : 'admin/logout.php')) ?>" class="nav-link nav-logout"><?= icon('logout') ?><span>Logout</span></a>
   </nav>
   <div class="sidebar-foot"><?= e(setting('site_tagline')) ?></div>
 </aside>

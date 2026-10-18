@@ -173,10 +173,15 @@ CREATE TABLE IF NOT EXISTS `rbnw_loans` (
   `user_id` INT UNSIGNED NOT NULL,
   `amount` DECIMAL(12,2) NOT NULL,
   `term_months` TINYINT UNSIGNED NOT NULL,
+  `purpose` VARCHAR(60) DEFAULT NULL,
   `monthly_rate` DECIMAL(5,2) NOT NULL,
   `monthly_amortization` DECIMAL(12,2) NOT NULL,
   `total_interest` DECIMAL(12,2) NOT NULL,
   `total_payable` DECIMAL(12,2) NOT NULL,
+  `processing_fee` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `net_proceeds` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'amount credited to wallet (amount - processing fee)',
+  `effective_rate_annual` DECIMAL(6,2) DEFAULT NULL COMMENT 'EIR disclosed to borrower, % per year',
+  `amount_paid` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   `employment_type` VARCHAR(50) DEFAULT NULL,
   `company_name` VARCHAR(150) DEFAULT NULL,
   `monthly_income` DECIMAL(12,2) DEFAULT NULL,
@@ -185,8 +190,27 @@ CREATE TABLE IF NOT EXISTS `rbnw_loans` (
   `status` ENUM('pending','approved','rejected','active','completed') NOT NULL DEFAULT 'pending',
   `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `approved_at` DATETIME DEFAULT NULL,
+  `disbursed_at` DATETIME DEFAULT NULL,
+  `completed_at` DATETIME DEFAULT NULL,
   UNIQUE KEY `uq_loan_ref` (`reference_no`),
+  KEY `idx_loan_user_status` (`user_id`, `status`),
   CONSTRAINT `fk_loan_user` FOREIGN KEY (`user_id`) REFERENCES `rbnw_users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `rbnw_loan_schedule` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `loan_id` INT UNSIGNED NOT NULL,
+  `installment_no` TINYINT UNSIGNED NOT NULL,
+  `due_date` DATE NOT NULL,
+  `principal` DECIMAL(12,2) NOT NULL,
+  `interest` DECIMAL(12,2) NOT NULL,
+  `amount_due` DECIMAL(12,2) NOT NULL,
+  `amount_paid` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  `status` ENUM('due','paid') NOT NULL DEFAULT 'due',
+  `paid_at` DATETIME DEFAULT NULL,
+  UNIQUE KEY `uq_loan_installment` (`loan_id`, `installment_no`),
+  KEY `idx_sched_due` (`due_date`, `status`),
+  CONSTRAINT `fk_sched_loan` FOREIGN KEY (`loan_id`) REFERENCES `rbnw_loans`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------

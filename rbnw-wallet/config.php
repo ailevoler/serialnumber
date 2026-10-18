@@ -64,6 +64,18 @@ defined('CASH_IN_MAX_AMOUNT')       || define('CASH_IN_MAX_AMOUNT', 50000.00);
 defined('CASH_IN_QR_EXPIRY_MINS')   || define('CASH_IN_QR_EXPIRY_MINS', 15);
 
 // ---------------------------------------------------------
+// LOANS (GLoan-style instant cash loan). These are placeholders: set the
+// rates, fees and limits RBNW has approved before going live.
+// Rate is an add-on rate per month on the original principal.
+// ---------------------------------------------------------
+defined('LOAN_MIN_AMOUNT')         || define('LOAN_MIN_AMOUNT', 1000.00);
+defined('LOAN_MONTHLY_RATE_PCT')   || define('LOAN_MONTHLY_RATE_PCT', 1.99);
+defined('LOAN_PROCESSING_FEE_PCT') || define('LOAN_PROCESSING_FEE_PCT', 2.00); // deducted from proceeds
+defined('LOAN_TERMS')              || define('LOAN_TERMS', [3, 6, 9, 12]);
+defined('LOAN_LIMIT_BY_LEVEL')     || define('LOAN_LIMIT_BY_LEVEL', [1 => 5000.00, 2 => 25000.00, 3 => 50000.00]);
+defined('LOAN_REQUIRE_KYC')        || define('LOAN_REQUIRE_KYC', true); // set false in config.local.php to test
+
+// ---------------------------------------------------------
 // SECURITY SETTINGS
 // ---------------------------------------------------------
 define('MPIN_LENGTH', 6);

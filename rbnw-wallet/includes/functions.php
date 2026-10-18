@@ -50,7 +50,12 @@ function post_wallet_transaction(
     array $meta = []
 ): array {
     $pdo = db();
-    $pdo->beginTransaction();
+    // Join a caller's transaction if one is open (e.g. loan disbursement),
+    // otherwise run in our own.
+    $ownTx = !$pdo->inTransaction();
+    if ($ownTx) {
+        $pdo->beginTransaction();
+    }
 
     try {
         // Lock the wallet row so concurrent requests can't race the balance
@@ -102,11 +107,15 @@ function post_wallet_transaction(
             'success',
         ]);
 
-        $pdo->commit();
+        if ($ownTx) {
+            $pdo->commit();
+        }
 
         return ['reference_no' => $reference, 'balance_before' => $before, 'balance_after' => $after];
     } catch (Throwable $e) {
-        $pdo->rollBack();
+        if ($ownTx && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         throw $e;
     }
 }
@@ -336,6 +345,8 @@ function tx_type_label(string $type): string
 {
     return match ($type) {
         'cash_in', 'top_up' => 'Cash In',
+        'loan_disbursement' => 'Loan Received',
+        'loan_repayment'    => 'Loan Payment',
         default             => ucwords(str_replace('_', ' ', $type)),
     };
 }

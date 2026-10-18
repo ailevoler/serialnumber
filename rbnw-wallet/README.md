@@ -57,6 +57,24 @@ are mostly UI + one API file each, not new architecture.
    testing send-money end to end (`UPDATE rbnw_wallets SET balance = 5000
    WHERE user_id = 1;`) until Top Up is wired to a real cash-in source.
 
+## Updating an existing database
+
+When a new module adds tables/columns, run its file from
+`database/migrations/` once in phpMyAdmin (SQL tab), oldest first:
+
+- `2026-10-18-loans.sql` — Loans (schedule table + loan columns)
+
+## Loans
+
+GLoan-style instant cash loan: credit limit by wallet level, amount
+slider, 3/6/9/12-month terms, purpose, live quote, Truth-in-Lending style
+disclosure (finance charge, EIR), MPIN confirmation, instant disbursement
+to the wallet, and repayment (next installment or full) from the wallet.
+Rates, fees and limits are the `LOAN_*` settings in `config.php` —
+placeholders until RBNW sets the approved values (override them in
+`config.local.php`). Loans need a verified (KYC) account; set
+`LOAN_REQUIRE_KYC` to false in `config.local.php` only for testing.
+
 ## Notes on conventions used (matches your other apps)
 
 - Page links, CSS/JS and redirects use app-relative paths (`app_url()` /

@@ -53,6 +53,7 @@ function erp_payment_account(string $method): string
 {
     return [
         'wallet'   => 'acct_wallet_payable',
+        'product_wallet' => 'acct_product_wallet_payable',
         'paymongo' => 'acct_paymongo',
         'cash'     => 'acct_cash',
         'bank'     => 'acct_bank',
@@ -172,11 +173,12 @@ function gl_accounts_with_balances(?string $from = null, ?string $to = null): ar
 
 /* ---------- Automatic postings used by the MLM engine ---------- */
 
-function erp_post_commission(int $earningId, int $userId, string $type, float $amount, string $desc): void
+function erp_post_commission(int $earningId, int $userId, string $type, float $amount, string $desc, string $paidTo = 'ewallet'): void
 {
-    erp_post('CM', $desc, [
+    $credit = ['ewallet' => 'acct_wallet_payable', 'product' => 'acct_product_wallet_payable', 'outright' => 'acct_outright_source'][$paidTo] ?? 'acct_wallet_payable';
+    erp_post('CM', $desc . ($paidTo === 'outright' ? ' (outright)' : ($paidTo === 'product' ? ' (product wallet)' : '')), [
         ['acct_comm_' . $type, $amount, 0, null, $userId],
-        ['acct_wallet_payable', 0, $amount, null, $userId],
+        [$credit, 0, $amount, null, $userId],
     ], 'earning', $earningId);
 }
 

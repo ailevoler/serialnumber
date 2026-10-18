@@ -26,6 +26,7 @@ if (is_post()) {
 
     save_setting('direct_mode', $mode('direct_mode'));
     save_setting('direct_percent', $numv('direct_percent'));
+    save_setting('direct_outright', isset($_POST['direct_outright']) ? '1' : '0');
 
     save_setting('indirect_mode', $mode('indirect_mode'));
     save_setting('indirect_levels', levels_from_post('indirect_levels'));
@@ -40,6 +41,7 @@ if (is_post()) {
     save_setting('pair_pv', (string)max(1, round(input_float('pair_pv'), 2)));
     save_setting('pair_bonus', $numv('pair_bonus'));
     save_setting('pair_daily_cap', (string)max(0, input_int('pair_daily_cap')));
+    save_setting('pairing_to_product_wallet', isset($_POST['pairing_to_product_wallet']) ? '1' : '0');
 
     save_setting('unilevel_base', input('unilevel_base') === 'amount' ? 'amount' : 'pv');
     save_setting('unilevel_percent', levels_from_post('unilevel_percent'));
@@ -127,7 +129,12 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
           </select></div>
         <div class="form-group"><label>Percent (if percent mode)</label><input class="input" type="number" step="0.01" min="0" name="direct_percent" value="<?= e(setting('direct_percent', 10)) ?>"></div>
       </div>
-      <p class="help mb-0">Paid to the sponsor once a new member activates with a paid code.</p>
+      <label class="toggle-card mt-1">
+        <input type="checkbox" name="direct_outright" value="1" <?= setting('direct_outright', '1') === '1' ? 'checked' : '' ?>>
+        <span class="toggle-ui"></span>
+        <span><strong>Outright Direct Referral Bonus</strong><small>Paid directly to the sponsor at the time of sale. Shown only on the Referral Bonus card — not credited to the wallet, not withdrawable and not included in Total Earnings.</small></span>
+      </label>
+      <p class="help mb-0 mt-1">Paid to the sponsor once a new member activates with a paid code.</p>
     </div>
   </div>
 
@@ -216,7 +223,12 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
         <div class="form-group"><label>Bonus per pair (<?= e($cur) ?>)</label><input class="input" type="number" step="0.01" min="0" name="pair_bonus" value="<?= e(setting('pair_bonus', 0)) ?>"></div>
         <div class="form-group"><label>Max pairs per day</label><input class="input" type="number" min="0" name="pair_daily_cap" value="<?= e(setting('pair_daily_cap', 0)) ?>"><div class="help">0 = unlimited. Excess pairs are flushed.</div></div>
       </div>
-      <p class="help mb-0">Each package's PV goes to the left or right leg of every upline in the binary tree. Unpaired PV is carried forward.</p>
+      <label class="toggle-card mt-1">
+        <input type="checkbox" name="pairing_to_product_wallet" value="1" <?= setting('pairing_to_product_wallet', '0') === '1' ? 'checked' : '' ?>>
+        <span class="toggle-ui"></span>
+        <span><strong>Credit Pairing / Matching Bonus to Product Wallet</strong><small>All binary pairing bonuses go to the member's Product Wallet (for buying products only, not withdrawable). Still shown as Pairing / Matching Bonus.</small></span>
+      </label>
+      <p class="help mb-0 mt-1">Each package's PV goes to the left or right leg of every upline in the binary tree. Unpaired PV is carried forward.</p>
     </div>
   </div>
 

@@ -20,14 +20,35 @@ function credit_earning(int $userId, string $type, float $amount, ?int $sourceId
     if ($amount <= 0) {
         return;
     }
-    q('INSERT INTO earnings (user_id, type, amount, source_user_id, order_id, level, pairs, credited, description) VALUES (?,?,?,?,?,?,?,?,?)',
-        [$userId, $type, $amount, $sourceId, $orderId, $level, $pairs, $toWallet ? 1 : 0, mb_substr($desc, 0, 255)]);
-    if ($toWallet) {
-        $earningId = (int)db()->lastInsertId();
+    // Where the income goes: e-wallet (withdrawable), product wallet (products only),
+    // outright (paid directly at the sale; record only) or none (e.g. product discount).
+    $paidTo = earning_destination($type, $toWallet);
+    $credited = in_array($paidTo, ['ewallet', 'product'], true);
+    q('INSERT INTO earnings (user_id, type, amount, source_user_id, order_id, level, pairs, credited, paid_to, description) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        [$userId, $type, $amount, $sourceId, $orderId, $level, $pairs, $credited ? 1 : 0, $paidTo, mb_substr($desc, 0, 255)]);
+    $earningId = (int)db()->lastInsertId();
+    if ($credited) {
         q('UPDATE users SET total_earnings = total_earnings + ? WHERE id = ?', [$amount, $userId]);
-        wallet_credit($userId, 'earning', $amount, $desc, strtoupper($type));
-        erp_post_commission($earningId, $userId, $type, $amount, $desc);
+        wallet_post($userId, 'credit', 'earning', $amount, $desc, strtoupper($type), $paidTo);
     }
+    if ($paidTo !== 'none') {
+        erp_post_commission($earningId, $userId, $type, $amount, $desc, $paidTo);
+    }
+}
+
+/** ewallet | product | outright | none, based on the compensation plan settings. */
+function earning_destination(string $type, bool $toWallet = true): string
+{
+    if (!$toWallet || $type === 'discount') {
+        return 'none';
+    }
+    if ($type === 'direct' && setting('direct_outright', '1') === '1') {
+        return 'outright';
+    }
+    if ($type === 'pairing' && setting('pairing_to_product_wallet', '0') === '1') {
+        return 'product';
+    }
+    return 'ewallet';
 }
 
 /** Is an income type (direct, indirect, passup, pairing, unilevel, discount) switched on? */
@@ -401,6 +422,7 @@ function generate_codes(int $packageId, int $qty, string $type, ?int $ownerId): 
 function create_order(int $userId, array $cart, string $method, string $address, string $paymentRef = ''): int
 {
     $allowed = setting_list('order_payment_methods');
+    $allowed[] = 'product_wallet';
     if (paymongo_enabled()) {
         $allowed[] = 'paymongo';
     }
@@ -431,7 +453,7 @@ function create_order(int $userId, array $cart, string $method, string $address,
             throw new RuntimeException('Your cart is empty.');
         }
         $orderNo = 'XO' . date('ymd') . random_string(5, '0123456789');
-        $status = $method === 'wallet' ? 'paid' : 'pending';
+        $status = in_array($method, ['wallet', 'product_wallet'], true) ? 'paid' : 'pending';
         q('INSERT INTO orders (order_no, user_id, subtotal_srp, discount, total, total_pv, payment_method, payment_ref, shipping_address, status, paid_at)
            VALUES (?,?,?,?,?,?,?,?,?,?,?)', [$orderNo, $userId, $srp, $srp - $total, $total, $pv, $method, $paymentRef, $address, $status,
             $status === 'paid' ? date('Y-m-d H:i:s') : null]);
@@ -441,8 +463,8 @@ function create_order(int $userId, array $cart, string $method, string $address,
                 [$orderId, $p['id'], $p['name'], $qty, $p['srp'], $p['member_price'], $p['pv']]);
             q('UPDATE products SET stock = stock - ? WHERE id = ?', [$qty, $p['id']]);
         }
-        if ($method === 'wallet') {
-            wallet_debit($userId, 'purchase', $total, "Product purchase {$orderNo}", $orderNo);
+        if ($method === 'wallet' || $method === 'product_wallet') {
+            wallet_post($userId, 'debit', 'purchase', $total, "Product purchase {$orderNo}", $orderNo, $method === 'product_wallet' ? 'product' : 'ewallet');
             process_order_commission($orderId);
         }
         return $orderId;
@@ -462,8 +484,9 @@ function cancel_order(int $orderId): void
         foreach (q_all('SELECT product_id, qty FROM order_items WHERE order_id = ?', [$orderId]) as $it) {
             q('UPDATE products SET stock = stock + ? WHERE id = ?', [$it['qty'], $it['product_id']]);
         }
-        if ($o['payment_method'] === 'wallet' && $o['status'] !== 'pending') {
-            wallet_credit((int)$o['user_id'], 'purchase_refund', (float)$o['total'], "Refund for cancelled order {$o['order_no']}", $o['order_no']);
+        if (in_array($o['payment_method'], ['wallet', 'product_wallet'], true) && $o['status'] !== 'pending') {
+            wallet_post((int)$o['user_id'], 'credit', 'purchase_refund', (float)$o['total'], "Refund for cancelled order {$o['order_no']}", $o['order_no'],
+                $o['payment_method'] === 'product_wallet' ? 'product' : 'ewallet');
         }
         q("UPDATE orders SET status = 'cancelled' WHERE id = ?", [$orderId]);
     });

@@ -12,11 +12,12 @@ Lahat ay naka-on/off at nababago sa **Admin → Compensation Plan** (puwedeng ma
 | # | Income | Paano kinukuwenta |
 |---|--------|-------------------|
 | 1 | **Product Discount** | SRP − Member Price sa bawat order (savings / retail profit, hindi pumapasok sa wallet) |
-| 2 | **Direct Referral Bonus** | Fixed bawat package, o % ng package price — para sa sponsor |
+| 2 | **Direct Referral Bonus** | Fixed bawat package, o % ng package price — para sa sponsor. Kapag **Outright** (default), ibinibigay ito nang direkta sa bentahan: nakikita lang sa Direct Referral Bonus card, hindi pumapasok sa wallet, hindi withdrawable at hindi kasama sa Total Earnings |
 | 3 | **Indirect Bonus** | Bawat level sa itaas ng sponsor (default 5 levels: `50,30,20,10,10`), fixed o % ng package price; puwedeng magdagdag ng level |
 | 4 | **Pass Up Bonus (Australian Pass Up)** | Ang N-th recruit ng sponsor (hal. `1` o `1,2` para 2-Up) ay ipinapasa sa pass-up upline na kumikita ng bonus (fixed o %). May option kung kikita pa rin ng Direct Referral ang sponsor |
 | 5 | **Pairing / Matching Bonus (Binary)** | Bawat `PV per side` sa left + right = 1 pair × bonus, may daily cap (sobra ay flush), carry-forward ang natirang PV |
 | 6 | **Unilevel Bonus (Repeat Purchase)** | % ng PV o ng halaga ng order bawat level paakyat sa sponsor line; puwedeng magdagdag ng level |
+| + | **Product Wallet** | Kapag naka-on ang *Credit Pairing / Matching Bonus to Product Wallet*, lahat ng pairing bonus ay pumapasok sa Product Wallet — pambili lang ng produkto (hindi withdrawable / transferable), pero nakikita pa rin bilang Pairing / Matching Bonus at kasama sa Total Earnings |
 | + | **E-Wallet** | Available Balance, Total Earnings, breakdown ng bawat bonus at Withdrawal; payout (may fee), pambili ng produkto/codes, member-to-member transfer |
 
 ## PayMongo
@@ -121,7 +122,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS).
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.

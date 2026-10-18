@@ -58,10 +58,13 @@ if ($cart) {
     }
 }
 $methods = setting_list('order_payment_methods');
+if ((float)$me['product_wallet'] > 0 || setting('pairing_to_product_wallet', '0') === '1') {
+    array_unshift($methods, 'product_wallet');
+}
 if (paymongo_enabled()) {
     $methods[] = 'paymongo';
 }
-$labels = ['paymongo' => paymongo_label(), 'wallet' => 'E-Wallet', 'cash' => 'Cash / Pick-up', 'bank' => 'Bank Deposit', 'gcash' => 'GCash', 'maya' => 'Maya'];
+$labels = ['paymongo' => paymongo_label(), 'product_wallet' => 'Product Wallet', 'wallet' => 'E-Wallet', 'cash' => 'Cash / Pick-up', 'bank' => 'Bank Deposit', 'gcash' => 'GCash', 'maya' => 'Maya'];
 
 page_header('My Cart', $me, 'Review items and checkout');
 ?>
@@ -111,7 +114,7 @@ page_header('My Cart', $me, 'Review items and checkout');
             <label class="radio-pill"><input type="radio" name="payment_method" value="<?= e($m) ?>" <?= $i === 0 ? 'checked' : '' ?>><span><?= e($labels[$m] ?? ucfirst($m)) ?></span></label>
           <?php endforeach; ?>
         </div>
-        <p class="small text-muted">Wallet balance: <strong><?= money($me['wallet_balance']) ?></strong></p>
+        <p class="small text-muted">E-Wallet: <strong><?= money($me['wallet_balance']) ?></strong><?php if (in_array('product_wallet', $methods, true)): ?> · Product Wallet: <strong><?= money($me['product_wallet']) ?></strong><?php endif; ?></p>
         <div id="payment-ref-box" class="form-group">
           <label for="payment_ref">Payment Reference No.</label>
           <input class="input" id="payment_ref" name="payment_ref" placeholder="e.g. GCash ref number">

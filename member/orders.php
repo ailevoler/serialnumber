@@ -36,7 +36,7 @@ if ($order):
   </div>
   <div class="card-body">
     <dl class="kv">
-      <dt>Payment</dt><dd><?= e(strtoupper($order['payment_method'])) ?> <?= $order['payment_ref'] ? '· Ref ' . e($order['payment_ref']) : '' ?></dd>
+      <dt>Payment</dt><dd><?= e(strtoupper(str_replace('_', ' ', $order['payment_method']))) ?> <?= $order['payment_ref'] ? '· Ref ' . e($order['payment_ref']) : '' ?></dd>
       <dt>Discount</dt><dd class="text-gold"><?= money($order['discount']) ?></dd>
       <dt>Total</dt><dd><strong><?= money($order['total']) ?></strong> (<?= num($order['total_pv']) ?> PV)</dd>
       <dt>Deliver to</dt><dd><?= e($order['shipping_address']) ?></dd>
@@ -55,7 +55,7 @@ if ($order):
         <tr>
           <td><a href="?view=<?= (int)$r['id'] ?>"><strong><?= e($r['order_no']) ?></strong></a></td>
           <td class="nowrap"><?= fdatetime($r['created_at']) ?></td>
-          <td><?= e(strtoupper($r['payment_method'])) ?></td>
+          <td><?= e(strtoupper(str_replace('_', ' ', $r['payment_method']))) ?></td>
           <td><?= money($r['total']) ?></td>
           <td><?= num($r['total_pv']) ?></td>
           <td><?= badge($r['status']) ?></td>

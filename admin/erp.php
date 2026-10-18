@@ -14,6 +14,8 @@ $cash = array_sum(array_map(fn($c) => $byCode[$c]['balance'] ?? 0, $cashCodes));
 $revMtd = $sumType($mtd, 'revenue');
 $expMtd = $sumType($mtd, 'expense');
 $walletGl = $byCode[(string)setting('acct_wallet_payable')]['balance'] ?? 0;
+$productGl = $byCode[(string)setting('acct_product_wallet_payable')]['balance'] ?? 0;
+$productActual = (float)q_val("SELECT COALESCE(SUM(product_wallet),0) FROM users WHERE role = 'member'");
 $walletActual = (float)q_val("SELECT COALESCE(SUM(wallet_balance),0) FROM users WHERE role = 'member'");
 $payoutsPayable = $byCode[(string)setting('acct_payouts_payable')]['balance'] ?? 0;
 $pendingPayouts = (float)q_val("SELECT COALESCE(SUM(amount),0) FROM payouts WHERE status = 'pending'");
@@ -72,6 +74,12 @@ page_header('Finance Dashboard', $me, 'ERP · General ledger overview');
         <div class="row"><span>Members' Wallet Payable (G/L)</span><strong><?= money($walletGl) ?></strong></div>
         <div class="row"><span>Sum of member wallets</span><strong><?= money($walletActual) ?></strong></div>
         <div class="row total"><span>Difference</span><span class="<?= $diff1 ? 'text-danger' : 'text-green' ?>"><?= money($diff1) ?> <?= $diff1 ? '⚠' : '✓' ?></span></div>
+      </div>
+      <?php $diff3 = round($productGl - $productActual, 2); ?>
+      <div class="summary-box mb-2">
+        <div class="row"><span>Product Wallet Payable (G/L)</span><strong><?= money($productGl) ?></strong></div>
+        <div class="row"><span>Sum of product wallets</span><strong><?= money($productActual) ?></strong></div>
+        <div class="row total"><span>Difference</span><span class="<?= $diff3 ? 'text-danger' : 'text-green' ?>"><?= money($diff3) ?> <?= $diff3 ? '⚠' : '✓' ?></span></div>
       </div>
       <div class="summary-box">
         <div class="row"><span>Payouts Payable (G/L)</span><strong><?= money($payoutsPayable) ?></strong></div>

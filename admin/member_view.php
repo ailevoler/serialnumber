@@ -37,11 +37,13 @@ if (is_post()) {
             $amount = round(input_float('amount'), 2);
             $dir = input('direction') === 'debit' ? 'debit' : 'credit';
             $note = input('note') ?: 'Admin adjustment';
-            tx(function () use ($id, $dir, $amount, $note, $me) {
-                wallet_post($id, $dir, 'adjustment', $amount, $note, 'ADMIN#' . $me['id']);
-                erp_post('WA', 'Wallet adjustment: ' . $note, $dir === 'credit'
-                    ? [['acct_wallet_adjust', $amount, 0, null, $id], ['acct_wallet_payable', 0, $amount, null, $id]]
-                    : [['acct_wallet_payable', $amount, 0, null, $id], ['acct_other_income', 0, $amount, null, $id]], 'user', $id);
+            $wallet = input('wallet') === 'product' ? 'product' : 'ewallet';
+            $payable = $wallet === 'product' ? 'acct_product_wallet_payable' : 'acct_wallet_payable';
+            tx(function () use ($id, $dir, $amount, $note, $me, $wallet, $payable) {
+                wallet_post($id, $dir, 'adjustment', $amount, $note, 'ADMIN#' . $me['id'], $wallet);
+                erp_post('WA', wallet_labels()[$wallet] . ' adjustment: ' . $note, $dir === 'credit'
+                    ? [['acct_wallet_adjust', $amount, 0, null, $id], [$payable, 0, $amount, null, $id]]
+                    : [[$payable, $amount, 0, null, $id], ['acct_other_income', 0, $amount, null, $id]], 'user', $id);
             });
             log_activity((int)$me['id'], "Wallet {$dir} {$amount} for {$m['username']}: {$note}");
             flash('success', 'Wallet ' . $dir . 'ed ' . money($amount) . '.');
@@ -63,7 +65,7 @@ $logs = q_all('SELECT * FROM activity_logs WHERE user_id = ? ORDER BY id DESC LI
 page_header('Member: @' . $m['username'], $me, full_name($m));
 ?>
 <div class="stats">
-  <?= stat_card('Wallet', money($m['wallet_balance']), 'wallet', 'dark') ?>
+  <?= stat_card('E-Wallet', money($m['wallet_balance']), 'wallet', 'dark', 'Product Wallet: ' . money($m['product_wallet'])) ?>
   <?= stat_card('Total Earnings', money($m['total_earnings']), 'trending', 'gold') ?>
   <?= stat_card('Directs', num($m['direct_count']), 'user-plus') ?>
   <?= stat_card('Left / Right', num($m['left_count']) . ' / ' . num($m['right_count']), 'git-merge', 'gold', num($m['left_points']) . ' / ' . num($m['right_points']) . ' PV') ?>
@@ -159,6 +161,7 @@ page_header('Member: @' . $m['username'], $me, full_name($m));
             <label class="radio-pill"><input type="radio" name="direction" value="credit" checked><span>Credit (+)</span></label>
             <label class="radio-pill"><input type="radio" name="direction" value="debit"><span>Debit (−)</span></label>
           </div>
+          <div class="form-group"><label>Wallet</label><select class="input" name="wallet"><option value="ewallet">E-Wallet (<?= money($m['wallet_balance']) ?>)</option><option value="product">Product Wallet (<?= money($m['product_wallet']) ?>)</option></select></div>
           <div class="form-group"><label>Amount</label><input class="input" type="number" step="0.01" min="0.01" name="amount" required></div>
           <div class="form-group"><label>Note</label><input class="input" name="note" placeholder="Reason for adjustment" required></div>
           <button class="btn btn-gold btn-block" type="submit" data-confirm="Apply this wallet adjustment?">Apply</button>

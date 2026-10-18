@@ -263,14 +263,22 @@ function random_string(int $len, string $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ234567
     return $out;
 }
 
+/** Badge for where an earning went (e-wallet, product wallet, outright, not credited). */
+function paid_to_badge(string $paidTo): string
+{
+    $map = ['ewallet' => ['E-Wallet', 'success'], 'product' => ['Product Wallet', 'info'], 'outright' => ['Outright', 'gold'], 'none' => ['Not credited', 'muted']];
+    [$l, $c] = $map[$paidTo] ?? $map['ewallet'];
+    return '<span class="badge badge-' . $c . '">' . $l . '</span>';
+}
+
 function earning_types(): array
 {
     return [
         'discount' => ['label' => 'Product Discount',          'icon' => 'tag',       'hint' => 'Savings / retail profit'],
-        'direct'   => ['label' => 'Direct Referral Bonus',     'icon' => 'user-plus', 'hint' => 'Personally sponsored'],
+        'direct'   => ['label' => 'Direct Referral Bonus',     'icon' => 'user-plus', 'hint' => setting('direct_outright', '1') === '1' ? 'Outright · not withdrawable' : 'Personally sponsored'],
         'indirect' => ['label' => 'Indirect Bonus',            'icon' => 'users',     'hint' => 'Up to ' . count(setting_list('indirect_levels')) . ' levels'],
         'passup'   => ['label' => 'Pass Up Bonus',             'icon' => 'arrow-up',  'hint' => 'Australian Pass Up'],
-        'pairing'  => ['label' => 'Pairing / Matching Bonus',  'icon' => 'git-merge', 'hint' => 'Binary'],
+        'pairing'  => ['label' => 'Pairing / Matching Bonus',  'icon' => 'git-merge', 'hint' => setting('pairing_to_product_wallet', '0') === '1' ? 'Binary · Product Wallet' : 'Binary'],
         'unilevel' => ['label' => 'Unilevel Bonus',            'icon' => 'repeat',    'hint' => 'Repeat purchase'],
     ];
 }

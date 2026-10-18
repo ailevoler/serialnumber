@@ -42,6 +42,7 @@ CREATE TABLE users (
   left_points DECIMAL(14,2) NOT NULL DEFAULT 0,
   right_points DECIMAL(14,2) NOT NULL DEFAULT 0,
   wallet_balance DECIMAL(14,2) NOT NULL DEFAULT 0,
+  product_wallet DECIMAL(14,2) NOT NULL DEFAULT 0,
   total_earnings DECIMAL(14,2) NOT NULL DEFAULT 0,
   payout_method VARCHAR(40) NULL,
   payout_account_name VARCHAR(120) NULL,
@@ -96,7 +97,7 @@ CREATE TABLE orders (
   discount DECIMAL(12,2) NOT NULL DEFAULT 0,
   total DECIMAL(12,2) NOT NULL DEFAULT 0,
   total_pv DECIMAL(12,2) NOT NULL DEFAULT 0,
-  payment_method ENUM('wallet','cash','bank','gcash','maya','paymongo') NOT NULL DEFAULT 'wallet',
+  payment_method ENUM('wallet','product_wallet','cash','bank','gcash','maya','paymongo') NOT NULL DEFAULT 'wallet',
   payment_ref VARCHAR(100) NULL,
   shipping_address VARCHAR(255) NULL,
   status ENUM('pending','paid','shipped','completed','cancelled') NOT NULL DEFAULT 'pending',
@@ -131,6 +132,7 @@ CREATE TABLE earnings (
   level INT UNSIGNED NULL,
   pairs INT UNSIGNED NOT NULL DEFAULT 0,
   credited TINYINT(1) NOT NULL DEFAULT 1,
+  paid_to ENUM('ewallet','product','outright','none') NOT NULL DEFAULT 'ewallet',
   description VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_user_type (user_id, type),
@@ -141,6 +143,7 @@ CREATE TABLE earnings (
 CREATE TABLE wallet_transactions (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNSIGNED NOT NULL,
+  wallet ENUM('ewallet','product') NOT NULL DEFAULT 'ewallet',
   direction ENUM('credit','debit') NOT NULL,
   category ENUM('earning','payout','payout_refund','purchase','purchase_refund','transfer_in','transfer_out','adjustment','code_purchase') NOT NULL,
   amount DECIMAL(12,2) NOT NULL,
@@ -540,3 +543,12 @@ SELECT * FROM (
   SELECT 'testimonial', 'Sample Member', 'Replace with a real member story', 'Add real member testimonials here. Sample entries stay in Draft so they never appear on the live website.', NULL, 1, 'draft'
 ) seed
 WHERE NOT EXISTS (SELECT 1 FROM cms_items);
+
+-- v7: Product Wallet and outright Direct Referral Bonus
+INSERT IGNORE INTO gl_accounts (code, name, type, is_system, description) VALUES
+ ('2020', 'Members\' Product Wallet Payable', 'liability', 1, 'Product-only wallet balances (e.g. pairing bonus credited as product wallet)');
+INSERT IGNORE INTO settings (skey, svalue) VALUES
+ ('pairing_to_product_wallet', '0'),
+ ('direct_outright', '1'),
+ ('acct_product_wallet_payable', '2020'),
+ ('acct_outright_source', '1000');

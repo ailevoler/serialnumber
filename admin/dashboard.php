@@ -7,7 +7,7 @@ $newToday = (int)q_val("SELECT COUNT(*) FROM users WHERE role = 'member' AND DAT
 $activationSales = (float)q_val("SELECT COALESCE(SUM(p.price),0) FROM codes c JOIN packages p ON p.id = c.package_id WHERE c.status = 'used' AND c.code_type = 'paid'");
 $productSales = (float)q_val("SELECT COALESCE(SUM(total),0) FROM orders WHERE status IN ('paid','shipped','completed')");
 $commissions = (float)q_val('SELECT COALESCE(SUM(amount),0) FROM earnings WHERE credited = 1');
-$walletTotal = (float)q_val("SELECT COALESCE(SUM(wallet_balance),0) FROM users WHERE role = 'member'");
+$walletTotal = (float)q_val("SELECT COALESCE(SUM(wallet_balance + product_wallet),0) FROM users WHERE role = 'member'");
 $pendingPayouts = q_row("SELECT COUNT(*) n, COALESCE(SUM(amount),0) t FROM payouts WHERE status = 'pending'");
 $pendingOrders = (int)q_val("SELECT COUNT(*) FROM orders WHERE status = 'pending'");
 $unusedCodes = (int)q_val("SELECT COUNT(*) FROM codes WHERE status = 'unused'");
@@ -51,7 +51,7 @@ page_header('Admin Dashboard', $me, 'Company-wide overview');
   <?= stat_card('Activation Sales', money($activationSales), 'key', 'gold') ?>
   <?= stat_card('Product Sales', money($productSales), 'cart') ?>
   <?= stat_card('Commissions Paid', money($commissions), 'trending', 'gold') ?>
-  <?= stat_card('Wallet Liabilities', money($walletTotal), 'wallet', 'dark', 'Total member balances') ?>
+  <?= stat_card('Wallet Liabilities', money($walletTotal), 'wallet', 'dark', 'E-Wallet + Product Wallet') ?>
   <?= stat_card('Pending Payouts', money($pendingPayouts['t']), 'cash', 'gold', (int)$pendingPayouts['n'] . ' request(s)') ?>
   <?= stat_card('Total Paid Out', money($paidOut), 'download') ?>
   <?= stat_card('Unused Codes', num($unusedCodes), 'key', 'gold') ?>

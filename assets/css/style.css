@@ -315,7 +315,8 @@ a.node:hover { border-color: var(--green); color: var(--text); }
 .pkg-pick:has(input:checked) { border-color: var(--green); box-shadow: 0 0 0 3px rgba(22, 163, 74, .15); }
 .radio-pill input[type=checkbox]:checked + span { background: var(--green); border-color: var(--green); color: #fff; }
 .wallet-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
-@media (max-width: 720px) { .wallet-hero { grid-template-columns: 1fr; gap: 10px; } .level-row { grid-template-columns: 70px 1fr 28px; } }
+.wallet-hero.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 720px) { .wallet-hero, .wallet-hero.three { grid-template-columns: 1fr; gap: 10px; } .level-row { grid-template-columns: 70px 1fr 28px; } }
 
 /* ---------- Live Chat ---------- */
 .chat-widget { position: fixed; right: 22px; bottom: 22px; z-index: 60; }

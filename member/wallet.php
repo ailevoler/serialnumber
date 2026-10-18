@@ -31,8 +31,14 @@ if (is_post() && input('action') === 'transfer' && $transferOn) {
     redirect('member/wallet.php');
 }
 
-$p = paginate('SELECT COUNT(*) FROM wallet_transactions WHERE user_id = ?', [$uid]);
-$rows = q_all("SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}", [$uid]);
+$w = in_array(input('w'), ['ewallet', 'product'], true) ? input('w') : '';
+$wWhere = $w ? ' AND wallet = ?' : '';
+$wParams = $w ? [$uid, $w] : [$uid];
+$p = paginate("SELECT COUNT(*) FROM wallet_transactions WHERE user_id = ?{$wWhere}", $wParams);
+$rows = q_all("SELECT * FROM wallet_transactions WHERE user_id = ?{$wWhere} ORDER BY id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}", $wParams);
+$outright = setting('direct_outright', '1') === '1';
+$pairProduct = setting('pairing_to_product_wallet', '0') === '1';
+$hasProductWallet = $pairProduct || (float)$me['product_wallet'] > 0 || (bool)q_val("SELECT 1 FROM wallet_transactions WHERE user_id = ? AND wallet = 'product' LIMIT 1", [$uid]);
 $summary = earnings_summary($uid);
 $withdrawn = (float)q_val("SELECT COALESCE(SUM(amount),0) FROM payouts WHERE user_id = ? AND status = 'approved'", [$uid]);
 $pendingWd = (float)q_val("SELECT COALESCE(SUM(amount),0) FROM payouts WHERE user_id = ? AND status = 'pending'", [$uid]);
@@ -46,9 +52,12 @@ $walletIncome = [
 
 page_header('E-Wallet', $me, 'Your balance and transactions');
 ?>
-<div class="wallet-hero">
-  <?= stat_card('Available Balance', money($me['wallet_balance']), 'wallet', 'dark', 'Ready for withdrawal') ?>
-  <?= stat_card('Total Earnings', money($me['total_earnings']), 'trending', 'gold', 'All bonuses credited to wallet') ?>
+<div class="wallet-hero <?= $hasProductWallet ? 'three' : '' ?>">
+  <?= stat_card('Available Balance', money($me['wallet_balance']), 'wallet', 'dark', 'E-Wallet · ready for withdrawal') ?>
+  <?php if ($hasProductWallet): ?>
+    <?= stat_card('Product Wallet', money($me['product_wallet']), 'box', '', 'For product purchases only · not withdrawable') ?>
+  <?php endif; ?>
+  <?= stat_card('Total Earnings', money($me['total_earnings']), 'trending', 'gold', $outright ? 'Excludes outright Direct Referral Bonus' : 'All bonuses credited to your wallets') ?>
 </div>
 <div class="card">
   <div class="card-header"><h3><?= icon('chart') ?> Wallet Summary</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('member/earnings.php')) ?>">Income history</a></div></div>
@@ -73,21 +82,23 @@ page_header('E-Wallet', $me, 'Your balance and transactions');
 </div>
 <div class="grid <?= $transferOn ? 'grid-main' : '' ?>">
   <div class="card">
-    <div class="card-header"><h3><?= icon('list') ?> Transactions</h3><div class="actions"><a class="btn btn-gold btn-sm" href="<?= e(url('member/payouts.php')) ?>"><?= icon('cash', 14) ?> Request Payout</a></div></div>
+    <div class="card-header"><h3><?= icon('list') ?> Transactions</h3>
+      <?php if ($hasProductWallet): ?><div class="tabs mb-0" style="margin-left:8px"><a href="?" class="<?= $w === '' ? 'active' : '' ?>">All</a><a href="?w=ewallet" class="<?= $w === 'ewallet' ? 'active' : '' ?>">E-Wallet</a><a href="?w=product" class="<?= $w === 'product' ? 'active' : '' ?>">Product Wallet</a></div><?php endif; ?><div class="actions"><a class="btn btn-gold btn-sm" href="<?= e(url('member/payouts.php')) ?>"><?= icon('cash', 14) ?> Request Payout</a></div></div>
     <div class="card-body p-0 table-wrap">
       <table class="table stack">
-        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="text-right">Amount</th><th class="text-right">Balance</th></tr></thead>
+        <thead><tr><th>Date</th><th>Description</th><th>Wallet</th><th>Category</th><th class="text-right">Amount</th><th class="text-right">Balance</th></tr></thead>
         <tbody>
         <?php foreach ($rows as $r): ?>
           <tr>
             <td class="nowrap"><?= fdatetime($r['created_at']) ?></td>
             <td><?= e($r['description']) ?></td>
+            <td><span class="badge badge-<?= $r['wallet'] === 'product' ? 'info' : 'success' ?>"><?= e(wallet_labels()[$r['wallet']]) ?></span></td>
             <td><span class="badge badge-muted"><?= e(str_replace('_', ' ', $r['category'])) ?></span></td>
             <td class="text-right <?= $r['direction'] === 'credit' ? 'amount-plus' : 'amount-minus' ?>"><?= $r['direction'] === 'credit' ? '+' : '−' ?><?= money($r['amount']) ?></td>
             <td class="text-right"><?= money($r['balance_after']) ?></td>
           </tr>
         <?php endforeach; ?>
-        <?php if (!$rows) echo empty_row(5, 'No transactions yet.'); ?>
+        <?php if (!$rows) echo empty_row(6, 'No transactions yet.'); ?>
         </tbody>
       </table>
     </div>

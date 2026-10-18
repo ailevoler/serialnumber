@@ -60,7 +60,7 @@ page_header('Orders', $me, 'Product orders and fulfillment');
         <dt>Member</dt><dd><?= e(full_name($view)) ?> (@<?= e($view['username']) ?>)</dd>
         <dt>Mobile</dt><dd><?= e($view['mobile']) ?></dd>
         <dt>Deliver to</dt><dd><?= e($view['shipping_address']) ?></dd>
-        <dt>Payment</dt><dd><?= e(strtoupper($view['payment_method'])) ?> <?= $view['payment_ref'] ? '· Ref <strong>' . e($view['payment_ref']) . '</strong>' : '' ?></dd>
+        <dt>Payment</dt><dd><?= e(strtoupper(str_replace('_', ' ', $view['payment_method']))) ?> <?= $view['payment_ref'] ? '· Ref <strong>' . e($view['payment_ref']) . '</strong>' : '' ?></dd>
         <dt>Commission</dt><dd><?= $view['commission_processed'] ? '<span class="badge badge-success">Processed</span>' : '<span class="badge badge-warning">Not yet</span>' ?></dd>
       </dl>
       <div class="summary-box">
@@ -85,7 +85,7 @@ page_header('Orders', $me, 'Product orders and fulfillment');
           <td><a href="?<?= e(http_build_query(array_merge($_GET, ['view' => $r['id']]))) ?>"><strong><?= e($r['order_no']) ?></strong></a></td>
           <td><?= e(full_name($r)) ?><br><small class="text-muted">@<?= e($r['username']) ?></small></td>
           <td class="nowrap"><?= fdatetime($r['created_at']) ?></td>
-          <td><?= e(strtoupper($r['payment_method'])) ?><?= $r['payment_ref'] ? '<br><small class="text-muted">' . e($r['payment_ref']) . '</small>' : '' ?></td>
+          <td><?= e(strtoupper(str_replace('_', ' ', $r['payment_method']))) ?><?= $r['payment_ref'] ? '<br><small class="text-muted">' . e($r['payment_ref']) . '</small>' : '' ?></td>
           <td><?= money($r['total']) ?></td><td><?= num($r['total_pv']) ?></td>
           <td><?= badge($r['status']) ?></td>
           <td>

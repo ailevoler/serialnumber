@@ -44,7 +44,7 @@ page_header('My Earnings', $me, 'Income from the 6 ways to earn');
   </div>
   <div class="card-body p-0 table-wrap">
     <table class="table stack">
-      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>From</th><th class="text-right">Amount</th></tr></thead>
+      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>From</th><th>Credited to</th><th class="text-right">Amount</th></tr></thead>
       <tbody>
       <?php foreach ($rows as $r): ?>
         <tr>
@@ -52,15 +52,16 @@ page_header('My Earnings', $me, 'Income from the 6 ways to earn');
           <td><span class="badge badge-<?= $r['credited'] ? 'success' : 'gold' ?>"><?= e($types[$r['type']]['label']) ?></span></td>
           <td><?= e($r['description']) ?></td>
           <td><?= $r['source'] ? '@' . e($r['source']) : '—' ?></td>
+          <td><?= paid_to_badge($r['paid_to']) ?></td>
           <td class="text-right amount-plus"><?= money($r['amount']) ?></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$rows) echo empty_row(5); ?>
+      <?php if (!$rows) echo empty_row(6); ?>
       </tbody>
     </table>
   </div>
   <div class="card-body"><strong>Total (filtered): <span class="text-green"><?= money($sum) ?></span></strong>
-    <p class="small text-muted mb-0">Product Discount is your savings/retail profit and is not credited to the wallet.</p></div>
+    <p class="small text-muted mb-0">Product Discount is your savings/retail profit and is not credited to the wallet.<?= setting('direct_outright', '1') === '1' ? ' Direct Referral Bonus is paid outright at the time of sale — it is not credited to the wallet and not included in Total Earnings.' : '' ?><?= setting('pairing_to_product_wallet', '0') === '1' ? ' Pairing / Matching Bonus is credited to your Product Wallet for product purchases.' : '' ?></p></div>
   <?= pagination_links($p) ?>
 </div>
 <?php page_footer();

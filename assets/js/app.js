@@ -85,7 +85,7 @@
   if (pm.length && refBox) {
     var toggle = function () {
       var sel = document.querySelector('input[name="payment_method"]:checked');
-      refBox.style.display = sel && sel.value !== 'wallet' && sel.value !== 'paymongo' ? '' : 'none';
+      refBox.style.display = sel && ['wallet', 'product_wallet', 'paymongo'].indexOf(sel.value) === -1 ? '' : 'none';
     };
     pm.forEach(function (r) { r.addEventListener('change', toggle); }); toggle();
   }

@@ -92,22 +92,41 @@ $activeNav = 'home';
     </div>
 
     <?php
+    // Slides: [slug, eyebrow, headline accent, headline, text, link, CTA].
+    // Drop a photo at assets/img/banners/<slug>.jpg|.png|.webp (a transparent
+    // PNG cut-out of a person looks best) and it replaces the illustration.
     $banners = [
-      ['banner-cash-in.svg', 'Cash In anytime', 'Add money to your wallet from any QR Ph app.', 'top-up.php', 'Cash In now'],
-      ['banner-request.svg', 'Request money in a few taps', 'Share a QR code and get paid instantly.', 'request-money.php', 'Try it now'],
-      ['banner-secure.svg', 'Your money, always secure', 'MPIN-protected and backed by RBNW.', 'security.php', 'Learn more'],
+      ['banner-cash-in', 'RBNW Wallet', 'Cash In', 'Anytime', 'Add money from any QR Ph app in seconds.', 'top-up.php', 'Cash In Now'],
+      ['banner-request', 'Get paid faster', 'Request', 'Money', 'Share a QR code and get paid instantly.', 'request-money.php', 'Try It Now'],
+      ['banner-secure', 'Bank-grade security', 'Always', 'Secure', 'MPIN-protected and backed by RBNW.', 'security.php', 'Learn More'],
     ];
+    $bannerImage = function (string $slug): array {
+        foreach (['png', 'webp', 'jpg', 'jpeg'] as $ext) {
+            if (is_file(__DIR__ . "/assets/img/banners/{$slug}.{$ext}")) {
+                return [asset_url("assets/img/banners/{$slug}.{$ext}"), true];
+            }
+        }
+        return [asset_url("assets/img/banners/{$slug}.svg"), false];
+    };
     ?>
     <section class="banner-slider" aria-roledescription="carousel" aria-label="Promotions">
       <div class="banner-track" id="bannerTrack">
-        <?php foreach ($banners as $i => [$img, $title, $text, $href, $cta]): ?>
-          <a class="banner-slide" href="<?= $href ?>" aria-label="<?= htmlspecialchars($title) ?>" aria-roledescription="slide">
-            <div class="banner-copy">
-              <strong><?= htmlspecialchars($title) ?></strong>
-              <span><?= htmlspecialchars($text) ?></span>
-              <em class="banner-cta"><?= htmlspecialchars($cta) ?> <i class="fa-solid fa-arrow-right"></i></em>
+        <?php foreach ($banners as $i => [$slug, $eyebrow, $accent, $headline, $text, $href, $cta]): ?>
+          <?php [$img, $isPhoto] = $bannerImage($slug); ?>
+          <a class="banner-slide" href="<?= $href ?>" aria-label="<?= htmlspecialchars("$accent $headline") ?>" aria-roledescription="slide">
+            <div class="banner-photo <?= $isPhoto ? 'is-photo' : 'is-art' ?>">
+              <img src="<?= $img ?>" alt="" <?= $i ? 'loading="lazy"' : '' ?>>
             </div>
-            <img class="banner-art" src="<?= asset_url('assets/img/banners/' . $img) ?>" alt="" <?= $i ? 'loading="lazy"' : '' ?>>
+            <span class="banner-deco tri-1"></span>
+            <span class="banner-deco tri-2"></span>
+            <span class="banner-deco plus-1">+</span>
+            <span class="banner-deco plus-2">+</span>
+            <div class="banner-copy">
+              <small><?= htmlspecialchars($eyebrow) ?></small>
+              <strong><span><?= htmlspecialchars($accent) ?></span><?= htmlspecialchars($headline) ?></strong>
+              <p><?= htmlspecialchars($text) ?></p>
+              <em class="banner-cta"><?= htmlspecialchars($cta) ?></em>
+            </div>
           </a>
         <?php endforeach; ?>
       </div>

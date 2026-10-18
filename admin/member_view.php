@@ -18,8 +18,9 @@ if (is_post()) {
                 throw new RuntimeException('Invalid email.');
             }
             $status = in_array(input('status'), ['active', 'inactive', 'blocked'], true) ? input('status') : $m['status'];
-            q('UPDATE users SET first_name = ?, last_name = ?, email = ?, mobile = ?, address = ?, status = ? WHERE id = ?',
-                [input('first_name'), input('last_name'), $email, input('mobile'), input('address'), $status, $id]);
+            $tier = array_key_exists(input('distributor_tier'), stockist_tiers()) ? input('distributor_tier') : null;
+            q('UPDATE users SET first_name = ?, last_name = ?, email = ?, mobile = ?, address = ?, status = ?, distributor_tier = ? WHERE id = ?',
+                [input('first_name'), input('last_name'), $email, input('mobile'), input('address'), $status, $tier, $id]);
             log_activity((int)$me['id'], "Updated member {$m['username']} (status: {$status})");
             flash('success', 'Member updated.');
         } elseif ($action === 'password') {
@@ -97,6 +98,10 @@ page_header('Member: @' . $m['username'], $me, full_name($m));
             <div class="form-group"><label>Email</label><input class="input" type="email" name="email" value="<?= e($m['email']) ?>" required></div>
             <div class="form-group"><label>Mobile</label><input class="input" name="mobile" value="<?= e($m['mobile']) ?>"></div>
             <div class="form-group"><label>Address</label><input class="input" name="address" value="<?= e($m['address']) ?>"></div>
+            <div class="form-group"><label>Distributor tier (product discount)</label>
+              <select class="input" name="distributor_tier"><option value="">Package discount (<?= e($m['package_name'] ?? '—') ?>)</option>
+                <?php foreach (stockist_tiers() as $tn => $tp): ?><option value="<?= e($tn) ?>" <?= ($m['distributor_tier'] ?? '') === $tn ? 'selected' : '' ?>><?= e($tn) ?> (<?= num($tp, 0) ?>%)</option><?php endforeach; ?>
+              </select></div>
             <div class="form-group"><label>Status</label>
               <select class="input" name="status"><?php foreach (['active', 'inactive', 'blocked'] as $s): ?><option <?= $m['status'] === $s ? 'selected' : '' ?>><?= $s ?></option><?php endforeach; ?></select>
               <div class="help">Inactive members do not receive bonuses. Blocked members cannot log in.</div></div>

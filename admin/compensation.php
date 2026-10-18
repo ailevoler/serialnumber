@@ -34,17 +34,32 @@ if (is_post()) {
     $positions = array_unique(array_filter(array_map('intval', explode(',', input('passup_positions'))), fn($n) => $n > 0));
     sort($positions);
     save_setting('passup_positions', implode(',', $positions) ?: '1');
-    save_setting('passup_mode', $mode('passup_mode'));
+    save_setting('passup_mode', in_array(input('passup_mode'), ['fixed', 'percent', 'package'], true) ? input('passup_mode') : 'fixed');
+    save_setting('passup_kept_bonus', isset($_POST['passup_kept_bonus']) ? '1' : '0');
     save_setting('passup_bonus', $numv('passup_bonus'));
     save_setting('passup_sponsor_keeps_direct', isset($_POST['passup_sponsor_keeps_direct']) ? '1' : '0');
 
     save_setting('pair_pv', (string)max(1, round(input_float('pair_pv'), 2)));
     save_setting('pair_bonus', $numv('pair_bonus'));
     save_setting('pair_daily_cap', (string)max(0, input_int('pair_daily_cap')));
+    save_setting('pairing_mode', input('pairing_mode') === 'matching' ? 'matching' : 'unit');
+    save_setting('pair_rate', $numv('pair_rate'));
     save_setting('pairing_to_product_wallet', isset($_POST['pairing_to_product_wallet']) ? '1' : '0');
 
     save_setting('unilevel_base', input('unilevel_base') === 'amount' ? 'amount' : 'pv');
     save_setting('unilevel_percent', levels_from_post('unilevel_percent'));
+    save_setting('unilevel_mode', input('unilevel_mode') === 'per_unit' ? 'per_unit' : 'percent');
+    save_setting('unilevel_per_unit', levels_from_post('unilevel_per_unit'));
+    save_setting('discount_mode', input('discount_mode') === 'tier' ? 'tier' : 'fixed');
+    $tiers = [];
+    foreach ((array)($_POST['tier_name'] ?? []) as $i => $tn) {
+        $tn = trim(str_replace([':', ','], ' ', (string)$tn));
+        $tp = (float)($_POST['tier_pct'][$i] ?? 0);
+        if ($tn !== '' && $tp > 0 && $tp < 100) {
+            $tiers[] = $tn . ':' . round($tp, 2);
+        }
+    }
+    save_setting('stockist_tiers', implode(',', $tiers));
     save_setting('unilevel_require_active', isset($_POST['unilevel_require_active']) ? '1' : '0');
 
     // Per-package direct bonus and binary PV
@@ -52,10 +67,12 @@ if (is_post()) {
         if (!is_array($row)) {
             continue;
         }
-        q('UPDATE packages SET price = ?, pv = ?, direct_bonus = ? WHERE id = ?', [
+        q('UPDATE packages SET price = ?, pv = ?, direct_bonus = ?, coded_bonus = ?, discount_percent = ? WHERE id = ?', [
             max(0, round((float)($row['price'] ?? 0), 2)),
             max(0, round((float)($row['pv'] ?? 0), 2)),
             max(0, round((float)($row['direct_bonus'] ?? 0), 2)),
+            max(0, round((float)($row['coded_bonus'] ?? 0), 2)),
+            min(99, max(0, round((float)($row['discount_percent'] ?? 0), 2))),
             (int)$pid,
         ]);
     }
@@ -140,7 +157,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
 
   <!-- Pass Up -->
   <div class="card">
-    <div class="card-header"><h3><?= icon('arrow-up') ?> Pass Up Bonus (Australian Pass Up)</h3></div>
+    <div class="card-header"><h3><?= icon('arrow-up') ?> Coded Bonus (Pass-Up · Australian)</h3></div>
     <div class="card-body">
       <div class="form-grid">
         <div class="form-group"><label>Recruit number(s) passed up</label><input class="input" name="passup_positions" value="<?= e(setting('passup_positions', '1')) ?>" placeholder="1 or 1,2">
@@ -149,22 +166,28 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
           <select class="input" name="passup_mode">
             <option value="fixed" <?= $sel('passup_mode', 'fixed') ?>>Fixed amount</option>
             <option value="percent" <?= $sel('passup_mode', 'percent') ?>>Percent of package price</option>
+            <option value="package" <?= $sel('passup_mode', 'package') ?>>Per package (Coded Bonus column below)</option>
           </select></div>
-        <div class="form-group"><label>Pass-up bonus (<?= e($cur) ?> or %)</label><input class="input" type="number" step="0.01" min="0" name="passup_bonus" value="<?= e(setting('passup_bonus', 0)) ?>"></div>
+        <div class="form-group"><label>Coded bonus (<?= e($cur) ?> or %)</label><input class="input" type="number" step="0.01" min="0" name="passup_bonus" value="<?= e(setting('passup_bonus', 0)) ?>"></div>
         <div class="form-group"><label>&nbsp;</label>
           <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="passup_sponsor_keeps_direct" value="1" <?= setting('passup_sponsor_keeps_direct', '1') === '1' ? 'checked' : '' ?>> Sponsor still earns Direct Referral on a passed-up recruit</label></div>
       </div>
-      <p class="help mb-0">The passed-up recruit (and their own pass-ups) goes to the sponsor's pass-up upline, who earns the bonus.</p>
+      <label class="toggle-card mt-1">
+        <input type="checkbox" name="passup_kept_bonus" value="1" <?= setting('passup_kept_bonus', '0') === '1' ? 'checked' : '' ?>>
+        <span class="toggle-ui"></span>
+        <span><strong>Sponsor earns the coded bonus on recruits that are not passed up</strong><small>e.g. 2-Up: invites #1 and #2 pass up to your upline; from invite #3 onward the coded bonus is yours.</small></span>
+      </label>
+      <p class="help mb-0 mt-1">A passed-up recruit is coded to the upline who received it, so that upline also receives the recruit's own pass-ups.</p>
     </div>
   </div>
 </div>
 
 <!-- Packages -->
 <div class="card">
-  <div class="card-header"><h3><?= icon('package') ?> Packages — Direct Referral Bonus &amp; Binary PV</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('admin/packages.php')) ?>"><?= icon('plus', 14) ?> Add / manage packages</a></div></div>
+  <div class="card-header"><h3><?= icon('package') ?> Packages — Bonuses per Package</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('admin/packages.php')) ?>"><?= icon('plus', 14) ?> Add / manage packages</a></div></div>
   <div class="card-body p-0 table-wrap">
     <table class="table stack">
-      <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV</th><th>Direct Referral Bonus (<?= e($cur) ?>)</th></tr></thead>
+      <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV / Pair value</th><th>Direct Referral (<?= e($cur) ?>)</th><th>Coded Bonus (<?= e($cur) ?>)</th><th>Product Discount (%)</th></tr></thead>
       <tbody>
       <?php foreach ($packages as $pk): ?>
         <tr>
@@ -172,6 +195,8 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
           <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][price]" value="<?= e($pk['price']) ?>"></td>
           <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][pv]" value="<?= e($pk['pv']) ?>"></td>
           <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][direct_bonus]" value="<?= e($pk['direct_bonus']) ?>"></td>
+          <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][coded_bonus]" value="<?= e($pk['coded_bonus']) ?>"></td>
+          <td><input class="input" type="number" step="0.01" min="0" max="99" name="pkg[<?= (int)$pk['id'] ?>][discount_percent]" value="<?= e($pk['discount_percent']) ?>"></td>
         </tr>
       <?php endforeach; ?>
       </tbody>
@@ -207,7 +232,15 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
         <div class="form-group"><label>&nbsp;</label>
           <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="unilevel_require_active" value="1" <?= setting('unilevel_require_active', '1') === '1' ? 'checked' : '' ?>> Only active members earn</label></div>
       </div>
-      <p class="help">Level 1 = the buyer's sponsor. Percent of the base per level.</p>
+      <div class="form-group"><label>Computation</label>
+        <select class="input" name="unilevel_mode">
+          <option value="per_unit" <?= $sel('unilevel_mode', 'per_unit') ?>>Fixed amount per bottle / pouch bought, per level</option>
+          <option value="percent" <?= $sel('unilevel_mode', 'percent') ?>>Percent of the commission base, per level</option>
+        </select></div>
+      <p class="help">Level 1 = the buyer's sponsor.</p>
+      <div class="section-title">Per bottle / pouch (<?= e($cur) ?>)</div>
+      <?php level_editor('unilevel_per_unit', setting_list('unilevel_per_unit') ?: ['5'], $cur); ?>
+      <div class="section-title">Percent mode (%)</div>
       <?php level_editor('unilevel_percent', setting_list('unilevel_percent'), '%'); ?>
     </div>
   </div>
@@ -218,9 +251,16 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
   <div class="card">
     <div class="card-header"><h3><?= icon('git-merge') ?> Pairing / Matching Bonus (Binary)</h3></div>
     <div class="card-body">
+      <div class="form-group"><label>Pairing computation</label>
+        <select class="input" name="pairing_mode">
+          <option value="matching" <?= $sel('pairing_mode', 'matching') ?>>Package matching — Silver↔Silver, Gold↔Gold… (pays the matched pair value)</option>
+          <option value="unit" <?= $sel('pairing_mode', 'unit') ?>>Fixed PV per pair × fixed bonus per pair</option>
+        </select>
+        <div class="help">Package matching uses each package's Pair value (table above). The smaller side is matched; the rest carries forward. Each match counts as 1 pair.</div></div>
       <div class="form-grid">
-        <div class="form-group"><label>PV per side for 1 pair</label><input class="input" type="number" step="0.01" min="1" name="pair_pv" value="<?= e(setting('pair_pv', 100)) ?>"></div>
-        <div class="form-group"><label>Bonus per pair (<?= e($cur) ?>)</label><input class="input" type="number" step="0.01" min="0" name="pair_bonus" value="<?= e(setting('pair_bonus', 0)) ?>"></div>
+        <div class="form-group"><label>Matching payout (% of pair value)</label><input class="input" type="number" step="0.01" min="0" name="pair_rate" value="<?= e(setting('pair_rate', 100)) ?>"></div>
+        <div class="form-group"><label>PV per side for 1 pair (fixed mode)</label><input class="input" type="number" step="0.01" min="1" name="pair_pv" value="<?= e(setting('pair_pv', 100)) ?>"></div>
+        <div class="form-group"><label>Bonus per pair (<?= e($cur) ?>, fixed mode)</label><input class="input" type="number" step="0.01" min="0" name="pair_bonus" value="<?= e(setting('pair_bonus', 0)) ?>"></div>
         <div class="form-group"><label>Max pairs per day</label><input class="input" type="number" min="0" name="pair_daily_cap" value="<?= e(setting('pair_daily_cap', 0)) ?>"><div class="help">0 = unlimited. Excess pairs are flushed.</div></div>
       </div>
       <label class="toggle-card mt-1">
@@ -236,8 +276,20 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
   <div class="card">
     <div class="card-header"><h3><?= icon('tag') ?> Product Discount</h3></div>
     <div class="card-body">
-      <p class="mb-1">Members buy at <strong>Member Price</strong>. The difference from SRP is recorded as their discount / retail profit (not credited to the wallet).</p>
-      <a class="btn btn-light btn-sm" href="<?= e(url('admin/products.php')) ?>"><?= icon('box', 14) ?> Set SRP &amp; Member Price per product</a>
+      <div class="form-group"><label>Member price</label>
+        <select class="input" name="discount_mode">
+          <option value="tier" <?= $sel('discount_mode', 'tier') ?>>Discount tier — SRP less the member's package / stockist discount %</option>
+          <option value="fixed" <?= $sel('discount_mode', 'fixed') ?>>Fixed Member Price set per product</option>
+        </select></div>
+      <div class="section-title">Stockist tiers (assigned per member, override the package discount)</div>
+      <div class="tier-rows">
+        <?php $tiers = stockist_tiers(); $tiers[''] = 0; foreach ($tiers as $tn => $tp): ?>
+          <div class="filters mb-1"><input class="input" name="tier_name[]" value="<?= e($tn) ?>" placeholder="Tier name, e.g. City Hub" style="flex:1"><input class="input" type="number" step="0.01" min="0" max="99" name="tier_pct[]" value="<?= $tp ?: '' ?>" placeholder="%" style="width:90px"></div>
+        <?php endforeach; ?>
+      </div>
+      <p class="help">Leave a row empty to remove it. Assign a member's tier in Members → Manage.</p>
+      <p class="mb-1 small">The difference from SRP is recorded as the member's discount / retail profit (not credited to the wallet).</p>
+      <a class="btn btn-light btn-sm" href="<?= e(url('admin/products.php')) ?>"><?= icon('box', 14) ?> Set SRP per product</a>
     </div>
   </div>
 </div>

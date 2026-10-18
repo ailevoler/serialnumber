@@ -156,7 +156,7 @@ function register_member(array $d): int
             throw new RuntimeException('Username is already taken.');
         }
 
-        $code = q_row("SELECT c.*, p.name AS package_name, p.pv, p.price, p.direct_bonus FROM codes c JOIN packages p ON p.id = c.package_id
+        $code = q_row("SELECT c.*, p.name AS package_name, p.pv, p.price, p.direct_bonus, p.coded_bonus FROM codes c JOIN packages p ON p.id = c.package_id
                        WHERE c.code = ? FOR UPDATE", [strtoupper(trim($d['code'] ?? ''))]);
         if (!$code || !hash_equals((string)$code['pin'], strtoupper(trim($d['pin'] ?? '')))) {
             throw new RuntimeException('Invalid activation code or PIN.');
@@ -253,13 +253,20 @@ function register_member(array $d): int
                 }
             }
 
-            // ---- 4. Pass Up Bonus
-            if ($passedUp) {
-                $receiver = q_row('SELECT status FROM users WHERE id = ?', [$passupTo]);
+            // ---- 4. Coded Bonus (Pass-Up): passed-up recruits pay the coded upline;
+            //      kept recruits (e.g. invite #3 onward in a 2-Up) pay the sponsor when enabled.
+            if (plan_on('passup') && ($passedUp || setting('passup_kept_bonus', '0') === '1')) {
                 $val = (float)setting('passup_bonus', 0);
+                $amt = match (setting('passup_mode', 'fixed')) {
+                    'percent' => $price * $val / 100,
+                    'package' => (float)$code['coded_bonus'],
+                    default   => $val,
+                };
+                $receiver = q_row('SELECT status FROM users WHERE id = ?', [$passupTo]);
                 if ($receiver && $receiver['status'] === 'active') {
-                    credit_earning($passupTo, 'passup', setting('passup_mode', 'fixed') === 'percent' ? $price * $val / 100 : $val, $newId,
-                        "Pass-up bonus: {$newName} (#{$directCount} recruit of {$sponsor['username']})");
+                    credit_earning($passupTo, 'passup', $amt, $newId, $passedUp
+                        ? "Coded bonus (pass-up): {$newName} – invite #{$directCount} of {$sponsor['username']}"
+                        : "Coded bonus: {$newName} – your invite #{$directCount} ({$code['package_name']})");
                 }
             }
         }
@@ -290,6 +297,10 @@ function add_binary_points(int $newId, float $pv): void
 
 function process_pairing(int $userId, int $sourceId): void
 {
+    if (setting('pairing_mode', 'unit') === 'matching') {
+        process_pairing_matching($userId, $sourceId);
+        return;
+    }
     $unit = (float)setting('pair_pv', 100);
     $bonus = (float)setting('pair_bonus', 0);
     $cap = (int)setting('pair_daily_cap', 0);
@@ -316,6 +327,31 @@ function process_pairing(int $userId, int $sourceId): void
     }
 }
 
+/**
+ * Package matching: left and right pair values are matched (Silver↔Silver = 100, Gold↔Gold = 400 …).
+ * The smaller side is matched and paid at pair_rate %; the rest carries forward. Each match = 1 pair for the daily cap.
+ */
+function process_pairing_matching(int $userId, int $sourceId): void
+{
+    $u = q_row('SELECT id, status, left_points, right_points FROM users WHERE id = ? FOR UPDATE', [$userId]);
+    $matched = round(min((float)$u['left_points'], (float)$u['right_points']), 2);
+    if ($matched <= 0) {
+        return;
+    }
+    q('UPDATE users SET left_points = left_points - ?, right_points = right_points - ? WHERE id = ?', [$matched, $matched, $userId]);
+    if ($u['status'] !== 'active') {
+        return;
+    }
+    $cap = (int)setting('pair_daily_cap', 0);
+    $today = (int)q_val("SELECT COALESCE(SUM(pairs),0) FROM earnings WHERE user_id = ? AND type = 'pairing' AND DATE(created_at) = CURDATE()", [$userId]);
+    if ($cap > 0 && $today >= $cap) {
+        log_activity($userId, "Pairing of {$matched} flushed (daily cap of {$cap} pairs reached)");
+        return;
+    }
+    $amount = $matched * (float)setting('pair_rate', 100) / 100;
+    credit_earning($userId, 'pairing', $amount, $sourceId, 'Pairing / matching bonus: ' . num($matched) . ' matched', null, null, 1);
+}
+
 /** Pay discount record + unilevel when an order is marked paid. Safe to call more than once. */
 function process_order_commission(int $orderId): void
 {
@@ -332,8 +368,10 @@ function process_order_commission(int $orderId): void
         }
 
         // 6. Repeat Purchase Unilevel
-        $pcts = plan_on('unilevel') ? array_map('floatval', setting_list('unilevel_percent')) : [];
+        $perUnit = setting('unilevel_mode', 'percent') === 'per_unit';
+        $pcts = plan_on('unilevel') ? array_map('floatval', setting_list($perUnit ? 'unilevel_per_unit' : 'unilevel_percent')) : [];
         $base = setting('unilevel_base', 'pv') === 'amount' ? (float)$o['total'] : (float)$o['total_pv'];
+        $units = (int)q_val('SELECT COALESCE(SUM(qty),0) FROM order_items WHERE order_id = ?', [$orderId]);
         $requireActive = setting('unilevel_require_active', '1') === '1';
         $up = (int)$o['sponsor_id'];
         foreach ($pcts as $i => $pct) {
@@ -345,8 +383,8 @@ function process_order_commission(int $orderId): void
                 break;
             }
             if (!$requireActive || $row['status'] === 'active') {
-                credit_earning((int)$row['id'], 'unilevel', $base * $pct / 100, (int)$o['user_id'],
-                    'Unilevel L' . ($i + 1) . " ({$pct}%) – {$o['username']} order {$o['order_no']}", $orderId, $i + 1);
+                credit_earning((int)$row['id'], 'unilevel', $perUnit ? $units * $pct : $base * $pct / 100, (int)$o['user_id'],
+                    'Unilevel L' . ($i + 1) . ($perUnit ? " ({$units} × " . money($pct) . ')' : " ({$pct}%)") . " – {$o['username']} order {$o['order_no']}", $orderId, $i + 1);
             }
             $up = (int)$row['sponsor_id'];
         }
@@ -432,7 +470,8 @@ function create_order(int $userId, array $cart, string $method, string $address,
     if (!$cart) {
         throw new RuntimeException('Your cart is empty.');
     }
-    return tx(function () use ($userId, $cart, $method, $address, $paymentRef) {
+    $buyer = q_row('SELECT u.distributor_tier, p.discount_percent FROM users u LEFT JOIN packages p ON p.id = u.package_id WHERE u.id = ?', [$userId]) ?? [];
+    return tx(function () use ($userId, $cart, $method, $address, $paymentRef, $buyer) {
         $items = [];
         $srp = $total = $pv = 0.0;
         foreach ($cart as $pid => $qty) {
@@ -446,6 +485,7 @@ function create_order(int $userId, array $cart, string $method, string $address,
             }
             $items[] = [$p, $qty];
             $srp += $p['srp'] * $qty;
+            $p['member_price'] = member_price($p, $buyer);
             $total += $p['member_price'] * $qty;
             $pv += $p['pv'] * $qty;
         }
@@ -507,4 +547,44 @@ function purchase_codes_wallet(int $userId, int $packageId, int $qty): array
         log_activity($userId, "Bought {$qty} {$pkg['name']} code(s) via wallet");
         return $codes;
     });
+}
+
+/** Stockist tiers from settings: ['Mobile Stockist' => 43.0, ...] */
+function stockist_tiers(): array
+{
+    $out = [];
+    foreach (setting_list('stockist_tiers') as $row) {
+        [$name, $pct] = array_pad(explode(':', $row, 2), 2, '0');
+        if (trim($name) !== '') {
+            $out[trim($name)] = (float)$pct;
+        }
+    }
+    return $out;
+}
+
+/** Discount % for a member: stockist tier if assigned, else their package discount. Null in fixed-price mode. */
+function member_discount_percent(array $member): ?float
+{
+    if (setting('discount_mode', 'fixed') !== 'tier') {
+        return null;
+    }
+    $tiers = stockist_tiers();
+    if (!empty($member['distributor_tier']) && isset($tiers[$member['distributor_tier']])) {
+        return $tiers[$member['distributor_tier']];
+    }
+    return (float)($member['discount_percent'] ?? 0);
+}
+
+/** Price the member pays for a product. $member needs distributor_tier and discount_percent (package). */
+function member_price(array $product, array $member): float
+{
+    $d = member_discount_percent($member);
+    return $d === null ? (float)$product['member_price'] : round((float)$product['srp'] * (1 - $d / 100), 2);
+}
+
+/** The logged-in member's pricing profile (tier + package discount). */
+function pricing_profile(int $userId): array
+{
+    static $cache = [];
+    return $cache[$userId] ??= (q_row('SELECT u.distributor_tier, p.discount_percent, p.name package_name FROM users u LEFT JOIN packages p ON p.id = u.package_id WHERE u.id = ?', [$userId]) ?? []);
 }

@@ -15,6 +15,8 @@ CREATE TABLE packages (
   price DECIMAL(12,2) NOT NULL DEFAULT 0,
   pv DECIMAL(12,2) NOT NULL DEFAULT 0,
   direct_bonus DECIMAL(12,2) NOT NULL DEFAULT 0,
+  coded_bonus DECIMAL(12,2) NOT NULL DEFAULT 0,
+  discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0,
   description VARCHAR(255) NULL,
   status ENUM('active','inactive') NOT NULL DEFAULT 'active',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -32,6 +34,7 @@ CREATE TABLE users (
   role ENUM('member','admin','cms') NOT NULL DEFAULT 'member',
   status ENUM('active','inactive','blocked') NOT NULL DEFAULT 'active',
   package_id INT UNSIGNED NULL,
+  distributor_tier VARCHAR(40) NULL,
   sponsor_id INT UNSIGNED NULL,
   placement_id INT UNSIGNED NULL,
   position ENUM('L','R') NULL,
@@ -218,10 +221,12 @@ CREATE TABLE activity_logs (
 -- ---------------------------------------------------------------
 -- Seed data
 -- ---------------------------------------------------------------
-INSERT INTO packages (id, name, price, pv, direct_bonus, description) VALUES
- (1, 'Starter',  1500.00, 100.00, 150.00, 'Entry package with starter products'),
- (2, 'Business', 3500.00, 250.00, 400.00, 'Business package with more products'),
- (3, 'Elite',    7500.00, 500.00, 900.00, 'Elite package with full product set');
+-- Package prices are placeholders: set the real prices in Admin → Compensation Plan.
+INSERT INTO packages (id, name, price, pv, direct_bonus, coded_bonus, discount_percent, description) VALUES
+ (1, 'Silver',    1500.00,  100.00,  140.00,  500.00, 25, 'Silver package'),
+ (2, 'Gold',      5000.00,  400.00,  550.00, 2000.00, 30, 'Gold package'),
+ (3, 'Platinum',  8000.00,  700.00, 1000.00, 3500.00, 35, 'Platinum package'),
+ (4, 'Diamond',  12000.00, 1200.00, 1700.00, 6000.00, 40, 'Diamond package');
 
 -- Default logins (CHANGE AFTER INSTALL):
 --   Administrator : admin    / Admin@123
@@ -231,10 +236,8 @@ INSERT INTO users (id, username, email, password, first_name, last_name, role, s
  (2, 'xgenlife', 'company@xgenlife.com', '$2y$10$J9Qj28iQyu0.g9Gva2DgseW6P1xkSTjUXA/mom3BKUo1HuRK2GEtK', 'XGEN', 'Life Intl', 'member', 'active', 3);
 
 INSERT INTO products (sku, name, description, srp, member_price, pv, stock) VALUES
- ('XG-001', 'XGEN Barley Plus', 'Pure organic barley grass powder drink, 30 sachets.', 1200.00, 950.00, 50.00, 200),
- ('XG-002', 'XGEN Coffee 12-in-1', 'Healthy coffee blend with natural herbs, 20 sachets.', 650.00, 500.00, 25.00, 300),
- ('XG-003', 'XGEN Moringa Caps', 'Malunggay capsules for daily nutrition, 60 caps.', 800.00, 620.00, 30.00, 150),
- ('XG-004', 'XGEN Glutathione Soap', 'Whitening and anti-aging soap, 135g.', 250.00, 180.00, 10.00, 500);
+ ('NUT-6IN1', 'Nutriva 6-in-1 Coffee', '6-in-1 functional coffee. SRP ₱300 per pouch.', 300.00, 225.00, 5.00, 500),
+ ('MAG-60ML', 'Magnesium Spray 60ml', 'Topical magnesium spray, 60 ml. SRP ₱900 per bottle.', 900.00, 675.00, 5.00, 300);
 
 INSERT INTO settings (skey, svalue) VALUES
  ('site_name', 'XGEN LIFE Intl'),
@@ -552,3 +555,34 @@ INSERT IGNORE INTO settings (skey, svalue) VALUES
  ('direct_outright', '1'),
  ('acct_product_wallet_payable', '2020'),
  ('acct_outright_source', '1000');
+
+-- v8: official XGEN compensation plan settings
+INSERT IGNORE INTO settings (skey, svalue) VALUES
+ ('passup_kept_bonus', '1'), ('pairing_mode', 'matching'), ('pair_rate', '100'),
+ ('unilevel_mode', 'per_unit'), ('unilevel_per_unit', '5,5,5,5,5,5,5,5,5,5'),
+ ('discount_mode', 'tier'), ('stockist_tiers', 'Mobile Stockist:43,City Hub:47,Mega Depot:52');
+
+UPDATE settings SET svalue = CASE skey
+  WHEN 'direct_enabled' THEN '1'
+  WHEN 'direct_mode' THEN 'fixed'
+  WHEN 'direct_outright' THEN '1'
+  WHEN 'passup_enabled' THEN '1'
+  WHEN 'passup_positions' THEN '1,2'
+  WHEN 'passup_mode' THEN 'package'
+  WHEN 'passup_kept_bonus' THEN '1'
+  WHEN 'passup_sponsor_keeps_direct' THEN '1'
+  WHEN 'pairing_enabled' THEN '1'
+  WHEN 'pairing_mode' THEN 'matching'
+  WHEN 'pair_rate' THEN '100'
+  WHEN 'pair_daily_cap' THEN '7'
+  WHEN 'pairing_to_product_wallet' THEN '1'
+  WHEN 'unilevel_enabled' THEN '1'
+  WHEN 'unilevel_mode' THEN 'per_unit'
+  WHEN 'unilevel_per_unit' THEN '5,5,5,5,5,5,5,5,5,5'
+  WHEN 'discount_enabled' THEN '1'
+  WHEN 'discount_mode' THEN 'tier'
+  WHEN 'stockist_tiers' THEN 'Mobile Stockist:43,City Hub:47,Mega Depot:52'
+  ELSE svalue END
+WHERE skey IN ('direct_enabled','direct_mode','direct_outright','passup_enabled','passup_positions','passup_mode','passup_kept_bonus',
+  'passup_sponsor_keeps_direct','pairing_enabled','pairing_mode','pair_rate','pair_daily_cap','pairing_to_product_wallet',
+  'unilevel_enabled','unilevel_mode','unilevel_per_unit','discount_enabled','discount_mode','stockist_tiers');

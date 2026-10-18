@@ -5,20 +5,22 @@ Member Dashboard + Administrator Backoffice para sa XGEN LIFE Intl.
 
 Theme: puting base, logo-green na accent, may konting gold.
 
-## 6 Ways to Earn (+ Wallet)
+## Compensation Plan (XGEN LIFE official plan)
 
-Lahat ay naka-on/off at nababago sa **Admin → Compensation Plan** (puwedeng mag-add/remove ng levels at mag-set ng fixed o % na bonus).
+Lahat ay nababago sa **Admin → Compensation Plan**. Default values (galing sa complan materials):
 
-| # | Income | Paano kinukuwenta |
-|---|--------|-------------------|
-| 1 | **Product Discount** | SRP − Member Price sa bawat order (savings / retail profit, hindi pumapasok sa wallet) |
-| 2 | **Direct Referral Bonus** | Fixed bawat package, o % ng package price — para sa sponsor. Kapag **Outright** (default), ibinibigay ito nang direkta sa bentahan: nakikita lang sa Direct Referral Bonus card, hindi pumapasok sa wallet, hindi withdrawable at hindi kasama sa Total Earnings |
-| 3 | **Indirect Bonus** | Bawat level sa itaas ng sponsor (default 5 levels: `50,30,20,10,10`), fixed o % ng package price; puwedeng magdagdag ng level |
-| 4 | **Pass Up Bonus (Australian Pass Up)** | Ang N-th recruit ng sponsor (hal. `1` o `1,2` para 2-Up) ay ipinapasa sa pass-up upline na kumikita ng bonus (fixed o %). May option kung kikita pa rin ng Direct Referral ang sponsor |
-| 5 | **Pairing / Matching Bonus (Binary)** | Bawat `PV per side` sa left + right = 1 pair × bonus, may daily cap (sobra ay flush), carry-forward ang natirang PV |
-| 6 | **Unilevel Bonus (Repeat Purchase)** | % ng PV o ng halaga ng order bawat level paakyat sa sponsor line; puwedeng magdagdag ng level |
-| + | **Product Wallet** | Kapag naka-on ang *Credit Pairing / Matching Bonus to Product Wallet*, lahat ng pairing bonus ay pumapasok sa Product Wallet — pambili lang ng produkto (hindi withdrawable / transferable), pero nakikita pa rin bilang Pairing / Matching Bonus at kasama sa Total Earnings |
-| + | **E-Wallet** | Available Balance, Total Earnings, breakdown ng bawat bonus at Withdrawal; payout (may fee), pambili ng produkto/codes, member-to-member transfer |
+| # | Income | XGEN plan |
+|---|--------|-----------|
+| 1 | **Direct Selling Discount** | Presyo = SRP less discount ng member: Silver 25%, Gold 30%, Platinum 35%, Diamond 40%; stockist tiers (ina-assign sa member): Mobile Stockist 43%, City Hub 47%, Mega Depot 52%. Hal. Nutriva 6-in-1 Coffee SRP ₱300 → Silver ₱225; Magnesium Spray SRP ₱900 → Silver ₱675 |
+| 2 | **Direct Referral Bonus (Outright)** | Silver ₱140, Gold ₱550, Platinum ₱1,000, Diamond ₱1,700 — nasa Referral card lang; hindi wallet, hindi withdrawable, hindi kasama sa Total Earnings |
+| 3 | **Coded Bonus (Pass-Up, 2-Up)** | Silver ₱500, Gold ₱2,000, Platinum ₱3,500, Diamond ₱6,000. Invite #1 at #2 mo → pasa sa coded upline mo; invite #3 pataas → sa iyo; ang invite #1 at #2 ng mga invite #3+ mo → pasa sa iyo |
+| 4 | **Pairing / Matching Bonus (Product Wallet)** | Silver↔Silver ₱100, Gold↔Gold ₱400, Platinum↔Platinum ₱700, Diamond↔Diamond ₱1,200; maximum 7 pairs a day; pumapasok sa Product Wallet |
+| 5 | **Unilevel** | ₱5 bawat bote / pouch, 10 levels |
+| + | **Indirect Bonus** | Hanggang 5 levels (nababago / puwedeng i-off) |
+| + | **E-Wallet / Product Wallet** | E-Wallet: withdrawable (payout, transfer, pambili). Product Wallet: pambili lang ng produkto |
+
+> Ang **package prices** (Silver ₱1,500, Gold ₱5,000, Platinum ₱8,000, Diamond ₱12,000) ay pansamantala lang —
+> palitan sa Compensation Plan ng tunay na presyo.
 
 ## PayMongo
 
@@ -122,7 +124,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral).
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.

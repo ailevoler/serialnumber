@@ -19,6 +19,9 @@ if (is_post()) {
 $search = input('q');
 $products = q_all("SELECT * FROM products WHERE status = 'active' AND (name LIKE ? OR sku LIKE ?) ORDER BY name", ["%{$search}%", "%{$search}%"]);
 
+$prof = pricing_profile((int)$me['id']);
+$disc = member_discount_percent($prof);
+
 page_header('Products', $me, 'Shop at member price and earn');
 ?>
 <div class="card">
@@ -26,12 +29,13 @@ page_header('Products', $me, 'Shop at member price and earn');
     <form class="filters" method="get">
       <input class="input" name="q" value="<?= e($search) ?>" placeholder="Search products…" style="flex:1">
       <button class="btn btn-primary" type="submit"><?= icon('search', 16) ?> Search</button>
+      <?php if ($disc !== null): ?><span class="badge badge-gold" style="align-self:center"><?= e($prof['distributor_tier'] ?: ($prof['package_name'] ?? 'Member')) ?> · <?= num($disc, 0) ?>% off SRP</span><?php endif; ?>
       <a class="btn btn-gold" href="<?= e(url('member/cart.php')) ?>"><?= icon('cart', 16) ?> Cart (<?= (int)array_sum($_SESSION['cart'] ?? []) ?>)</a>
     </form>
   </div>
 </div>
 <div class="product-grid">
-  <?php foreach ($products as $p): $save = $p['srp'] - $p['member_price']; ?>
+  <?php foreach ($products as $p): $p['member_price'] = member_price($p, $prof); $save = $p['srp'] - $p['member_price']; ?>
     <div class="product">
       <div class="product-img"><img src="<?= e(product_image($p['image'])) ?>" alt="<?= e($p['name']) ?>" loading="lazy"></div>
       <div class="product-body">

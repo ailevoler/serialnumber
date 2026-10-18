@@ -51,6 +51,7 @@ if ($cart) {
     $in = implode(',', array_fill(0, count($cart), '?'));
     foreach (q_all("SELECT * FROM products WHERE id IN ($in) AND status = 'active'", array_keys($cart)) as $p) {
         $qty = (int)$cart[$p['id']];
+        $p['member_price'] = member_price($p, pricing_profile($uid));
         $items[] = $p + ['qty' => $qty];
         $srp += $p['srp'] * $qty;
         $total += $p['member_price'] * $qty;

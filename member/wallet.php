@@ -46,7 +46,7 @@ $walletIncome = [
     'pairing'  => 'Pairing / Matching Bonus',
     'direct'   => 'Direct Referral Bonus',
     'indirect' => 'Indirect Bonus',
-    'passup'   => 'Pass Up Bonus',
+    'passup'   => 'Coded Bonus (Pass-Up)',
     'unilevel' => 'Unilevel Bonus',
 ];
 

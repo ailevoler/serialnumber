@@ -62,7 +62,7 @@ page_header('Simulation Report #' . $run['id'], $me, 'Actuarial projection: ' . 
 
 <div class="stats">
   <?= stat_card('Members Simulated', num($r['members_created']), 'users', '', num($p['levels']) . ' level(s) · ' . num($r['invites_used']) . ' invite(s) each · ' . num($p['days']) . ' day(s)') ?>
-  <?= stat_card('Total Revenue', money($rev), 'trending', 'dark', 'Packages ' . money($r['revenue']['packages']) . ' · Products ' . money($r['revenue']['products'])) ?>
+  <?= stat_card('Total Revenue', money($rev), 'trending', 'dark', 'Packages ' . money($r['revenue']['packages']) . (!empty($r['upgrades']['count']) ? ' · Upgrades ' . money($r['revenue']['upgrades']) : '') . ' · Products ' . money($r['revenue']['products'])) ?>
   <?= stat_card('Total Commissions', money($c['ewallet'] + $c['outright'] + $c['product_wallet']), 'wallet', 'gold', 'Payout ratio ' . num($r['ratios']['payout'], 1) . '% of revenue') ?>
   <?= stat_card('Cash Payout Ratio', num($r['ratios']['cash_payout'], 1) . '%', 'cash', '', 'E-wallet + outright only') ?>
   <?= stat_card('Binary Pairs Paid', num($r['pairs_paid']), 'git-merge', '', num($r['flushed']['events']) . ' flushed (' . money($r['flushed']['value']) . ') by the ' . ($p['pair_cap'] ?: 'no') . '/day cap') ?>
@@ -77,9 +77,10 @@ page_header('Simulation Report #' . $run['id'], $me, 'Actuarial projection: ' . 
         <thead><tr><th>Item</th><th class="text-right">Amount</th><th class="text-right">% of revenue</th></tr></thead>
         <tbody>
           <tr><td>Package sales (<?= num($r['members_created']) ?> activations)</td><td class="text-right"><?= money($r['revenue']['packages']) ?></td><td class="text-right"><?= $share($r['revenue']['packages']) ?></td></tr>
+          <?php if (!empty($r['upgrades']['count'])): ?><tr><td>Package upgrades (<?= num($r['upgrades']['count']) ?> upgrade(s), +<?= num($r['upgrades']['pv']) ?> PV)</td><td class="text-right"><?= money($r['revenue']['upgrades']) ?></td><td class="text-right"><?= $share($r['revenue']['upgrades']) ?></td></tr><?php endif; ?>
           <tr><td>Product sales (<?= num($r['orders']['units']) ?> unit(s), <?= num($r['orders']['count']) ?> order(s))</td><td class="text-right"><?= money($r['revenue']['products']) ?></td><td class="text-right"><?= $share($r['revenue']['products']) ?></td></tr>
           <tr class="row-total"><td><strong>Total revenue</strong></td><td class="text-right"><strong><?= money($rev) ?></strong></td><td class="text-right">100%</td></tr>
-          <tr><td>Less: package product cost (<?= num($p['package_cost_percent'], 1) ?>%)</td><td class="text-right text-danger"><?= money(-$c['package_cost']) ?></td><td class="text-right"><?= $share($c['package_cost']) ?></td></tr>
+          <tr><td>Less: package product cost (<?= num($p['package_cost_percent'], 1) ?>% of package<?= !empty($r['upgrades']['count']) ? ' &amp; upgrade' : '' ?> sales)</td><td class="text-right text-danger"><?= money(-$c['package_cost']) ?></td><td class="text-right"><?= $share($c['package_cost']) ?></td></tr>
           <tr><td>Less: repeat product COGS (<?= num($p['cogs_percent'], 1) ?>%)</td><td class="text-right text-danger"><?= money(-$c['product_cogs']) ?></td><td class="text-right"><?= $share($c['product_cogs']) ?></td></tr>
           <tr><td>Less: Direct Referral paid outright</td><td class="text-right text-danger"><?= money(-$c['outright']) ?></td><td class="text-right"><?= $share($c['outright']) ?></td></tr>
           <tr><td>Less: E-wallet commissions (withdrawable)</td><td class="text-right text-danger"><?= money(-$c['ewallet']) ?></td><td class="text-right"><?= $share($c['ewallet']) ?></td></tr>
@@ -192,6 +193,7 @@ page_header('Simulation Report #' . $run['id'], $me, 'Actuarial projection: ' . 
       <div class="sim-kv"><span>Period</span><b><?= num($p['days']) ?> day(s): <?= e(fdate($r['start_date'])) ?> – <?= e(fdate($r['end_date'])) ?></b></div>
       <div class="sim-kv"><span>Package mix</span><b><?= e(implode(', ', array_map(fn($id, $v) => ($pkgNames[$id] ?? '#' . $id) . ' ' . num($v, 1) . '%', array_keys($p['mix']), $p['mix']))) ?></b></div>
       <div class="sim-kv"><span>Repeat units per member</span><b><?= num($p['repeat_units']) ?></b></div>
+      <div class="sim-kv"><span>Members who upgrade (one level)</span><b><?= num($p['upgrade_percent'] ?? 0, 1) ?>%<?= !empty($r['upgrades']['count']) ? ' · ' . num($r['upgrades']['count']) . ' upgrade(s), bonuses ' . money($r['upgrades']['bonuses']) : '' ?></b></div>
       <div class="sim-kv"><span>COGS · package cost · opex</span><b><?= num($p['cogs_percent'], 1) ?>% · <?= num($p['package_cost_percent'], 1) ?>% · <?= num($p['opex_percent'], 1) ?>%</b></div>
       <div class="sim-kv"><span>Run by</span><b>@<?= e($run['admin'] ?? '—') ?> · <?= e(fdatetime($run['created_at'])) ?></b></div>
       <?php if ($run['backup_file']): ?><div class="sim-kv"><span>Backup before run</span><b class="mono small"><?= e($run['backup_file']) ?></b></div><?php endif; ?>

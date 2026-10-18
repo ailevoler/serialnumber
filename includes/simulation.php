@@ -67,7 +67,7 @@ function sim_defaults(): array
     $top = q_val('SELECT username FROM users WHERE id = ?', [system_root_id()]);
     return [
         'members' => 100, 'levels' => 5, 'invites' => 0, 'placement' => 'auto', 'left_percent' => 50,
-        'pair_cap' => (int)setting('pair_daily_cap', 0), 'days' => 30, 'repeat_units' => 2,
+        'pair_cap' => (int)setting('pair_daily_cap', 0), 'days' => 30, 'repeat_units' => 2, 'upgrade_percent' => 0,
         'cogs_percent' => 35, 'package_cost_percent' => 35, 'opex_percent' => 10,
         'top' => (string)$top, 'seed' => '', 'mix' => $mix,
     ];
@@ -88,6 +88,7 @@ function sim_params(array $in): array
         'pair_cap'     => $clamp($in['pair_cap'] ?? null, 0, 1000, $d['pair_cap']),
         'days'         => $clamp($in['days'] ?? null, 1, 365, $d['days']),
         'repeat_units' => $clamp($in['repeat_units'] ?? null, 0, 100, $d['repeat_units']),
+        'upgrade_percent' => $pct($in['upgrade_percent'] ?? null, 0.0),
         'cogs_percent' => $pct($in['cogs_percent'] ?? null, $d['cogs_percent']),
         'package_cost_percent' => $pct($in['package_cost_percent'] ?? null, $d['package_cost_percent']),
         'opex_percent' => $pct($in['opex_percent'] ?? null, $d['opex_percent']),
@@ -172,7 +173,7 @@ function run_simulation(array $p, int $adminId, ?string $backupFile = null): int
         ['running', json_encode($p), $backupFile, $adminId]);
     $runId = (int)db()->lastInsertId();
     $before = [];
-    foreach (['users', 'earnings', 'orders', 'activity_logs', 'codes', 'journal_entries'] as $t) {
+    foreach (['users', 'earnings', 'orders', 'activity_logs', 'codes', 'journal_entries', 'package_upgrades'] as $t) {
         $before[$t] = (int)q_val("SELECT COALESCE(MAX(id),0) FROM {$t}");
     }
 
@@ -240,6 +241,23 @@ function run_simulation(array $p, int $adminId, ?string $backupFile = null): int
             }
         }
 
+        // ---- Upgrades: a share of members move up one package (paid in cash) on a random later day.
+        if ($p['upgrade_percent'] > 0) {
+            $GLOBALS['setting_overrides']['upgrade_allow_skip'] = '0';
+            foreach ($members as $m) {
+                if (mt_rand(1, 10000) > $p['upgrade_percent'] * 100) {
+                    continue;
+                }
+                $row = q_row('SELECT * FROM users WHERE id = ?', [$m['id']]);
+                $next = upgrade_targets($row)[0] ?? null;
+                if (!$next) {
+                    continue;
+                }
+                sim_set_clock($startTs + mt_rand($m['day'], $p['days'] - 1) * 86400 + 18 * 3600 + mt_rand(0, 3600));
+                upgrade_member($m['id'], (int)$next['id'], 'cash', ['reference' => "SIM{$runId}-UP{$m['id']}"]);
+            }
+        }
+
         // ---- Repeat purchases: each member buys N units on a random day after joining.
         if ($p['repeat_units'] > 0) {
             foreach ($members as $m) {
@@ -285,6 +303,7 @@ function sim_compute_results(int $runId, array $p, array $b, int $startTs, int $
     $orders = q_row("SELECT COUNT(*) n, COALESCE(SUM(total),0) total, COALESCE(SUM(subtotal_srp),0) srp, COALESCE(SUM(discount),0) discount
                      FROM orders WHERE id > ? AND status = 'paid'", [$b['orders']]);
     $units = (int)q_val('SELECT COALESCE(SUM(qty),0) FROM order_items WHERE order_id > ?', [$b['orders']]);
+    $upg = q_row('SELECT COUNT(*) n, COALESCE(SUM(amount),0) amount, COALESCE(SUM(bonuses),0) bonuses, COALESCE(SUM(pv_added),0) pv FROM package_upgrades WHERE id > ?', [$b['package_upgrades']]);
 
     $byType = [];
     foreach (earning_types() as $k => $t) {
@@ -349,6 +368,17 @@ function sim_compute_results(int $runId, array $p, array $b, int $startTs, int $
             $daily[$r['d']]['joins'] = (int)$r['n'];
         }
     }
+    foreach (q_all('SELECT DATE(created_at) d, SUM(amount) amt FROM package_upgrades WHERE id > ? GROUP BY DATE(created_at)', [$b['package_upgrades']]) as $r) {
+        if (isset($daily[$r['d']])) {
+            $daily[$r['d']]['revenue'] += (float)$r['amt'];
+        }
+    }
+    foreach (q_all("SELECT DATE(u.created_at) d, SUM(g.amount) amt FROM package_upgrades g JOIN users u ON u.id = g.user_id
+                    WHERE g.id > ? GROUP BY DATE(u.created_at)", [$b['package_upgrades']]) as $r) {
+        if (isset($daily[$r['d']])) {
+            $daily[$r['d']]['revenue'] -= (float)$r['amt']; // join-day revenue counted the upgraded price
+        }
+    }
     foreach (q_all("SELECT DATE(paid_at) d, SUM(total) amt FROM orders WHERE id > ? AND status = 'paid' GROUP BY DATE(paid_at)", [$b['orders']]) as $r) {
         if (isset($daily[$r['d']])) {
             $daily[$r['d']]['revenue'] += (float)$r['amt'];
@@ -361,7 +391,7 @@ function sim_compute_results(int $runId, array $p, array $b, int $startTs, int $
     }
 
     // ---- Profit & loss
-    $pkgRevenue = array_sum(array_column($pkgRows, 'revenue'));
+    $pkgRevenue = array_sum(array_column($pkgRows, 'revenue')); // final package prices = activations + upgrade differences
     $prodRevenue = (float)$orders['total'];
     $revenue = $pkgRevenue + $prodRevenue;
     $pkgCost = $pkgRevenue * $p['package_cost_percent'] / 100;
@@ -386,12 +416,13 @@ function sim_compute_results(int $runId, array $p, array $b, int $startTs, int $
             'direct_outright' => setting('direct_outright', '1') === '1', 'pair_cap' => $p['pair_cap'],
         ],
         'packages' => array_values($perPackage),
+        'upgrades' => ['count' => (int)$upg['n'], 'amount' => (float)$upg['amount'], 'bonuses' => (float)$upg['bonuses'], 'pv' => (float)$upg['pv']],
         'orders' => ['count' => (int)$orders['n'], 'units' => $units, 'total' => $prodRevenue, 'srp' => (float)$orders['srp'], 'discount' => (float)$orders['discount']],
         'by_type' => $byType,
         'paid_to' => $paidTo,
         'pairs_paid' => $byType['pairing']['pairs'],
         'flushed' => ['events' => $flushedEvents, 'value' => round($flushedValue, 2)],
-        'revenue' => ['packages' => $pkgRevenue, 'products' => $prodRevenue, 'total' => $revenue],
+        'revenue' => ['packages' => $pkgRevenue - (float)$upg['amount'], 'upgrades' => (float)$upg['amount'], 'products' => $prodRevenue, 'total' => $revenue],
         'costs' => ['package_cost' => round($pkgCost, 2), 'product_cogs' => round($prodCost, 2), 'outright' => $paidTo['outright'],
                     'ewallet' => $paidTo['ewallet'], 'product_wallet' => $paidTo['product'], 'product_wallet_cost' => round($pwCost, 2), 'opex' => round($opex, 2)],
         'profit' => ['net' => round($net, 2), 'worst' => round($worst, 2), 'per_member' => $created ? round($net / $created, 2) : 0],
@@ -419,7 +450,7 @@ function reset_system(bool $clearSimulations = false): array
     try {
         tx(function () use ($root, $clearSimulations, &$counts) {
             foreach (['order_items', 'orders', 'earnings', 'wallet_transactions', 'payouts', 'payments', 'chat_messages', 'chat_threads',
-                      'crm_activities', 'crm_leads', 'journal_lines', 'journal_entries', 'expenses', 'activity_logs'] as $t) {
+                      'crm_activities', 'crm_leads', 'journal_lines', 'journal_entries', 'expenses', 'activity_logs', 'package_upgrades'] as $t) {
                 $counts[$t] = q("DELETE FROM {$t}")->rowCount();
             }
             $counts['codes'] = q('DELETE FROM codes WHERE used_by IS NULL OR used_by <> ?', [$root])->rowCount();

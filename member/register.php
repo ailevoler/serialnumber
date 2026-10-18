@@ -4,7 +4,7 @@ $me = require_member();
 $uid = (int)$me['id'];
 
 $codeOptions = q_all("SELECT c.code, c.code_type, p.name package_name FROM codes c JOIN packages p ON p.id = c.package_id
-                      WHERE c.owner_id = ? AND c.status = 'unused' ORDER BY c.id", [$uid]);
+                      WHERE c.owner_id = ? AND c.status = 'unused' AND c.code_type <> 'upgrade' ORDER BY c.id", [$uid]);
 $form = ['sponsor' => $me['username'], 'placement' => input('placement'), 'position' => strtoupper(input('position'))];
 $lockSponsor = false;
 $error = null;

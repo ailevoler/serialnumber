@@ -164,6 +164,14 @@ function fulfill_payment(int $paymentId): bool
         } elseif ($pay['purpose'] === 'codes' && $pay['package_id']) {
             generate_codes((int)$pay['package_id'], (int)$pay['qty'], 'paid', (int)$pay['user_id']);
             erp_post_code_sale('paymongo', (float)$pay['amount'], "Code sale {$pay['reference']} (PayMongo)", (int)$pay['user_id'], 'payment', (int)$pay['id']);
+        } elseif ($pay['purpose'] === 'upgrade' && $pay['package_id']) {
+            try {
+                upgrade_member((int)$pay['user_id'], (int)$pay['package_id'], 'paymongo', ['reference' => $pay['reference'], 'amount' => (float)$pay['amount']]);
+            } catch (RuntimeException $ex) {
+                // Paid but no longer applicable (e.g. already upgraded another way): book the cash and leave it for the admin.
+                erp_post_code_sale('paymongo', (float)$pay['amount'], "Upgrade payment {$pay['reference']} (PayMongo) – not applied: " . $ex->getMessage(), (int)$pay['user_id'], 'payment', (int)$pay['id']);
+                log_activity((int)$pay['user_id'], "Upgrade payment {$pay['reference']} could not be applied: " . $ex->getMessage());
+            }
         }
         log_activity((int)$pay['user_id'], "PayMongo payment {$pay['reference']} paid (" . $pay['amount'] . ')');
         return true;

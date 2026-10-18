@@ -61,6 +61,10 @@ if (is_post()) {
     }
     save_setting('stockist_tiers', implode(',', $tiers));
     save_setting('unilevel_require_active', isset($_POST['unilevel_require_active']) ? '1' : '0');
+    foreach (['upgrade_enabled', 'upgrade_allow_skip', 'upgrade_add_pv', 'upgrade_wallet'] as $k) {
+        save_setting($k, isset($_POST[$k]) ? '1' : '0');
+    }
+    save_setting('upgrade_bonus', input('upgrade_bonus') === 'none' ? 'none' : 'difference');
 
     // Per-package direct bonus and binary PV
     foreach ((array)($_POST['pkg'] ?? []) as $pid => $row) {
@@ -291,6 +295,32 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
       <p class="mb-1 small">The difference from SRP is recorded as the member's discount / retail profit (not credited to the wallet).</p>
       <a class="btn btn-light btn-sm" href="<?= e(url('admin/products.php')) ?>"><?= icon('box', 14) ?> Set SRP per product</a>
     </div>
+  </div>
+</div>
+
+<div class="card" id="upgrade">
+  <div class="card-header"><h3><?= icon('arrow-up') ?> Package Upgrade</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('admin/upgrades.php')) ?>">Upgrade history</a></div></div>
+  <div class="card-body">
+    <div class="toggle-grid">
+      <?php foreach ([
+          'upgrade_enabled' => ['Allow package upgrades', 'Members pay only the price difference (Silver → Gold → Platinum → Diamond).'],
+          'upgrade_allow_skip' => ['Allow skipping levels', 'e.g. Silver straight to Diamond. Off = one level at a time.'],
+          'upgrade_add_pv' => ['Add the PV difference to the binary', 'e.g. Silver 100 → Gold 400 adds 300 PV to the upline legs (pairing).'],
+          'upgrade_wallet' => ['Members can pay with E-Wallet', 'QR Ph follows the PayMongo settings; upgrade codes always work.'],
+      ] as $k => [$title, $hint]): ?>
+        <label class="toggle-card">
+          <input type="checkbox" name="<?= $k ?>" value="1" <?= setting($k, '1') === '1' ? 'checked' : '' ?>>
+          <span class="toggle-ui"></span>
+          <span><strong><?= e($title) ?></strong><small><?= e($hint) ?></small></span>
+        </label>
+      <?php endforeach; ?>
+    </div>
+    <div class="form-group mt-2"><label>Bonuses on upgrade</label>
+      <select class="input" name="upgrade_bonus">
+        <option value="difference" <?= $sel('upgrade_bonus', 'difference') ?>>Pay the difference — Direct Referral and Coded Bonus of the new package less the old one</option>
+        <option value="none" <?= $sel('upgrade_bonus', 'none') ?>>No bonuses on upgrades</option>
+      </select>
+      <div class="help">The bonus goes to whoever earned the original bonus. Indirect in percent mode pays the % of the difference.</div></div>
   </div>
 </div>
 

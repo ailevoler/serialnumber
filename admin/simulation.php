@@ -133,6 +133,7 @@ page_header('Simulation & Reset', $me, 'Stress-test the compensation plan, reset
           <div class="section-title">Repeat Purchase &amp; Costs</div>
           <div class="form-grid">
             <div class="form-group"><label>Repeat units per member</label><input class="input" type="number" name="repeat_units" min="0" max="100" value="<?= (int)$form['repeat_units'] ?>"><div class="help">Bottles / pouches each member buys during the period (Unilevel).</div></div>
+            <div class="form-group"><label>% of members who upgrade</label><input class="input" type="number" step="0.01" min="0" max="100" name="upgrade_percent" value="<?= e((string)($form['upgrade_percent'] ?? 0)) ?>"><div class="help">They move up one package (paying the difference) on a later day.</div></div>
             <div class="form-group"><label>Product cost (COGS) %</label><input class="input" type="number" step="0.01" min="0" max="100" name="cogs_percent" value="<?= e((string)$form['cogs_percent']) ?>"><div class="help">Cost of goods as % of selling price. Also the real cost of Product Wallet credits.</div></div>
             <div class="form-group"><label>Package product cost %</label><input class="input" type="number" step="0.01" min="0" max="100" name="package_cost_percent" value="<?= e((string)$form['package_cost_percent']) ?>"><div class="help">Cost of the products inside a package, as % of its price.</div></div>
             <div class="form-group"><label>Operating expenses %</label><input class="input" type="number" step="0.01" min="0" max="100" name="opex_percent" value="<?= e((string)$form['opex_percent']) ?>"><div class="help">Admin, shipping, salaries, etc. as % of revenue.</div></div>
@@ -188,7 +189,7 @@ page_header('Simulation & Reset', $me, 'Stress-test the compensation plan, reset
       <div class="card-header"><h3 class="text-danger"><?= icon('alert') ?> Reset System</h3></div>
       <div class="card-body">
         <?= $err('reset') ?>
-        <p class="small">Deletes <strong>all members</strong> (<?= num(max(0, $memberCount - 1)) ?> now) except the root account<?= $rootUser ? ' <strong>@' . e($rootUser['username']) . '</strong>' : '' ?>, plus all codes, orders, earnings, wallet history, payouts, payments, chat, CRM leads, journal entries, expenses and logs. The root account's wallets and counters go back to zero.</p>
+        <p class="small">Deletes <strong>all members</strong> (<?= num(max(0, $memberCount - 1)) ?> now) except the root account<?= $rootUser ? ' <strong>@' . e($rootUser['username']) . '</strong>' : '' ?>, plus all codes, orders, package upgrades, earnings, wallet history, payouts, payments, chat, CRM leads, journal entries, expenses and logs. The root account's wallets and counters go back to zero.</p>
         <p class="small text-muted">Kept: admin &amp; content manager accounts, settings, compensation plan, packages, products, website CMS and chart of accounts.</p>
         <form method="post" data-busy="Backing up and resetting the system…" data-confirm="Sigurado ka bang buburahin ang lahat ng data maliban sa admin at root account? May backup na awtomatikong ida-download.">
           <?= csrf_field() ?><input type="hidden" name="action" value="reset">

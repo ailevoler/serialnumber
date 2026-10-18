@@ -53,7 +53,7 @@ page_header('My Activation Codes', $me, 'Codes you can use to register new membe
           <td><span class="code-chip mono"><?= e($r['code']) ?></span></td>
           <td class="mono"><?= e($r['pin']) ?></td>
           <td><?= e($r['package_name']) ?></td>
-          <td><?= $r['code_type'] === 'free' ? '<span class="badge badge-muted">Free</span>' : '<span class="badge badge-success">Paid</span>' ?></td>
+          <td><?= code_type_badge($r['code_type']) ?></td>
           <td><?= $status === 'used' ? '@' . e($r['used_username']) . ' · ' . fdate($r['used_at']) : fdate($r['created_at']) ?></td>
         </tr>
       <?php endforeach; ?>

@@ -24,6 +24,7 @@ function nav_items(string $role): array
                 ['admin/members.php', 'Members', 'users'],
                 ['admin/genealogy.php', 'Genealogy', 'tree'],
                 ['admin/register_member.php', 'Register Member', 'user-plus'],
+                ['admin/upgrades.php', 'Package Upgrades', 'arrow-up'],
                 ['admin/codes.php', 'Code Generator', 'key'],
                 ['admin/packages.php', 'Packages', 'package'],
             ],
@@ -71,6 +72,7 @@ function nav_items(string $role): array
             ['member/register.php', 'Register Member', 'user-plus'],
             ['member/codes.php', 'My Codes', 'key'],
             ['member/buy_codes.php', 'Buy Codes', 'card'],
+            ['member/upgrade.php', 'Upgrade Package', 'arrow-up'],
         ],
         'Shop' => [
             ['member/shop.php', 'Products', 'box'],

@@ -7,7 +7,7 @@ if (!$pay) {
     flash('error', 'Payment not found.');
     redirect('member/dashboard.php');
 }
-$back = $pay['purpose'] === 'order' ? 'member/orders.php' : 'member/codes.php';
+$back = ['order' => 'member/orders.php', 'upgrade' => 'member/upgrade.php'][$pay['purpose']] ?? 'member/codes.php';
 
 if ($pay['status'] === 'paid') {
     flash('success', 'Payment ' . $pay['reference'] . ' is already confirmed.');
@@ -29,7 +29,7 @@ if (input('result') === 'cancel') {
 try {
     if ($pay['checkout_id'] && paymongo_session_paid($pay['checkout_id'])) {
         fulfill_payment((int)$pay['id']);
-        flash('success', 'Payment received! ' . ($pay['purpose'] === 'order' ? 'Your order is now paid.' : 'Your activation codes are ready.'));
+        flash('success', 'Payment received! ' . (['order' => 'Your order is now paid.', 'upgrade' => 'Your package has been upgraded.'][$pay['purpose']] ?? 'Your activation codes are ready.'));
     } else {
         flash('info', 'We are waiting for PayMongo to confirm your payment. This page will update automatically once confirmed.');
     }

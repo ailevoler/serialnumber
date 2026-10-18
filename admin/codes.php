@@ -20,11 +20,15 @@ if (is_post()) {
                 }
                 $owner = (int)$o['id'];
             }
-            $type = input('code_type') === 'free' ? 'free' : 'paid';
+            $type = in_array(input('code_type'), ['free', 'upgrade'], true) ? input('code_type') : 'paid';
             $saleMethod = input('sale_method');
             $codes = tx(function () use ($pkg, $qty, $type, $owner, $saleMethod) {
                 $codes = generate_codes((int)$pkg['id'], $qty, $type, $owner);
-                if ($type === 'paid' && in_array($saleMethod, ['cash', 'bank', 'gcash'], true)) {
+                if ($type === 'upgrade') {
+                    // The amount depends on the member's current package, so the sale is booked when the code is redeemed.
+                    $in = implode(',', array_fill(0, count($codes), '?'));
+                    q("UPDATE codes SET sale_method = ? WHERE code IN ($in)", array_merge([in_array($saleMethod, ['cash', 'bank', 'gcash'], true) ? $saleMethod : null], $codes));
+                } elseif ($type === 'paid' && in_array($saleMethod, ['cash', 'bank', 'gcash'], true)) {
                     erp_post_code_sale($saleMethod, (float)$pkg['price'] * $qty, "Code sale: {$qty} × {$pkg['name']} (" . strtoupper($saleMethod) . ')' . ($owner ? ' to @' . input('owner') : ''), $owner, 'codes', null);
                 }
                 return $codes;
@@ -92,11 +96,12 @@ page_header('Activation Codes', $me, 'Generate and distribute serial codes');
       <?= csrf_field() ?><input type="hidden" name="action" value="generate">
       <div><label>Package</label><select class="input" name="package_id" required><?php foreach ($packages as $pk): ?><option value="<?= $pk['id'] ?>"><?= e($pk['name']) ?> – <?= money($pk['price']) ?></option><?php endforeach; ?></select></div>
       <div><label>Quantity</label><input class="input" type="number" name="qty" min="1" max="500" value="10" required></div>
-      <div><label>Type</label><select class="input" name="code_type"><option value="paid">Paid (earns bonuses)</option><option value="free">Free (no bonuses / PV)</option></select></div>
+      <div><label>Type</label><select class="input" name="code_type"><option value="paid">Paid (earns bonuses)</option><option value="free">Free (no bonuses / PV)</option><option value="upgrade">Upgrade (members move up to this package)</option></select></div>
       <div><label>Assign to (username)</label><input class="input" name="owner" placeholder="optional"></div>
       <div><label>Payment received (ERP)</label><select class="input" name="sale_method"><option value="">Not yet / record later</option><option value="cash">Cash on Hand</option><option value="bank">Bank Deposit</option><option value="gcash">GCash / Maya</option></select></div>
       <button class="btn btn-primary" type="submit"><?= icon('key', 15) ?> Generate</button>
     </form>
+    <p class="help mb-0 mt-1">Upgrade codes: the member pays the price difference to their current package; the payment method chosen here is booked in the ERP when the code is redeemed.</p>
   </div>
 </div>
 
@@ -129,7 +134,7 @@ page_header('Activation Codes', $me, 'Generate and distribute serial codes');
           <td><span class="code-chip mono"><?= e($r['code']) ?></span></td>
           <td class="mono"><?= e($r['pin']) ?></td>
           <td><?= e($r['package_name']) ?></td>
-          <td><?= $r['code_type'] === 'free' ? '<span class="badge badge-muted">Free</span>' : '<span class="badge badge-success">Paid</span>' ?></td>
+          <td><?= code_type_badge($r['code_type']) ?></td>
           <td><?= $r['owner'] ? '@' . e($r['owner']) : '<span class="text-muted">Company</span>' ?></td>
           <td><?= badge($r['status']) ?></td>
           <td><?= $r['used_username'] ? '@' . e($r['used_username']) . '<br><small class="text-muted">' . fdate($r['used_at']) . '</small>' : '—' ?></td>

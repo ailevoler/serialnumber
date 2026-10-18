@@ -165,6 +165,9 @@ function register_member(array $d): int
         if ($code['status'] !== 'unused') {
             throw new RuntimeException('This activation code has already been used or is blocked.');
         }
+        if ($code['code_type'] === 'upgrade') {
+            throw new RuntimeException('This is an upgrade code. Use it in Upgrade Package, not for registration.');
+        }
 
         $sponsor = find_member_by_username(strtolower(trim($d['sponsor'] ?? '')));
         if (!$sponsor || $sponsor['status'] !== 'active') {

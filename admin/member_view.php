@@ -34,6 +34,11 @@ if (is_post()) {
         } elseif ($action === 'crm') {
             crm_add_activity(null, $id, (int)$me['id'], input('type'), input('body'), input('due_date') ?: null);
             flash('success', 'CRM activity saved.');
+        } elseif ($action === 'upgrade') {
+            $method = in_array(input('method'), ['cash', 'bank', 'gcash', 'wallet', 'none', 'free'], true) ? input('method') : 'none';
+            upgrade_member($id, input_int('package_id'), $method, ['admin_id' => (int)$me['id']]);
+            $new = q_val('SELECT p.name FROM users u JOIN packages p ON p.id = u.package_id WHERE u.id = ?', [$id]);
+            flash('success', "@{$m['username']} upgraded to {$new}.");
         } elseif ($action === 'wallet') {
             $amount = round(input_float('amount'), 2);
             $dir = input('direction') === 'debit' ? 'debit' : 'credit';
@@ -62,6 +67,8 @@ $summary = earnings_summary($id);
 $tx = q_all('SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY id DESC LIMIT 10', [$id]);
 $codes = (int)q_val("SELECT COUNT(*) FROM codes WHERE owner_id = ? AND status = 'unused'", [$id]);
 $logs = q_all('SELECT * FROM activity_logs WHERE user_id = ? ORDER BY id DESC LIMIT 8', [$id]);
+$upgradeTargets = upgrade_targets($m, true);
+$upgrades = q_all('SELECT u.*, f.name from_name, t.name to_name FROM package_upgrades u LEFT JOIN packages f ON f.id = u.from_package_id JOIN packages t ON t.id = u.to_package_id WHERE u.user_id = ? ORDER BY u.id DESC LIMIT 5', [$id]);
 
 page_header('Member: @' . $m['username'], $me, full_name($m));
 ?>
@@ -155,6 +162,27 @@ page_header('Member: @' . $m['username'], $me, full_name($m));
           <dt>Last login</dt><dd><?= fdatetime($m['last_login']) ?></dd>
           <dt>Joined</dt><dd><?= fdatetime($m['created_at']) ?></dd>
         </dl>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3><?= icon('arrow-up') ?> Upgrade Package</h3></div>
+      <div class="card-body">
+        <?php if ($upgradeTargets): ?>
+        <form method="post">
+          <?= csrf_field() ?><input type="hidden" name="action" value="upgrade">
+          <div class="form-group"><label>Upgrade to</label>
+            <select class="input" name="package_id"><?php foreach ($upgradeTargets as $t): $qt = upgrade_quote($m, $t); ?><option value="<?= (int)$t['id'] ?>"><?= e($t['name']) ?> – pay <?= money($qt['amount']) ?> (+<?= num($qt['pv']) ?> PV)</option><?php endforeach; ?></select></div>
+          <div class="form-group"><label>Payment</label>
+            <select class="input" name="method">
+              <?php foreach (['cash', 'bank', 'gcash', 'wallet', 'none', 'free'] as $k): ?><option value="<?= $k ?>"><?= e(upgrade_methods()[$k]) ?><?= $k === 'wallet' ? ' (' . money($m['wallet_balance']) . ')' : '' ?></option><?php endforeach; ?>
+            </select>
+            <div class="help">Sponsor and coded upline earn the bonus difference; the PV difference goes to the binary. "Free" changes the package only.</div></div>
+          <button class="btn btn-primary btn-block" type="submit" data-confirm="Upgrade this member's package?"><?= icon('arrow-up', 16) ?> Upgrade</button>
+        </form>
+        <?php else: ?><p class="text-muted mb-0">Already on the highest package.</p><?php endif; ?>
+        <?php if ($upgrades): ?>
+          <ul class="list-plain small mt-2"><?php foreach ($upgrades as $u): ?><li><span><?= e(($u['from_name'] ?? '—') . ' → ' . $u['to_name']) ?> · <?= money($u['amount']) ?> · <?= e(upgrade_methods()[$u['method']] ?? $u['method']) ?></span><span class="text-muted" style="margin-left:auto"><?= fdate($u['created_at']) ?></span></li><?php endforeach; ?></ul>
+        <?php endif; ?>
       </div>
     </div>
     <div class="card">

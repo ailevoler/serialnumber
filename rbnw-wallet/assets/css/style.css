@@ -741,29 +741,39 @@ input, select, textarea { font-family: inherit; }
 
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px 4px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px 10px;
 }
 
 .service-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   text-align: center;
+  transition: transform .1s;
 }
+.service-item:active { transform: scale(0.95); }
 
 .service-item .icon-tile {
-  width: 44px; height: 44px;
-  border-radius: 14px;
+  width: 60px; height: 60px;
+  border-radius: 18px;
   background: #fff;
+  border: 1px solid rgba(13, 27, 51, 0.05);
   box-shadow: var(--shadow-soft);
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
+  font-size: 23px;
   color: var(--rbnw-blue);
+  transition: box-shadow .15s, background .15s;
 }
+.service-item:hover .icon-tile { background: var(--rbnw-blue-50); box-shadow: var(--shadow-card); }
 
-.service-item span { font-size: 10px; color: var(--text-dark); font-weight: 600; line-height: 1.2; }
+.service-item span { font-size: 12.5px; color: var(--text-dark); font-weight: 600; line-height: 1.25; }
+
+@media (max-width: 350px) {
+  .service-item .icon-tile { width: 52px; height: 52px; font-size: 20px; border-radius: 16px; }
+  .service-item span { font-size: 11.5px; }
+}
 
 /* ---------------------------------------------------------
    Cards / list rows

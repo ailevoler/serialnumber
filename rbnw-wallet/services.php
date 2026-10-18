@@ -14,6 +14,8 @@ $services = [
   ['donations.php', 'fa-hand-holding-heart', 'Donations'],
   ['cash-out.php', 'fa-arrow-down', 'Cash Out'],
   ['scan-qr.php', 'fa-qrcode', 'Scan QR'],
+  ['transactions.php', 'fa-clock-rotate-left', 'Transactions'],
+  ['notifications.php', 'fa-bell', 'Notifications'],
 ];
 ?>
 <!DOCTYPE html>

@@ -109,12 +109,6 @@ $activeNav = 'home';
       <a class="service-item" href="bank-wallet.php">
         <div class="icon-tile"><i class="fa-solid fa-building-columns"></i></div><span>Bank Wallet</span>
       </a>
-      <a class="service-item" href="donations.php">
-        <div class="icon-tile"><i class="fa-solid fa-hand-holding-heart"></i></div><span>Donations</span>
-      </a>
-      <a class="service-item" href="transactions.php">
-        <div class="icon-tile"><i class="fa-solid fa-clock-rotate-left"></i></div><span>Transactions</span>
-      </a>
       <a class="service-item" href="services.php">
         <div class="icon-tile"><i class="fa-solid fa-ellipsis"></i></div><span>More</span>
       </a>

@@ -143,7 +143,8 @@ function register_member(array $d): int
     if (trim($d['first_name'] ?? '') === '' || trim($d['last_name'] ?? '') === '') {
         throw new RuntimeException('First name and last name are required.');
     }
-    if ($err = validate_password($d['password'] ?? '')) {
+    // _password_hash: a pre-hashed password (bulk registrations by the plan simulator)
+    if (empty($d['_password_hash']) && ($err = validate_password($d['password'] ?? ''))) {
         throw new RuntimeException($err);
     }
     $position = strtoupper($d['position'] ?? '');
@@ -197,7 +198,7 @@ function register_member(array $d): int
 
         q('INSERT INTO users (username, email, password, first_name, last_name, mobile, address, role, status, package_id, sponsor_id, placement_id, position)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [
-            $username, trim($d['email']), password_hash($d['password'], PASSWORD_DEFAULT),
+            $username, trim($d['email']), $d['_password_hash'] ?? password_hash($d['password'], PASSWORD_DEFAULT),
             trim($d['first_name']), trim($d['last_name']), trim($d['mobile'] ?? ''), trim($d['address'] ?? ''),
             'member', 'active', $code['package_id'], $sponsorId, $placementId, $pos,
         ]);
@@ -492,7 +493,9 @@ function create_order(int $userId, array $cart, string $method, string $address,
         if (!$items) {
             throw new RuntimeException('Your cart is empty.');
         }
-        $orderNo = 'XO' . date('ymd') . random_string(5, '0123456789');
+        do {
+            $orderNo = 'XO' . date('ymd') . random_string(5, '0123456789');
+        } while (q_val('SELECT id FROM orders WHERE order_no = ?', [$orderNo]));
         $status = in_array($method, ['wallet', 'product_wallet'], true) ? 'paid' : 'pending';
         q('INSERT INTO orders (order_no, user_id, subtotal_srp, discount, total, total_pv, payment_method, payment_ref, shipping_address, status, paid_at)
            VALUES (?,?,?,?,?,?,?,?,?,?,?)', [$orderNo, $userId, $srp, $srp - $total, $total, $pv, $method, $paymentRef, $address, $status,

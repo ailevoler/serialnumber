@@ -499,7 +499,7 @@ body.auth { background: #fff; }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 1024px) {
-  .grid-main, .grid-3 { grid-template-columns: 1fr; }
+  .grid-main, .grid-3 { grid-template-columns: minmax(0, 1fr); }
   .sidebar { transform: translateX(-100%); box-shadow: 0 0 40px rgba(0,0,0,.2); }
   body.sidebar-open .sidebar { transform: translateX(0); }
   body.sidebar-open .sidebar-backdrop { display: block; position: fixed; inset: 0; background: rgba(6, 61, 27, .35); z-index: 35; }
@@ -512,7 +512,7 @@ body.auth { background: #fff; }
   .hero-points { display: none; }
 }
 @media (max-width: 720px) {
-  .grid-2, .grid-4, .form-grid { grid-template-columns: 1fr; }
+  .grid-2, .grid-4, .form-grid { grid-template-columns: minmax(0, 1fr); }
   .content { padding: 16px; }
   .topbar { padding: 10px 16px; }
   .topbar-name { display: none; }

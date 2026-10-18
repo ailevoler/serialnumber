@@ -102,6 +102,15 @@ Financial Statements (Income Statement, Balance Sheet, Trial Balance, may print 
 Kapag na-generate ng admin ang codes na nabayaran na nang cash/bank/GCash, piliin ang *Payment received (ERP)* sa Code Generator
 para mai-post ang benta.
 
+## Simulation, Reset at Backup (Admin → System → Simulation & Reset)
+
+- **Admin Action PIN** — 4–8 digits, kailangan ang admin password para i-set o palitan. Hinihingi ito bago ang Simulation, Reset at pag-delete ng backup. Kapag 5 beses mali sa loob ng 15 minuto, naka-lock muna.
+- **Plan Simulation (actuarial test)** — awtomatikong nagre-register ng test members (`sim{run}_{n}`) gamit ang totoong compensation engine. Ilalagay mo kung ilang members, ilang levels, ilang invites bawat member, max pairs per day, ilang araw, Left/Right placement, package mix, repeat purchase units, at mga cost (COGS, package cost, opex). Ang report ay may Profit & Loss, commissions per type, cost per package, member outcomes, kita vs komisyon bawat araw, top earners, at resulta na **KUMIKITA** o **NALULUGI**. Hindi nababawasan ang totoong stock ng products.
+- **Reset System** — binubura ang lahat ng members (maliban sa root account), codes, orders, earnings, wallet history, payouts, payments, chat, CRM, journal entries, expenses at logs. Naiiwan ang admin at content manager accounts, settings, plan, packages, products, CMS at chart of accounts. Kailangang i-type ang `RESET` at ang PIN.
+- **Auto Backup** — bago ang bawat Simulation at Reset, gumagawa ng buong database backup (`.sql.gz`) sa `backups/` at awtomatiko itong nada-download. May "Backup Now" button din. I-restore gamit ang phpMyAdmin → Import o `gunzip < file.sql.gz | mysql dbname`.
+- Naka-block ang `backups/` gamit ang `.htaccess` (Apache). Sa Nginx, idagdag ang `location /backups/ { deny all; }`.
+- Gamitin ang Simulation sa test o staging copy, o mag-Reset pagkatapos, dahil totoong records ang nalilikha nito.
+
 ## Mga Feature
 
 **Member Dashboard** — dashboard ng kita (6 ways), referral link, binary genealogy (may "+ Add" sa bakanteng slot),
@@ -124,7 +133,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan).
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan) at `database/upgrade_v9.sql` (Simulation & Reset).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.

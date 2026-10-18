@@ -33,4 +33,6 @@ require_once __DIR__ . '/erp.php';
 require_once __DIR__ . '/chat.php';
 require_once __DIR__ . '/crm.php';
 require_once __DIR__ . '/cms.php';
+require_once __DIR__ . '/backup.php';
+require_once __DIR__ . '/simulation.php';
 require_once __DIR__ . '/layout.php';

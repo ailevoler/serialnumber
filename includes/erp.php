@@ -72,7 +72,7 @@ function erp_post(string $docType, string $memo, array $lines, ?string $refType 
     if (!$manual && !erp_on()) {
         return null;
     }
-    $date = $date ?: date('Y-m-d');
+    $date = $date ?: app_today();
     $lock = (string)setting('erp_lock_date', '');
     if ($lock !== '' && $date <= $lock) {
         if ($manual) {

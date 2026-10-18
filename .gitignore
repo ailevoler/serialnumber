@@ -4,3 +4,6 @@ uploads/products/*
 .DS_Store
 uploads/cms/*
 !uploads/cms/.gitkeep
+backups/*
+!backups/.htaccess
+!backups/index.html

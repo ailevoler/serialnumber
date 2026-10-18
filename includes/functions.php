@@ -120,6 +120,10 @@ function settings_all(bool $refresh = false): array
 
 function setting(string $key, $default = null)
 {
+    // Temporary in-memory overrides (used by the plan simulator; never saved).
+    if (isset($GLOBALS['setting_overrides']) && array_key_exists($key, $GLOBALS['setting_overrides'])) {
+        return $GLOBALS['setting_overrides'][$key];
+    }
     $all = settings_all();
     return array_key_exists($key, $all) ? $all[$key] : $default;
 }
@@ -133,6 +137,12 @@ function setting_list(string $key): array
 function save_setting(string $key, string $value): void
 {
     q('INSERT INTO settings (skey, svalue) VALUES (?, ?) ON DUPLICATE KEY UPDATE svalue = VALUES(svalue)', [$key, $value]);
+}
+
+/** Today's date for postings; the plan simulator moves it to the simulated day. */
+function app_today(): string
+{
+    return $GLOBALS['sim_today'] ?? date('Y-m-d');
 }
 
 /* ---------- CSRF ---------- */
@@ -309,6 +319,7 @@ function icon(string $name, int $size = 18): string
         'repeat'    => '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
         'copy'      => '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
         'bell'      => '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
+        'alert'     => '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/>',
         'send'      => '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>',
         'download'  => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
         'plus'      => '<path d="M12 5v14M5 12h14"/>',

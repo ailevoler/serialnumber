@@ -54,6 +54,7 @@ function nav_items(string $role): array
                 ['admin/announcements.php', 'Announcements', 'megaphone'],
                 ['admin/compensation.php', 'Compensation Plan', 'trending'],
                 ['admin/paymongo.php', 'PayMongo Settings', 'card'],
+                ['admin/simulation.php', 'Simulation & Reset', 'chart'],
                 ['admin/settings.php', 'General Settings', 'settings'],
                 ['admin/profile.php', 'My Account', 'shield'],
             ],

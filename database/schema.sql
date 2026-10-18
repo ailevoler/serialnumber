@@ -4,7 +4,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS cms_media, cms_items, cms_content, expenses, journal_lines, journal_entries, gl_accounts, crm_activities, crm_leads, chat_messages, chat_threads, payments, activity_logs, announcements, settings, payouts, wallet_transactions,
+DROP TABLE IF EXISTS simulation_runs, cms_media, cms_items, cms_content, expenses, journal_lines, journal_entries, gl_accounts, crm_activities, crm_leads, chat_messages, chat_threads, payments, activity_logs, announcements, settings, payouts, wallet_transactions,
   earnings, order_items, orders, products, codes, users, packages;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -586,3 +586,22 @@ UPDATE settings SET svalue = CASE skey
 WHERE skey IN ('direct_enabled','direct_mode','direct_outright','passup_enabled','passup_positions','passup_mode','passup_kept_bonus',
   'passup_sponsor_keeps_direct','pairing_enabled','pairing_mode','pair_rate','pair_daily_cap','pairing_to_product_wallet',
   'unilevel_enabled','unilevel_mode','unilevel_per_unit','discount_enabled','discount_mode','stockist_tiers');
+
+-- ---------------------------------------------------------------
+-- Plan Simulator runs (v9)
+-- ---------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS simulation_runs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  status ENUM('running','completed','failed') NOT NULL DEFAULT 'running',
+  params TEXT NOT NULL,
+  results MEDIUMTEXT NULL,
+  members_created INT UNSIGNED NOT NULL DEFAULT 0,
+  net_profit DECIMAL(14,2) NULL,
+  payout_ratio DECIMAL(9,2) NULL,
+  backup_file VARCHAR(120) NULL,
+  error VARCHAR(255) NULL,
+  created_by INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  finished_at DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

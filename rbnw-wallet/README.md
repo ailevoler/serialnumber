@@ -66,6 +66,7 @@ When a new module adds tables/columns, run its file from
 - `2026-10-19-savings.sql` — Save Money (interest tracking, goal fields)
 - `2026-10-19-bank-wallet.sql` — Bank Wallet (transfers table, new ledger types)
 - `2026-10-19-donations.sql` — Donations (anonymous flag, indexes)
+- `2026-10-19-kyc.sql` — KYC submissions
 
 ## Save Money
 
@@ -101,6 +102,28 @@ area filter chip, goal, optional `image` path). Users donate from the
 wallet with MPIN, optionally anonymous and with a message; the cause's
 `raised_amount` updates in the same DB transaction, and each cause shows
 its recent supporters (first name + last initial, or "Anonymous").
+
+## KYC (Verify Your ID)
+
+Details (ID type/number, birthdate, address) → valid ID front and back
+(camera or upload; passports skip the back) → selfie liveness → review →
+submit. Liveness runs on the phone with face-api (vendored in
+`assets/vendor/face-api`, MIT): five prompts in random order — turn
+left, turn right, look up, look down, blink — each shown as a red arc /
+chip around the face oval that turns green when done, then the selfie
+is captured automatically. Photos are re-encoded server-side (EXIF
+stripped) and stored in `KYC_STORAGE_DIR` — **set it to a folder outside
+public_html in config.local.php**. Staff review with:
+
+```
+php tools/kyc-review.php list
+php tools/kyc-review.php approve <id> [wallet_level]   # default level 2
+php tools/kyc-review.php reject <id> "Blurry ID photo"
+```
+
+The liveness check is a client-side signal (recorded with the
+submission), not proof on its own: always compare the selfie with the ID
+photo during review.
 
 ## Loans
 

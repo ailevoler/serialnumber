@@ -1,1 +1,3 @@
 rbnw-wallet/config.local.php
+rbnw-wallet/storage/kyc/*
+!rbnw-wallet/storage/kyc/.gitkeep

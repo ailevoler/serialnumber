@@ -41,7 +41,7 @@ async function loadNotifications() {
   }
 
   // Where tapping a notification takes you
-  const LINKS = { money_request: 'request-money.php', request_paid: 'request-money.php', request_declined: 'request-money.php', loan: 'loans.php', bank_transfer: 'bank-wallet.php', donation: 'donations.php' };
+  const LINKS = { money_request: 'request-money.php', request_paid: 'request-money.php', request_declined: 'request-money.php', loan: 'loans.php', bank_transfer: 'bank-wallet.php', donation: 'donations.php', kyc: 'kyc.php' };
   const esc = RBNW.escapeHtml;
   card.innerHTML = res.items.map(n => {
     const href = LINKS[n.type];

@@ -106,6 +106,14 @@ defined('DONATION_MIN') || define('DONATION_MIN', 10.00);
 defined('DONATION_MAX') || define('DONATION_MAX', 50000.00);
 
 // ---------------------------------------------------------
+// KYC. ID photos and selfies are sensitive: point KYC_STORAGE_DIR at a
+// folder OUTSIDE public_html in config.local.php, e.g.
+// define('KYC_STORAGE_DIR', '/home/u718203951/rbnw-private/kyc');
+// The default (storage/kyc inside the app) relies on storage/.htaccess.
+// ---------------------------------------------------------
+defined('KYC_STORAGE_DIR') || define('KYC_STORAGE_DIR', APP_ROOT . '/storage/kyc');
+
+// ---------------------------------------------------------
 // SECURITY SETTINGS
 // ---------------------------------------------------------
 define('MPIN_LENGTH', 6);

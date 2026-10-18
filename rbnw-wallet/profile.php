@@ -32,7 +32,7 @@ $activeNav = 'profile';
       <p style="color:var(--text-muted);font-size:12.5px;margin:4px 0;"><?= htmlspecialchars($user['mobile_number']) ?></p>
       <p style="color:var(--rbnw-blue);font-size:12.5px;font-weight:700;margin:0;"><?= htmlspecialchars($user['wallet_code']) ?></p>
       <span class="wallet-level-chip" style="background:var(--rbnw-blue);color:#fff;display:inline-block;margin-top:10px;">
-        <?= $user['kyc_status'] === 'verified' ? 'Verified Account' : 'Unverified — tap to verify' ?>
+        <?= ['verified' => 'Verified Account', 'pending' => 'Verification under review', 'rejected' => 'Verification not approved — tap to retry'][$user['kyc_status']] ?? 'Unverified — tap to verify' ?>
       </span>
     </div>
 

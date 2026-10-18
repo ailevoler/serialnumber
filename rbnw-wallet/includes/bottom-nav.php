@@ -16,16 +16,9 @@ $navItems = [
 ?>
 <nav class="bottom-nav" aria-label="Main">
   <?php foreach ($navItems as $key => [$href, $icon, $label]): ?>
-    <?php if ($key === 'scan'): ?>
-      <a href="<?= $href ?>" class="nav-item nav-scan<?= $activeNav === 'scan' ? ' active' : '' ?>" aria-label="<?= $label ?>">
-        <span class="scan-fab"><i class="fa-solid <?= $icon ?>"></i></span>
-        <span class="nav-label"><?= $label ?></span>
-      </a>
-    <?php else: ?>
-      <a href="<?= $href ?>" class="<?= nav_class($key, $activeNav) ?>"<?= $key === $activeNav ? ' aria-current="page"' : '' ?>>
-        <span class="nav-icon"><i class="fa-solid <?= $icon ?>"></i></span>
-        <span class="nav-label"><?= $label ?></span>
-      </a>
-    <?php endif; ?>
+    <a href="<?= $href ?>" class="<?= nav_class($key, $activeNav) ?>"<?= $key === $activeNav ? ' aria-current="page"' : '' ?>>
+      <span class="nav-icon"><i class="fa-solid <?= $icon ?>"></i></span>
+      <span class="nav-label"><?= $label ?></span>
+    </a>
   <?php endforeach; ?>
 </nav>

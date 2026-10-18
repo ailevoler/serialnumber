@@ -826,7 +826,7 @@ input, select, textarea { font-family: inherit; }
   box-shadow: 0 -1px 0 rgba(13, 27, 51, 0.05), 0 -10px 30px rgba(15, 76, 146, 0.10);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  align-items: end;
+  align-items: center;
   padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
   z-index: 50;
 }
@@ -862,23 +862,6 @@ input, select, textarea { font-family: inherit; }
 .bottom-nav .nav-item.active { color: var(--rbnw-blue); }
 .bottom-nav .nav-item.active .nav-icon { background: var(--rbnw-blue-50); }
 .bottom-nav .nav-item.active .nav-label { font-weight: 700; }
-
-/* Raised Scan QR button in the middle */
-.bottom-nav .nav-scan { color: var(--rbnw-blue); }
-.bottom-nav .scan-fab {
-  width: 58px; height: 58px;
-  border-radius: 20px;
-  background: var(--rbnw-gradient);
-  color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 23px;
-  margin-top: -34px;
-  box-shadow: 0 10px 22px rgba(15, 76, 146, 0.35), 0 0 0 5px #fff;
-  transform: rotate(0deg);
-  transition: transform .15s, box-shadow .15s;
-}
-.bottom-nav .nav-scan:active .scan-fab { transform: scale(0.94); }
-.bottom-nav .nav-scan .nav-label { font-weight: 700; }
 
 /* Minimal dashboard top bar (notifications only) */
 .topbar-minimal {

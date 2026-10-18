@@ -1,0 +1,89 @@
+# RBNW Wallet — Phase 1 (Sandbox)
+
+Digital wallet for Rural Bank of New Washington. Built to match the
+`RBNW-PROJECT.pdf` reference deck: same brand gradient (deep blue → green),
+card-based mobile UI, bottom tab nav, and the Login → Dashboard → Send Money
+flow shown in the deck's UI mockups.
+
+**Stack:** PHP 8+, MySQL, vanilla HTML/CSS/JS (no framework, no build step —
+matches your usual Hostinger shared-hosting setup).
+
+## What's built (this phase)
+
+| Module | Status |
+|---|---|
+| Login / Register (MPIN, hashed, lockout after 5 tries) | ✅ Working |
+| Dashboard (balance card, quick services, recent tx) | ✅ Working |
+| Send Money (6-step flow: recipient → amount → review → MPIN → sending → success) | ✅ Working, wallet-to-wallet, atomic ledger |
+| Transaction history | ✅ Working |
+| Notifications | ✅ Working |
+| Profile / Logout | ✅ Working |
+| Top Up, Pay Bills, Loans, Save Money, Request Money, Bank Wallet, Donations, Cash Out, Scan QR | 🔜 Branded "Coming Soon" stubs — DB schema already covers them, ready to wire up next |
+
+This mirrors the phased roadmap on the deck's last slide (Sandbox → Staging →
+Production → Beta). Everything here is Sandbox-phase: functional core wallet
++ send money, with the rest of the schema in place so the remaining modules
+are mostly UI + one API file each, not new architecture.
+
+## Deploy to Hostinger — rbnw.surgemobileaccess.com
+
+1. In hPanel, create the subdomain `rbnw.surgemobileaccess.com` if not yet
+   created, pointing its document root to its own folder (e.g.
+   `public_html/rbnw/` or wherever Hostinger puts new subdomains by
+   default) — **not** a subfolder of `surgemobileaccess.com`'s root, so it
+   gets a clean document root of its own.
+2. Upload everything inside `rbnw-wallet/` straight into that subdomain's
+   document root (so `login.php` sits at the root, not inside another
+   `rbnw-wallet/` folder — otherwise your URLs become
+   `rbnw.surgemobileaccess.com/rbnw-wallet/login.php`).
+3. Create the MySQL database + user in hPanel, then import the schema:
+   ```
+   mysql -u u718203951_rbnwuser -p u718203951_rbnwwallet < database/schema.sql
+   ```
+   (or paste `database/schema.sql` into phpMyAdmin's SQL tab)
+4. **Secrets:** copy `config.local.example.php` to `config.local.php` and
+   put the real DB password and PayMongo keys there. `config.local.php` is
+   gitignored so live keys never land in GitHub. Upload it together with
+   the rest of the files.
+   `config.php` already has `APP_URL` set to
+   `https://rbnw.surgemobileaccess.com`. Just fill in the real
+   `DB_NAME` / `DB_USER` / `DB_PASS` from hPanel > Databases (the
+   `u718203951_` prefix in there is a guess based on your other
+   subdomains — confirm the exact values in hPanel).
+5. Set `ini_set('display_errors', '1')` in `config.php` temporarily if you
+   need to debug — flip back to `'0'` before going live.
+6. Visit `/register.php` to create your first test account. A wallet row is
+   auto-created with ₱0.00 balance; top it up manually via phpMyAdmin for
+   testing send-money end to end (`UPDATE rbnw_wallets SET balance = 5000
+   WHERE user_id = 1;`) until Top Up is wired to a real cash-in source.
+
+## Notes on conventions used (matches your other apps)
+
+- Page links, CSS/JS and redirects use app-relative paths (`app_url()` /
+  `asset_url()`), not `APP_URL`, so login/register keep working on
+  http/https, www, a temporary domain, or a subfolder. `APP_URL` is only
+  used for absolute shareable links.
+- `filemtime()`-based cache-busting on `assets/css/style.css` and
+  `assets/js/app.js` via `asset_url()`.
+- `SET time_zone = '+08:00'` forced on the PDO session in `config.php`.
+- Every `/api/*.php` endpoint wraps output in `json_out()`, which flushes any
+  stray notice/warning output before encoding — same defensive pattern as
+  TriLink/SurgeBiz.
+- MPIN stored via `password_hash()`/`password_verify()`, never plaintext.
+- All money movement goes through `post_wallet_transaction()` in
+  `includes/functions.php`, which locks the wallet row (`FOR UPDATE`) and
+  writes a single ledger table (`rbnw_wallet_transactions`) — so balance and
+  history can never drift out of sync.
+
+## Next steps (suggested order)
+
+1. **Top Up** — wire to PayMongo QR Ph like your other wallets, credit
+   `rbnw_wallets` via `post_wallet_transaction()`.
+2. **Pay Bills** — `rbnw_billers` table is seeded with the Aklan/Boracay
+   billers from the deck; just needs the UI + `api/pay-bills.php`.
+3. **Scan QR** — generate/read `rbnw_qr_codes`, reuse the Send Money PIN step.
+4. **Loans / Save Money / Request Money / Donations / Bank Wallet** — schema
+   ready in `database/schema.sql`, same pattern as Send Money.
+
+Sabihin mo lang kung alin sa mga natitirang module ang unahin — same
+structure lang ang gagamitin, mabilis na dapat.

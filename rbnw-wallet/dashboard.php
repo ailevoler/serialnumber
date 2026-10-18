@@ -6,10 +6,6 @@ $user   = get_user(current_user_id());
 $wallet = get_wallet(current_user_id());
 $recentTx = get_recent_transactions(current_user_id(), 5);
 
-$stmt = db()->prepare("SELECT COUNT(*) c FROM rbnw_notifications WHERE user_id = ? AND is_read = 0");
-$stmt->execute([current_user_id()]);
-$unreadCount = (int)$stmt->fetch()['c'];
-
 $activeNav = 'home';
 ?>
 <!DOCTYPE html>
@@ -26,13 +22,6 @@ $activeNav = 'home';
 </head>
 <body>
 <div class="app-shell">
-
-  <div class="topbar-minimal">
-    <a href="notifications.php" class="icon-btn" aria-label="Notifications">
-      <i class="fa-solid fa-bell"></i>
-      <?php if ($unreadCount > 0): ?><span class="badge-dot"><?= min($unreadCount, 9) ?></span><?php endif; ?>
-    </a>
-  </div>
 
   <div class="app-main">
 

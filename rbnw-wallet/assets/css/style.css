@@ -69,6 +69,7 @@ input, select, textarea { font-family: inherit; }
   position: relative;
   display: flex;
   flex-direction: column;
+  padding-top: env(safe-area-inset-top); /* notch, when saved to home screen */
 }
 
 @media (min-width: 500px) {
@@ -863,11 +864,22 @@ input, select, textarea { font-family: inherit; }
 .bottom-nav .nav-item.active .nav-icon { background: var(--rbnw-blue-50); }
 .bottom-nav .nav-item.active .nav-label { font-weight: 700; }
 
-/* Minimal dashboard top bar (notifications only) */
-.topbar-minimal {
-  display: flex;
-  justify-content: flex-end;
-  padding: 14px 16px 0;
+.bottom-nav .nav-icon { position: relative; }
+.bottom-nav .nav-badge {
+  position: absolute;
+  top: 0;
+  left: 29px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #fff;
 }
 
 /* ---------------------------------------------------------

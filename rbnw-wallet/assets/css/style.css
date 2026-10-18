@@ -602,7 +602,11 @@ input, select, textarea { font-family: inherit; }
    Balance card
    --------------------------------------------------------- */
 .balance-card {
-  background: var(--rbnw-gradient);
+  /* blue at the top fading to green at the bottom, with a soft white
+     glow rising from the bottom edge */
+  background:
+    radial-gradient(120% 55% at 50% 118%, rgba(255, 255, 255, 0.30) 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(0deg, #2a9a55 0%, #1f8a73 22%, #17679f 52%, #0f4c92 76%, #0a3570 100%);
   border-radius: var(--radius-lg);
   padding: 20px;
   color: #fff;
@@ -613,13 +617,23 @@ input, select, textarea { font-family: inherit; }
 }
 
 .balance-card::after {
+  /* thin white highlight line along the bottom */
   content: '';
   position: absolute;
-  width: 180px; height: 180px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 50%;
-  top: -80px; right: -60px;
+  left: 18%; right: 18%; bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.7), rgba(255,255,255,0));
 }
+
+.balance-toggle {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: none; border: none; padding: 4px 0; color: inherit;
+  font-size: 12.5px; font-weight: 500;
+}
+.balance-toggle i { width: 16px; font-size: 14px; }
+
+.balance-amount.is-hidden { letter-spacing: 3px; }
 
 .balance-top {
   display: flex;
@@ -657,6 +671,7 @@ input, select, textarea { font-family: inherit; }
   background: transparent;
   border: none;
   color: #fff;
+  text-shadow: 0 1px 2px rgba(5, 40, 30, 0.25);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -679,8 +694,8 @@ input, select, textarea { font-family: inherit; }
 }
 
 .balance-action-icon.cash-in {
-  background: var(--rbnw-green);
-  color: #fff;
+  background: #fff;
+  color: var(--rbnw-green);
 }
 
 /* ---------------------------------------------------------

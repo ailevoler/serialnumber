@@ -27,10 +27,13 @@ $activeNav = 'home';
 
     <div class="balance-card">
       <div class="balance-top">
-        <span><i class="fa-regular fa-eye"></i> Total Balance</span>
+        <button type="button" class="balance-toggle" id="balanceToggle" aria-pressed="false" aria-label="Hide balance">
+          <i class="fa-regular fa-eye"></i> <span>Total Balance</span>
+        </button>
         <span class="wallet-level-chip">Wallet Level <?= (int)$user['wallet_level'] ?></span>
       </div>
-      <div class="balance-amount" id="balanceAmount"><?= peso((float)$wallet['balance']) ?></div>
+      <div class="balance-amount" id="balanceAmount" data-amount="<?= htmlspecialchars(peso((float)$wallet['balance'])) ?>"><?= peso((float)$wallet['balance']) ?></div>
+      <script>try{if(localStorage.getItem('rbnw_hide_balance')==='1'){var b=document.getElementById('balanceAmount');b.textContent='₱ ••••••';b.classList.add('is-hidden');}}catch(e){}</script>
       <div class="balance-actions">
         <button onclick="location.href='top-up.php'">
           <span class="balance-action-icon cash-in"><i class="fa-solid fa-plus"></i></span>
@@ -124,6 +127,29 @@ $activeNav = 'home';
 </div>
 
 <script src="<?= asset_url('assets/js/app.js') ?>"></script>
+<script>
+// Show / hide balance; the choice is remembered on this device.
+(() => {
+  const KEY = 'rbnw_hide_balance';
+  const btn = document.getElementById('balanceToggle');
+  const amt = document.getElementById('balanceAmount');
+  const set = (hidden) => {
+    amt.textContent = hidden ? '₱ ••••••' : amt.dataset.amount;
+    amt.classList.toggle('is-hidden', hidden);
+    btn.querySelector('i').className = hidden ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+    btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+    btn.setAttribute('aria-label', hidden ? 'Show balance' : 'Hide balance');
+  };
+  let hidden = false;
+  try { hidden = localStorage.getItem(KEY) === '1'; } catch (_) { /* storage unavailable */ }
+  set(hidden);
+  btn.addEventListener('click', () => {
+    hidden = !hidden;
+    set(hidden);
+    try { localStorage.setItem(KEY, hidden ? '1' : '0'); } catch (_) { /* storage unavailable */ }
+  });
+})();
+</script>
 <script>
 (() => {
   const track = document.getElementById('bannerTrack');

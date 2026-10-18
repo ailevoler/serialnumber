@@ -22,9 +22,16 @@ $activeNav = 'home';
     <button class="back-btn" onclick="location.href='dashboard.php'" style="background:none;border:none;"><i class="fa-solid fa-arrow-left"></i></button>
     <h2>All Services</h2>
   </div>
-  <div class="app-main" style="padding-top:16px;">
+  <div class="app-main" style="padding-top:16px;padding-bottom:calc(110px + env(safe-area-inset-bottom));">
     <div class="services-grid">
       <?php render_service_tiles(['send', 'cashin', 'bills', 'loans', 'save', 'request', 'bank', 'donate', 'cashout', 'scan', 'history', 'notif']); ?>
+    </div>
+
+    <div class="banner-slide" style="margin-top:24px">
+      <img src="<?= asset_url('assets/img/banners/banner-plugandgo-800.webp') ?>"
+           srcset="<?= asset_url('assets/img/banners/banner-plugandgo-800.webp') ?> 800w, <?= asset_url('assets/img/banners/banner-plugandgo-1600.webp') ?> 1600w"
+           sizes="(max-width: 460px) 100vw, 430px" width="800" height="300" loading="lazy"
+           alt="Plug&amp;Go — EV charging made easy. Find. Charge. Pay. Go.">
     </div>
   </div>
   <?php include __DIR__ . '/includes/bottom-nav.php'; ?>

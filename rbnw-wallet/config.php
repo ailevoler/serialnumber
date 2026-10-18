@@ -100,6 +100,12 @@ defined('BANK_PESONET_FEE')       || define('BANK_PESONET_FEE', 0.00);
 defined('BANK_TRANSFER_AUTO_COMPLETE') || define('BANK_TRANSFER_AUTO_COMPLETE', false); // sandbox only
 
 // ---------------------------------------------------------
+// DONATIONS
+// ---------------------------------------------------------
+defined('DONATION_MIN') || define('DONATION_MIN', 10.00);
+defined('DONATION_MAX') || define('DONATION_MAX', 50000.00);
+
+// ---------------------------------------------------------
 // SECURITY SETTINGS
 // ---------------------------------------------------------
 define('MPIN_LENGTH', 6);

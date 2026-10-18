@@ -322,9 +322,12 @@ CREATE TABLE IF NOT EXISTS `rbnw_donations` (
   `cause_id` INT UNSIGNED NOT NULL,
   `amount` DECIMAL(12,2) NOT NULL,
   `donation_type` ENUM('one_time','monthly') NOT NULL DEFAULT 'one_time',
+  `is_anonymous` TINYINT(1) NOT NULL DEFAULT 0,
   `message` VARCHAR(255) DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY `uq_don_ref` (`reference_no`),
+  KEY `idx_don_cause_created` (`cause_id`, `created_at`),
+  KEY `idx_don_user_created` (`user_id`, `created_at`),
   CONSTRAINT `fk_don_user` FOREIGN KEY (`user_id`) REFERENCES `rbnw_users`(`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_don_cause` FOREIGN KEY (`cause_id`) REFERENCES `rbnw_donation_causes`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

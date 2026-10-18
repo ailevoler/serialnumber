@@ -87,6 +87,19 @@ defined('SAVINGS_MAIN_PLAN_ID') || define('SAVINGS_MAIN_PLAN_ID', 1);
 defined('SAVINGS_GOAL_PLAN_ID') || define('SAVINGS_GOAL_PLAN_ID', 2);
 
 // ---------------------------------------------------------
+// BANK WALLET (transfer wallet -> bank). Transfers debit the wallet right
+// away and wait as 'processing' until RBNW sends them out (InstaPay /
+// PESONet / internal) and marks them done with tools/settle-bank-transfer.php.
+// ---------------------------------------------------------
+defined('BANK_MAX_LINKED')        || define('BANK_MAX_LINKED', 5);
+defined('BANK_TRANSFER_MIN')      || define('BANK_TRANSFER_MIN', 100.00);
+defined('BANK_INSTAPAY_MAX')      || define('BANK_INSTAPAY_MAX', 50000.00);
+defined('BANK_PESONET_MAX')       || define('BANK_PESONET_MAX', 200000.00);
+defined('BANK_INSTAPAY_FEE')      || define('BANK_INSTAPAY_FEE', 15.00);
+defined('BANK_PESONET_FEE')       || define('BANK_PESONET_FEE', 0.00);
+defined('BANK_TRANSFER_AUTO_COMPLETE') || define('BANK_TRANSFER_AUTO_COMPLETE', false); // sandbox only
+
+// ---------------------------------------------------------
 // SECURITY SETTINGS
 // ---------------------------------------------------------
 define('MPIN_LENGTH', 6);

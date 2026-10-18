@@ -335,7 +335,7 @@ function tx_display_meta(string $type): array
 {
     // [label, icon-class, is_negative]
     return match ($type) {
-        'send', 'cash_out', 'bill_payment', 'loan_repayment', 'savings_deposit', 'donation', 'remittance_out'
+        'send', 'cash_out', 'bill_payment', 'loan_repayment', 'savings_deposit', 'donation', 'remittance_out', 'bank_transfer'
             => ['sign' => '-', 'class' => 'tx-out'],
         default => ['sign' => '+', 'class' => 'tx-in'],
     };
@@ -351,6 +351,8 @@ function tx_type_label(string $type): string
         'cash_in', 'top_up' => 'Cash In',
         'loan_disbursement' => 'Loan Received',
         'loan_repayment'    => 'Loan Payment',
+        'bank_transfer'        => 'Bank Transfer',
+        'bank_transfer_refund' => 'Bank Transfer Refund',
         'savings_deposit'    => 'Moved to Savings',
         'savings_withdrawal' => 'From Savings',
         default             => ucwords(str_replace('_', ' ', $type)),

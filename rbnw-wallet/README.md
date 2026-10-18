@@ -64,6 +64,7 @@ When a new module adds tables/columns, run its file from
 
 - `2026-10-18-loans.sql` — Loans (schedule table + loan columns)
 - `2026-10-19-savings.sql` — Save Money (interest tracking, goal fields)
+- `2026-10-19-bank-wallet.sql` — Bank Wallet (transfers table, new ledger types)
 
 ## Save Money
 
@@ -73,6 +74,24 @@ savings goals (Goal Saver plan) with target and progress, daily-compounded
 interest credited net of the 20% final withholding tax, and activity
 history. Interest rates are the `interest_rate` values in
 `rbnw_savings_plans` — set them to RBNW's approved rates.
+
+## Bank Wallet
+
+Link up to `BANK_MAX_LINKED` bank / e-wallet accounts (RBNW, BDO, BPI,
+Landbank, GCash, Maya, ...), pick a primary, and transfer from the wallet
+via InstaPay (fee, up to ₱50k, minutes) or PESONet (next banking day);
+RBNW accounts are free. The wallet is debited when the transfer is
+submitted and the transfer waits as **Processing** until RBNW operations
+send it through the bank's InstaPay/PESONet channel, then settle it:
+
+```
+php tools/settle-bank-transfer.php list
+php tools/settle-bank-transfer.php complete BT2026...
+php tools/settle-bank-transfer.php fail BT2026... "Account closed"   # auto refund
+```
+
+For sandbox testing only, `BANK_TRANSFER_AUTO_COMPLETE` (config.local.php)
+marks transfers completed immediately.
 
 ## Loans
 

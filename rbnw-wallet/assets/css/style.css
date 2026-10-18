@@ -1131,3 +1131,36 @@ input, select, textarea { font-family: inherit; }
   .rbnw-loader .ring, .rbnw-loader .glow, .rbnw-loader .label::after { animation: none; }
   .rbnw-loader.show .r { animation: none; opacity: 1; }
 }
+
+/* ---------------------------------------------------------
+   Bottom sheet (Save Money, Bank Wallet)
+   --------------------------------------------------------- */
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(8, 20, 40, .45); z-index: 80; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+.sheet {
+  position: fixed; left: 50%; bottom: 0; width: 100%; max-width: var(--max-w); z-index: 81;
+  transform: translate(-50%, 105%); visibility: hidden;
+  transition: transform .25s ease, visibility 0s linear .25s;
+  background: #fff; border-radius: 24px 24px 0 0; padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
+  max-height: 90vh; overflow-y: auto;
+}
+.sheet.open { transform: translate(-50%, 0); visibility: visible; transition: transform .25s ease; }
+.sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--border-strong); margin: 0 auto 14px; }
+.sheet h3 { margin: 0 0 4px; font-size: 17px; }
+.sheet .sub { margin: 0 0 16px; font-size: 13px; color: var(--text-muted); }
+.sheet .amt-input { display: flex; align-items: center; justify-content: center; gap: 4px; border-bottom: 2px solid var(--border); padding-bottom: 6px; margin: 4px 20px 6px; }
+.sheet .amt-input:focus-within { border-color: var(--rbnw-blue-light); }
+.sheet .amt-input span { font-size: 28px; font-weight: 800; color: var(--rbnw-blue); }
+.sheet .amt-input input { border: none; outline: none; width: 5ch; font-size: 34px; font-weight: 800; color: var(--text-dark); }
+.sheet .avail { text-align: center; font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; }
+.sheet .avail button { background: none; border: none; color: var(--rbnw-blue); font-weight: 700; font-size: 12.5px; padding: 0 0 0 6px; }
+.sheet .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.sheet .quick button { height: 40px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: #fff; font-weight: 700; font-size: 13px; color: var(--rbnw-blue); }
+.sheet .flow { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12.5px; color: var(--text-body); margin-bottom: 16px; }
+.sheet .flow span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--bg); border-radius: 999px; font-weight: 600; }
+.sheet .flow i.fa-arrow-right { color: var(--text-faint); }
+.sheet .stack { display: flex; flex-direction: column; gap: 10px; }
+.sheet .goal-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.sheet .goal-stats div { background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: var(--text-muted); }
+.sheet .goal-stats strong { display: block; font-size: 15px; color: var(--text-dark); }
+.btn-danger-text { background: none; border: none; color: var(--danger); font-weight: 600; font-size: 13.5px; padding: 8px; }

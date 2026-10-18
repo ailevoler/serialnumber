@@ -16,7 +16,7 @@ $activeNav = 'home';
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Home — <?= APP_NAME ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,32 +27,11 @@ $activeNav = 'home';
 <body>
 <div class="app-shell">
 
-  <div class="topbar-brand">
-    <button class="icon-btn" id="menuBtn"><i class="fa-solid fa-bars"></i></button>
-    <div class="brand-lockup">
-      <span class="brand-r">R</span>
-      <span class="brand-text"><strong>RBNW</strong><small>WALLET</small></span>
-    </div>
-    <a href="notifications.php" class="icon-btn">
+  <div class="topbar-minimal">
+    <a href="notifications.php" class="icon-btn" aria-label="Notifications">
       <i class="fa-solid fa-bell"></i>
       <?php if ($unreadCount > 0): ?><span class="badge-dot"><?= min($unreadCount, 9) ?></span><?php endif; ?>
     </a>
-  </div>
-
-  <div class="topbar">
-    <div class="greet">
-      <div class="avatar"><?= strtoupper(substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1)) ?></div>
-      <div>
-        <div class="name">Hello, <?= htmlspecialchars($user['first_name']) ?>!</div>
-        <div class="verified">
-          <?php if ($user['kyc_status'] === 'verified'): ?>
-            <i class="fa-solid fa-circle-check"></i> Verified
-          <?php else: ?>
-            <span style="color:var(--text-muted);"><i class="fa-regular fa-circle"></i> Unverified — <a href="kyc.php" style="color:var(--rbnw-blue);font-weight:700;">verify now</a></span>
-          <?php endif; ?>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div class="app-main">
@@ -156,11 +135,6 @@ $activeNav = 'home';
 </div>
 
 <script src="<?= asset_url('assets/js/app.js') ?>"></script>
-<script>
-document.getElementById('menuBtn').addEventListener('click', () => {
-  RBNW.toast('Menu coming soon — use the bottom nav or Profile for now.', 'info');
-});
-</script>
 <script>
 (() => {
   const track = document.getElementById('bannerTrack');

@@ -15,6 +15,58 @@ $wallet = get_wallet(current_user_id());
 <link rel="stylesheet" href="<?= asset_url('assets/css/style.css') ?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
+.cashin-body { padding-bottom: 120px; }
+.cashin-amount-card {
+  background: #fff; border-radius: var(--radius-lg); padding: 20px 18px 16px;
+  box-shadow: var(--shadow-card); text-align: center;
+}
+.cashin-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+.cashin-input {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  border-bottom: 2px solid var(--border); padding-bottom: 8px; margin: 0 8px;
+  transition: border-color .15s;
+}
+.cashin-input:focus-within { border-color: var(--rbnw-blue-light); }
+.cashin-input .currency { font-size: 32px; font-weight: 800; color: var(--rbnw-blue); }
+.cashin-input input {
+  border: none; outline: none; background: transparent; min-width: 0;
+  width: 4.2ch; max-width: 240px; font-size: 40px; font-weight: 800;
+  color: var(--text-dark); letter-spacing: -0.5px; text-align: left;
+}
+.cashin-input input::placeholder { color: #c3ccd9; }
+.cashin-balance {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+  padding: 6px 12px; border-radius: 999px; background: var(--rbnw-blue-50);
+  font-size: 12.5px; color: var(--text-muted);
+}
+.cashin-balance i { color: var(--rbnw-blue); }
+.cashin-balance strong { color: var(--text-dark); }
+.cashin-section-title { margin: 22px 2px 10px; font-size: 13px; font-weight: 700; color: var(--text-body); }
+.cashin-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cashin-quick button {
+  height: 46px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+  background: #fff; font-size: 15px; font-weight: 700; color: var(--rbnw-blue);
+  transition: border-color .15s, background .15s, color .15s;
+}
+.cashin-quick button:hover { border-color: var(--border-strong); }
+.cashin-quick button.active { background: var(--rbnw-blue); border-color: var(--rbnw-blue); color: #fff; }
+.cashin-summary { margin: 18px 0 0; }
+.cashin-summary .review-row.total span { color: var(--rbnw-blue); font-size: 15px; }
+.cashin-note {
+  display: flex; gap: 10px; align-items: flex-start; margin-top: 18px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  background: var(--rbnw-blue-50); border: 1px solid #cfe0f5; color: var(--rbnw-blue);
+}
+.cashin-note i { margin-top: 2px; }
+.cashin-note strong { display: block; font-size: 13.5px; }
+.cashin-note span { display: block; font-size: 12.5px; color: var(--text-body); margin-top: 2px; line-height: 1.4; }
+#amountError .alert { margin: 14px 0 0; }
+.cashin-footer {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: var(--max-w);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(243,246,250,0) 0%, var(--bg) 35%);
+}
 .status-pill {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
@@ -50,37 +102,48 @@ $wallet = get_wallet(current_user_id());
       <button class="back-btn" onclick="RBNW.goBack('dashboard.php')" style="background:none;border:none;"><i class="fa-solid fa-arrow-left"></i></button>
       <h2>Cash In</h2>
     </div>
-    <div class="flow-body">
+    <div class="flow-body cashin-body">
 
-      <div class="amount-display">
-        <input type="text" id="amountInput" inputmode="numeric" placeholder="₱0.00" autocomplete="off">
-        <div class="avail">Current Balance: <strong><?= peso((float)$wallet['balance']) ?></strong></div>
+      <div class="cashin-amount-card">
+        <label for="amountInput" class="cashin-label">Enter amount</label>
+        <div class="cashin-input">
+          <span class="currency">₱</span>
+          <input type="text" id="amountInput" inputmode="decimal" placeholder="0.00" autocomplete="off" aria-describedby="cashinLimits">
+        </div>
+        <div class="cashin-balance">
+          <i class="fa-solid fa-wallet"></i> Current balance <strong><?= peso((float)$wallet['balance']) ?></strong>
+        </div>
       </div>
 
-      <div class="quick-amounts">
-        <button type="button" data-amt="100">₱100</button>
-        <button type="button" data-amt="200">₱200</button>
-        <button type="button" data-amt="500">₱500</button>
-        <button type="button" data-amt="1000">₱1,000</button>
-        <button type="button" data-amt="5000">₱5,000</button>
+      <div class="cashin-section-title">Quick amounts</div>
+      <div class="cashin-quick">
+        <?php foreach ([100, 200, 500, 1000, 2000, 5000] as $amt): ?>
+          <button type="button" data-amt="<?= $amt ?>">₱<?= number_format($amt) ?></button>
+        <?php endforeach; ?>
       </div>
 
-      <div class="card" id="feeCard" style="display:none;">
-        <div class="review-row"><span class="label">Amount to Receive</span><span id="feeAmount">₱0.00</span></div>
-        <div class="review-row"><span class="label">PayMongo Fee (<?= number_format(CASH_IN_FEE_PAYMONGO_PCT, 2) ?>%)</span><span id="feePaymongo">₱0.00</span></div>
+      <div class="card cashin-summary" id="feeCard" style="display:none;">
+        <div class="review-row"><span class="label">Amount to receive</span><span id="feeAmount">₱0.00</span></div>
+        <div class="review-row"><span class="label">PayMongo fee (<?= number_format(CASH_IN_FEE_PAYMONGO_PCT, 2) ?>%)</span><span id="feePaymongo">₱0.00</span></div>
         <?php if (CASH_IN_FEE_RBNW_PCT > 0): ?>
-        <div class="review-row"><span class="label">RBNW Fee (<?= number_format(CASH_IN_FEE_RBNW_PCT, 2) ?>%)</span><span id="feeRbnw">₱0.00</span></div>
+        <div class="review-row"><span class="label">RBNW fee (<?= number_format(CASH_IN_FEE_RBNW_PCT, 2) ?>%)</span><span id="feeRbnw">₱0.00</span></div>
         <?php endif; ?>
-        <div class="review-row"><span class="label">Total to Pay</span><span id="feeTotal">₱0.00</span></div>
+        <div class="review-row total"><span class="label">Total to pay</span><span id="feeTotal">₱0.00</span></div>
       </div>
 
-      <div class="alert alert-info">
+      <div class="cashin-note" id="cashinLimits">
         <i class="fa-solid fa-circle-info"></i>
-        Minimum cash in is <strong><?= peso(CASH_IN_MIN_AMOUNT) ?></strong>, maximum is <strong><?= peso(CASH_IN_MAX_AMOUNT) ?></strong>. Pay via GCash, Maya, or any QR Ph-supported bank app.
+        <div>
+          <strong>Min <?= peso(CASH_IN_MIN_AMOUNT) ?> · Max <?= peso(CASH_IN_MAX_AMOUNT) ?></strong>
+          <span>Pay using GCash, Maya, or any QR Ph-supported bank app.</span>
+        </div>
       </div>
 
       <div id="amountError"></div>
-      <button class="btn btn-primary" id="generateBtn">Generate QR Ph Code</button>
+    </div>
+
+    <div class="cashin-footer">
+      <button class="btn btn-primary" id="generateBtn"><i class="fa-solid fa-qrcode"></i> <span>Generate QR Ph Code</span></button>
     </div>
   </div>
 
@@ -162,19 +225,34 @@ function goToStep(n) {
   document.getElementById('step' + n).classList.remove('hidden');
 }
 
-document.querySelectorAll('.quick-amounts button').forEach(btn => {
+document.querySelectorAll('.cashin-quick button').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.quick-amounts button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.cashin-quick button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('amountInput').value = btn.dataset.amt;
+    document.getElementById('amountError').innerHTML = '';
+    fitAmountInput();
     updateFeePreview();
   });
 });
 
 document.getElementById('amountInput').addEventListener('input', (e) => {
-  e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+  // digits and one decimal point, max 2 decimals
+  let v = e.target.value.replace(/[^0-9.]/g, '');
+  const [whole, ...rest] = v.split('.');
+  v = rest.length ? whole + '.' + rest.join('').slice(0, 2) : whole;
+  e.target.value = v;
+  document.querySelectorAll('.cashin-quick button').forEach(b => b.classList.toggle('active', b.dataset.amt === v));
+  document.getElementById('amountError').innerHTML = '';
+  fitAmountInput();
   updateFeePreview();
 });
+
+// Grow the amount field with its text so "₱ 1,000" stays centred
+function fitAmountInput() {
+  const el = document.getElementById('amountInput');
+  el.style.width = Math.max(el.value.length || 4, 1) + 0.6 + 'ch';
+}
 
 function updateFeePreview() {
   const amt = parseFloat(document.getElementById('amountInput').value || '0');
@@ -198,26 +276,27 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
   const errBox = document.getElementById('amountError');
 
   if (!amt || amt < CASH_IN_MIN) {
-    errBox.innerHTML = `<div class="alert alert-error">Minimum cash in is ${RBNW.peso(CASH_IN_MIN)}.</div>`;
+    errBox.innerHTML = RBNW.alertHtml(`Minimum cash in is ${RBNW.peso(CASH_IN_MIN)}.`, 'error');
     return;
   }
   if (amt > CASH_IN_MAX) {
-    errBox.innerHTML = `<div class="alert alert-error">Maximum cash in is ${RBNW.peso(CASH_IN_MAX)}.</div>`;
+    errBox.innerHTML = RBNW.alertHtml(`Maximum cash in is ${RBNW.peso(CASH_IN_MAX)}.`, 'error');
     return;
   }
   errBox.innerHTML = '';
 
   const btn = document.getElementById('generateBtn');
+  const btnLabel = btn.querySelector('span');
   btn.disabled = true;
-  btn.textContent = 'Generating QR Ph code...';
+  btnLabel.textContent = 'Generating QR Ph code…';
 
   const res = await RBNW.api('top-up.php?action=generate', 'POST', { amount: amt });
 
   btn.disabled = false;
-  btn.textContent = 'Generate QR Ph Code';
+  btnLabel.textContent = 'Generate QR Ph Code';
 
   if (!res.success) {
-    errBox.innerHTML = `<div class="alert alert-error">${res.message || 'Failed to generate payment.'}</div>`;
+    errBox.innerHTML = RBNW.alertHtml(res.message || 'Failed to generate payment.', 'error');
     return;
   }
 

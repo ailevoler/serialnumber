@@ -1006,9 +1006,9 @@ input, select, textarea { font-family: inherit; }
 .success-screen .amt { font-size: 26px; font-weight: 800; color: var(--rbnw-blue); margin: 14px 0; }
 
 .alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  /* block (not flex) so mixed inline text/<strong> wraps as one paragraph */
+  display: block;
+  position: relative;
   padding: 12px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
@@ -1018,7 +1018,8 @@ input, select, textarea { font-family: inherit; }
   margin-bottom: 16px;
   animation: alert-in .2s ease-out;
 }
-.alert i { margin-top: 2px; flex-shrink: 0; }
+.alert > i:first-child { position: absolute; left: 14px; top: 15px; }
+.alert:has(> i:first-child) { padding-left: 38px; }
 .alert-error { background: var(--danger-50); color: #b42d28; border-color: #f6cdca; }
 .alert-success { background: var(--success-50); color: #1b7a3b; border-color: #c4e8d0; }
 .alert-info { background: var(--rbnw-blue-50); color: var(--rbnw-blue); border-color: #cfe0f5; }

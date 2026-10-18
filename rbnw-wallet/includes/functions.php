@@ -347,6 +347,8 @@ function tx_type_label(string $type): string
         'cash_in', 'top_up' => 'Cash In',
         'loan_disbursement' => 'Loan Received',
         'loan_repayment'    => 'Loan Payment',
+        'savings_deposit'    => 'Moved to Savings',
+        'savings_withdrawal' => 'From Savings',
         default             => ucwords(str_replace('_', ' ', $type)),
     };
 }

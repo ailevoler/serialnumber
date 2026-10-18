@@ -63,6 +63,16 @@ When a new module adds tables/columns, run its file from
 `database/migrations/` once in phpMyAdmin (SQL tab), oldest first:
 
 - `2026-10-18-loans.sql` — Loans (schedule table + loan columns)
+- `2026-10-19-savings.sql` — Save Money (interest tracking, goal fields)
+
+## Save Money
+
+GSave / Maya Savings / MariBank-style savings: instant transfers between
+the wallet and "My Savings" (Flexi Save plan), up to `SAVINGS_MAX_GOALS`
+savings goals (Goal Saver plan) with target and progress, daily-compounded
+interest credited net of the 20% final withholding tax, and activity
+history. Interest rates are the `interest_rate` values in
+`rbnw_savings_plans` — set them to RBNW's approved rates.
 
 ## Loans
 

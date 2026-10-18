@@ -230,12 +230,16 @@ CREATE TABLE IF NOT EXISTS `rbnw_savings_goals` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT UNSIGNED NOT NULL,
   `plan_id` INT UNSIGNED NOT NULL,
+  `is_main` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = the main savings account (one per user)',
   `goal_name` VARCHAR(150) NOT NULL,
   `target_amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   `target_date` DATE DEFAULT NULL,
   `current_balance` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  `interest_earned` DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'net of withholding tax',
+  `last_accrual_date` DATE DEFAULT NULL,
   `status` ENUM('active','completed','closed') NOT NULL DEFAULT 'active',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_goal_user_status` (`user_id`, `status`),
   CONSTRAINT `fk_goal_user` FOREIGN KEY (`user_id`) REFERENCES `rbnw_users`(`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_goal_plan` FOREIGN KEY (`plan_id`) REFERENCES `rbnw_savings_plans`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -243,9 +247,13 @@ CREATE TABLE IF NOT EXISTS `rbnw_savings_goals` (
 CREATE TABLE IF NOT EXISTS `rbnw_savings_transactions` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `goal_id` INT UNSIGNED NOT NULL,
+  `reference_no` VARCHAR(40) DEFAULT NULL,
   `type` ENUM('deposit','withdraw','interest') NOT NULL,
   `amount` DECIMAL(12,2) NOT NULL,
+  `tax_withheld` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  `balance_after` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_savtx_goal_created` (`goal_id`, `created_at`),
   CONSTRAINT `fk_savtx_goal` FOREIGN KEY (`goal_id`) REFERENCES `rbnw_savings_goals`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

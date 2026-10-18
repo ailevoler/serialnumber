@@ -76,6 +76,17 @@ defined('LOAN_LIMIT_BY_LEVEL')     || define('LOAN_LIMIT_BY_LEVEL', [1 => 5000.0
 defined('LOAN_REQUIRE_KYC')        || define('LOAN_REQUIRE_KYC', true); // set false in config.local.php to test
 
 // ---------------------------------------------------------
+// SAVINGS. Interest rates live in rbnw_savings_plans (Flexi Save = main
+// account, Goal Saver = goals). Interest compounds daily and is credited,
+// net of the 20% final withholding tax on deposit interest, whenever the
+// account is opened or money moves.
+// ---------------------------------------------------------
+defined('SAVINGS_WTAX_PCT')     || define('SAVINGS_WTAX_PCT', 20.0);
+defined('SAVINGS_MAX_GOALS')    || define('SAVINGS_MAX_GOALS', 5);
+defined('SAVINGS_MAIN_PLAN_ID') || define('SAVINGS_MAIN_PLAN_ID', 1);
+defined('SAVINGS_GOAL_PLAN_ID') || define('SAVINGS_GOAL_PLAN_ID', 2);
+
+// ---------------------------------------------------------
 // SECURITY SETTINGS
 // ---------------------------------------------------------
 define('MPIN_LENGTH', 6);

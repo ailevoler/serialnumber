@@ -83,6 +83,23 @@ require_guest();
   </div>
 </div>
 
+<div class="rbnw-loader" id="loginLoader" role="status" aria-live="polite" aria-hidden="true">
+  <div class="mark">
+    <span class="glow"></span>
+    <svg class="ring" viewBox="0 0 132 132" aria-hidden="true">
+      <defs>
+        <linearGradient id="rbnwLoaderGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#1a63c4"/><stop offset="100%" stop-color="#7fc242"/>
+        </linearGradient>
+      </defs>
+      <circle class="track" cx="66" cy="66" r="60"/>
+      <circle class="arc" cx="66" cy="66" r="60"/>
+    </svg>
+    <img class="r" src="<?= asset_url('assets/img/rbnw-r.png') ?>" alt="">
+  </div>
+  <div class="label">Logging you in</div>
+</div>
+
 <script src="<?= asset_url('assets/js/app.js') ?>"></script>
 <script>
 (() => {
@@ -92,6 +109,14 @@ require_guest();
   const btn      = document.getElementById('loginBtn');
   const btnText  = document.getElementById('loginBtnText');
   const REMEMBER_KEY = 'rbnw_last_mobile';
+
+  const loaderEl = document.getElementById('loginLoader');
+  function loader(on) {
+    loaderEl.classList.toggle('show', on);
+    loaderEl.setAttribute('aria-hidden', on ? 'false' : 'true');
+  }
+  // Coming back via the browser's back button must not leave it showing
+  window.addEventListener('pageshow', () => loader(false));
 
   function showError(msg, fieldId) {
     alertBox.innerHTML = RBNW.alertHtml(msg, 'error');
@@ -151,20 +176,25 @@ require_guest();
 
     busy = true;
     btn.disabled = true;
-    btnText.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle;"></span>';
+    loader(true);
 
-    const res = await RBNW.api('auth.php?action=login', 'POST', { mobile_number: mobile, mpin });
+    // keep the R animation on screen long enough to read as intentional
+    const [res] = await Promise.all([
+      RBNW.api('auth.php?action=login', 'POST', { mobile_number: mobile, mpin }),
+      new Promise(r => setTimeout(r, 900)),
+    ]);
 
     if (res.success) {
       try {
         if (document.getElementById('remember').checked) localStorage.setItem(REMEMBER_KEY, mobile);
         else localStorage.removeItem(REMEMBER_KEY);
       } catch (_) { /* storage unavailable */ }
-      btnText.innerHTML = '<i class="fa-solid fa-check"></i> Success';
+      document.querySelector('#loginLoader .label').textContent = 'Welcome back';
       window.location.href = 'dashboard.php';
       return;
     }
 
+    loader(false);
     busy = false;
     btn.disabled = false;
     btnText.textContent = 'Log In';

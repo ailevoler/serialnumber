@@ -63,8 +63,9 @@ $activeNav = 'home';
     </div>
 
     <?php
-    // Full designed banners: [file slug in assets/img/banners/, alt text, link]
+    // Full designed banners: [file slug in assets/img/banners/, alt text, link or null]
     $banners = [
+      ['banner-plugandgo', 'Plug&Go — EV charging made easy. Find. Charge. Pay. Go.', null],
       ['banner-wallet',    'RBNW Wallet — Your Bank. In Your Hands.',              'services.php'],
       ['banner-qrph',      'Pay easy with QR Ph — One QR. All banks. All e-wallets.', 'scan-qr.php'],
       ['banner-merchants', 'Pay easy with QR Ph at thousands of merchants.',        'scan-qr.php'],
@@ -73,13 +74,13 @@ $activeNav = 'home';
     <section class="banner-slider" aria-roledescription="carousel" aria-label="Promotions">
       <div class="banner-track" id="bannerTrack">
         <?php foreach ($banners as $i => [$slug, $alt, $href]): ?>
-          <a class="banner-slide" href="<?= $href ?>" aria-roledescription="slide">
+          <<?= $href ? 'a href="' . htmlspecialchars($href) . '"' : 'div' ?> class="banner-slide" aria-roledescription="slide">
             <img src="<?= asset_url("assets/img/banners/{$slug}-800.webp") ?>"
                  srcset="<?= asset_url("assets/img/banners/{$slug}-800.webp") ?> 800w, <?= asset_url("assets/img/banners/{$slug}-1600.webp") ?> 1600w"
                  sizes="(max-width: 460px) 100vw, 430px"
                  width="800" height="300" alt="<?= htmlspecialchars($alt) ?>"
                  <?= $i ? 'loading="lazy"' : 'fetchpriority="high"' ?>>
-          </a>
+          </<?= $href ? 'a' : 'div' ?>>
         <?php endforeach; ?>
       </div>
       <div class="banner-dots" id="bannerDots">

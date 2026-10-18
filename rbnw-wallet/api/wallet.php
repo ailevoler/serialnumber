@@ -44,7 +44,7 @@ switch ($action) {
             return [
                 'reference_no' => $tx['reference_no'],
                 'type' => $tx['type'],
-                'label' => ucwords(str_replace('_', ' ', $tx['type'])),
+                'label' => tx_type_label($tx['type']),
                 'counterparty_name' => $tx['counterparty_name'],
                 'amount' => (float)$tx['amount'],
                 'amount_formatted' => peso((float)$tx['amount']),

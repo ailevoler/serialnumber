@@ -329,25 +329,37 @@ function tx_display_meta(string $type): array
 }
 
 /**
+ * Display label for a ledger type. Wallet funding is always called
+ * "Cash In" in the UI, including legacy 'top_up' rows.
+ */
+function tx_type_label(string $type): string
+{
+    return match ($type) {
+        'cash_in', 'top_up' => 'Cash In',
+        default             => ucwords(str_replace('_', ' ', $type)),
+    };
+}
+
+/**
  * Single source for the service tiles on the dashboard and All Services.
- * key => [href, Font Awesome icon, label, tone (colour class)]
+ * key => [href, Font Awesome icon, label]
  */
 function services_catalog(): array
 {
     return [
-        'send'     => ['send-money.php',    'fa-paper-plane',          'Send Money',    'tone-blue'],
-        'cashin'   => ['top-up.php',        'fa-wallet',               'Cash In',       'tone-green'],
-        'bills'    => ['pay-bills.php',     'fa-file-invoice',         'Pay Bills',     'tone-orange'],
-        'loans'    => ['loans.php',         'fa-hand-holding-dollar',  'Loans',         'tone-violet'],
-        'save'     => ['save-money.php',    'fa-piggy-bank',           'Save Money',    'tone-pink'],
-        'request'  => ['request-money.php', 'fa-money-bill-transfer',  'Request Money', 'tone-teal'],
-        'bank'     => ['bank-wallet.php',   'fa-building-columns',     'Bank Wallet',   'tone-indigo'],
-        'donate'   => ['donations.php',     'fa-heart',                'Donations',     'tone-red'],
-        'cashout'  => ['cash-out.php',      'fa-money-bill-wave',      'Cash Out',      'tone-amber'],
-        'scan'     => ['scan-qr.php',       'fa-qrcode',               'Scan QR',       'tone-slate'],
-        'history'  => ['transactions.php',  'fa-receipt',              'Transactions',  'tone-cyan'],
-        'notif'    => ['notifications.php', 'fa-bell',                 'Notifications', 'tone-gold'],
-        'more'     => ['services.php',      'fa-grip',                 'More',          'tone-gray'],
+        'send'     => ['send-money.php',    'fa-paper-plane',          'Send Money'],
+        'cashin'   => ['top-up.php',        'fa-wallet',               'Cash In'],
+        'bills'    => ['pay-bills.php',     'fa-file-invoice',         'Pay Bills'],
+        'loans'    => ['loans.php',         'fa-hand-holding-dollar',  'Loans'],
+        'save'     => ['save-money.php',    'fa-piggy-bank',           'Save Money'],
+        'request'  => ['request-money.php', 'fa-money-bill-transfer',  'Request Money'],
+        'bank'     => ['bank-wallet.php',   'fa-building-columns',     'Bank Wallet'],
+        'donate'   => ['donations.php',     'fa-heart',                'Donations'],
+        'cashout'  => ['cash-out.php',      'fa-money-bill-wave',      'Cash Out'],
+        'scan'     => ['scan-qr.php',       'fa-qrcode',               'Scan QR'],
+        'history'  => ['transactions.php',  'fa-receipt',              'Transactions'],
+        'notif'    => ['notifications.php', 'fa-bell',                 'Notifications'],
+        'more'     => ['services.php',      'fa-grip',                 'More'],
     ];
 }
 
@@ -355,8 +367,8 @@ function render_service_tiles(array $keys): void
 {
     $all = services_catalog();
     foreach ($keys as $key) {
-        [$href, $icon, $label, $tone] = $all[$key];
-        echo '<a class="service-item ' . $tone . '" href="' . htmlspecialchars($href) . '">'
+        [$href, $icon, $label] = $all[$key];
+        echo '<a class="service-item" href="' . htmlspecialchars($href) . '">'
            . '<div class="icon-tile"><i class="fa-solid ' . $icon . '"></i></div>'
            . '<span>' . htmlspecialchars($label) . '</span></a>' . "\n";
     }

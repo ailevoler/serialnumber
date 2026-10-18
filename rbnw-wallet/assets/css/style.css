@@ -756,39 +756,17 @@ input, select, textarea { font-family: inherit; }
 .service-item:active { transform: scale(0.95); }
 
 .service-item .icon-tile {
-  --tone: var(--rbnw-blue);
-  --tone-bg: #eaf2fd;
-  position: relative;
   width: 60px; height: 60px;
   border-radius: 20px;
-  background:
-    radial-gradient(120% 120% at 0% 0%, #ffffff 0%, rgba(255,255,255,0) 55%),
-    var(--tone-bg);
-  border: 1px solid rgba(13, 27, 51, 0.06);
-  border: 1px solid color-mix(in srgb, var(--tone) 14%, transparent);
-  box-shadow: var(--shadow-soft);
-  box-shadow: 0 1px 2px rgba(13, 27, 51, 0.04), 0 6px 14px color-mix(in srgb, var(--tone) 16%, transparent);
+  background: linear-gradient(160deg, #ffffff 0%, var(--rbnw-blue-50) 100%);
+  border: 1px solid #dbe6f5;
+  box-shadow: 0 1px 2px rgba(13, 27, 51, 0.04), 0 6px 14px rgba(15, 76, 146, 0.10);
   display: flex; align-items: center; justify-content: center;
   font-size: 24px;
-  color: var(--tone);
+  color: var(--rbnw-blue);
   transition: transform .15s, box-shadow .15s;
 }
-.service-item:hover .icon-tile { transform: translateY(-2px); box-shadow: 0 10px 20px color-mix(in srgb, var(--tone) 24%, transparent); }
-
-/* One hue per service so tiles are easy to tell apart at a glance */
-.tone-blue   .icon-tile { --tone: #1a63c4; --tone-bg: #e6f0fd; }
-.tone-green  .icon-tile { --tone: #23964a; --tone-bg: #e3f6e9; }
-.tone-orange .icon-tile { --tone: #e2701b; --tone-bg: #fdeedf; }
-.tone-violet .icon-tile { --tone: #7347d6; --tone-bg: #efe9fc; }
-.tone-pink   .icon-tile { --tone: #d6417c; --tone-bg: #fce7ef; }
-.tone-teal   .icon-tile { --tone: #0e9384; --tone-bg: #def5f1; }
-.tone-indigo .icon-tile { --tone: #0a3570; --tone-bg: #e4eaf5; }
-.tone-red    .icon-tile { --tone: #d93a34; --tone-bg: #fde6e5; }
-.tone-amber  .icon-tile { --tone: #b7791f; --tone-bg: #fbf1dc; }
-.tone-slate  .icon-tile { --tone: #24324a; --tone-bg: #e9edf3; }
-.tone-cyan   .icon-tile { --tone: #0b84b5; --tone-bg: #e0f2fa; }
-.tone-gold   .icon-tile { --tone: #c98a00; --tone-bg: #fdf3d6; }
-.tone-gray   .icon-tile { --tone: #4d5c72; --tone-bg: #eef1f5; }
+.service-item:hover .icon-tile { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(15, 76, 146, 0.18); }
 
 .service-item span { font-size: 12.5px; color: var(--text-dark); font-weight: 600; line-height: 1.25; }
 

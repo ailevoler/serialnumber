@@ -126,7 +126,7 @@ $activeNav = 'home';
       <?php else: ?>
         <?php foreach ($recentTx as $tx):
           $meta = tx_display_meta($tx['type']);
-          $label = ucwords(str_replace('_', ' ', $tx['type']));
+          $label = tx_type_label($tx['type']);
           if ($tx['counterparty_name']) {
               $label .= ' — ' . $tx['counterparty_name'];
           }

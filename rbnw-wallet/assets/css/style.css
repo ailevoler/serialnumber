@@ -452,6 +452,7 @@ input, select, textarea { font-family: inherit; }
   transition: border-color .15s, background .15s;
 }
 .btn-biometric:hover { border-color: var(--border-strong); background: #fafcff; }
+.btn-biometric.ready { border-color: var(--rbnw-blue); color: var(--rbnw-blue); background: var(--rbnw-blue-50); }
 
 .btn-biometric .fp-chip {
   width: 28px;

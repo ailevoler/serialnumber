@@ -150,9 +150,52 @@ require_guest();
     e.currentTarget.querySelector('span').textContent = reveal ? 'Hide' : 'Show';
   });
 
-  document.getElementById('biometricBtn').addEventListener('click', () => {
-    RBNW.toast('Biometric login requires the RBNW mobile app.', 'info');
+  // ---------- Biometric login (fingerprint / face via WebAuthn) ----------
+  const BIO = RBNW.biometrics;
+  const bioBtn = document.getElementById('biometricBtn');
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+  if (!BIO.supported()) {
+    bioBtn.classList.add('hidden');
+    document.querySelector('.divider-or').classList.add('hidden');
+  }
+
+  bioBtn.addEventListener('click', async () => {
+    if (busy) return;
+    alertBox.innerHTML = '';
+    const mobile = RBNW.mobileFromField(mobileEl);
+    if (!/^09\d{9}$/.test(mobile)) {
+      showError('Enter your mobile number first, then tap biometrics.', 'mobileField');
+      mobileEl.focus();
+      return;
+    }
+    busy = true;
+    try {
+      const opt = await RBNW.api('webauthn.php?action=login_options', 'POST', { mobile_number: mobile });
+      if (!opt.success) { showError(opt.message); return; }
+      const assertion = await BIO.get(opt.publicKey);   // phone asks for fingerprint / face
+      loader(true);
+      const [res] = await Promise.all([
+        RBNW.api('webauthn.php?action=login_verify', 'POST', assertion),
+        new Promise(r => setTimeout(r, 700)),
+      ]);
+      if (!res.success) { loader(false); showError(res.message); return; }
+      try { if (document.getElementById('remember').checked) localStorage.setItem(REMEMBER_KEY, mobile); } catch (_) {}
+      document.querySelector('#loginLoader .label').textContent = 'Welcome back';
+      window.location.href = 'dashboard.php';
+    } catch (e) {
+      loader(false);
+      showError(BIO.errorText(e));
+    } finally { busy = false; }
   });
+
+  // Highlight the button when this phone is already set up for the remembered number
+  (async () => {
+    const saved = RBNW.mobileFromField(mobileEl);
+    if (lsGet('rbnw_bio_cred_' + saved) && await BIO.available()) {
+      bioBtn.classList.add('ready');
+      bioBtn.innerHTML = '<span class="fp-chip"><i class="fa-solid fa-fingerprint"></i></span> Log in with fingerprint / face';
+    }
+  })();
 
   let busy = false;
   form.addEventListener('submit', async (e) => {
@@ -190,7 +233,9 @@ require_guest();
         else localStorage.removeItem(REMEMBER_KEY);
       } catch (_) { /* storage unavailable */ }
       document.querySelector('#loginLoader .label').textContent = 'Welcome back';
-      window.location.href = 'dashboard.php';
+      // First MPIN login on a phone that supports fingerprint / face: offer to turn it on
+      const offer = !lsGet('rbnw_bio_cred_' + mobile) && !lsGet('rbnw_bio_skip_' + mobile) && await BIO.available();
+      window.location.href = offer ? 'security.php?offer=1' : 'dashboard.php';
       return;
     }
 

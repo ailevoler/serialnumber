@@ -67,6 +67,7 @@ When a new module adds tables/columns, run its file from
 - `2026-10-19-bank-wallet.sql` — Bank Wallet (transfers table, new ledger types)
 - `2026-10-19-donations.sql` — Donations (anonymous flag, indexes)
 - `2026-10-19-kyc.sql` — KYC submissions
+- `2026-10-19-biometrics.sql` — Biometric login (passkey credentials)
 
 ## Save Money
 
@@ -102,6 +103,17 @@ area filter chip, goal, optional `image` path). Users donate from the
 wallet with MPIN, optionally anonymous and with a message; the cause's
 `raised_amount` updates in the same DB transaction, and each cause shows
 its recent supporters (first name + last initial, or "Anonymous").
+
+## Biometric login (fingerprint / Face ID)
+
+Uses WebAuthn passkeys with the phone's built-in fingerprint / face
+unlock (`includes/webauthn.php`, no extra libraries; ES256 + RS256,
+attestation "none", user verification required, replay and clone checks).
+After the first MPIN login on a capable phone the user is offered to turn
+it on (`security.php?offer=1`); it can be managed or removed per phone in
+Profile → Security. Biometric login is tied to the exact domain it was set
+up on and needs https (works on rbnw.surgemobileaccess.com, not on an IP
+address). The fingerprint / face never leaves the phone.
 
 ## KYC (Verify Your ID)
 

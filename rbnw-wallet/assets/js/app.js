@@ -136,6 +136,48 @@ const RBNW = (() => {
     };
   }
 
+  // ---------- Biometric login (WebAuthn / passkeys) ----------
+  const b64u = {
+    toBuf: (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0)).buffer,
+    fromBuf: (b) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+  };
+  const biometrics = {
+    supported: () => !!(window.PublicKeyCredential && navigator.credentials),
+    async available() {
+      try { return this.supported() && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }
+      catch (_) { return false; }
+    },
+    // options from the server use base64url strings; WebAuthn wants ArrayBuffers
+    async create(pk) {
+      const cred = await navigator.credentials.create({ publicKey: {
+        ...pk, challenge: b64u.toBuf(pk.challenge),
+        user: { ...pk.user, id: b64u.toBuf(pk.user.id) },
+        excludeCredentials: (pk.excludeCredentials || []).map(c => ({ ...c, id: b64u.toBuf(c.id) })),
+      } });
+      return { id: cred.id, clientDataJSON: b64u.fromBuf(cred.response.clientDataJSON), attestationObject: b64u.fromBuf(cred.response.attestationObject) };
+    },
+    async get(pk) {
+      const cred = await navigator.credentials.get({ publicKey: {
+        ...pk, challenge: b64u.toBuf(pk.challenge),
+        allowCredentials: (pk.allowCredentials || []).map(c => ({ ...c, id: b64u.toBuf(c.id) })),
+      } });
+      return {
+        id: cred.id,
+        clientDataJSON: b64u.fromBuf(cred.response.clientDataJSON),
+        authenticatorData: b64u.fromBuf(cred.response.authenticatorData),
+        signature: b64u.fromBuf(cred.response.signature),
+      };
+    },
+    // Friendly text for the browser's WebAuthn errors
+    errorText(e) {
+      if (!e) return 'Biometric login failed.';
+      if (e.name === 'NotAllowedError') return 'Biometric check was cancelled or timed out.';
+      if (e.name === 'InvalidStateError') return 'This phone is already set up for biometric login.';
+      if (e.name === 'SecurityError') return 'Biometric login needs the secure (https) site.';
+      return e.message || 'Biometric login failed.';
+    },
+  };
+
   function goBack(fallbackUrl) {
     if (document.referrer && document.referrer.includes(location.host)) {
       history.back();
@@ -146,6 +188,6 @@ const RBNW = (() => {
 
   return {
     api, peso, toast, digitsOnly, formatMobile, escapeHtml, alertHtml, goBack,
-    localMobile, prettyMobile, bindMobileInput, mobileFromField, mountPinInput,
+    localMobile, prettyMobile, bindMobileInput, mobileFromField, mountPinInput, biometrics,
   };
 })();

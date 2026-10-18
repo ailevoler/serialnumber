@@ -104,6 +104,19 @@ wallet with MPIN, optionally anonymous and with a message; the cause's
 `raised_amount` updates in the same DB transaction, and each cause shows
 its recent supporters (first name + last initial, or "Anonymous").
 
+## Installable app (PWA)
+
+`manifest.webmanifest` (name, R icons incl. maskable, standalone display,
+shortcuts) + `sw.js` + `offline.html`. The service worker caches only
+static files (CSS/JS/images/fonts); pages and `/api/` always come from
+the network, so balances and personal data are never stored on the
+phone — offline you get a branded "You're offline" screen. An "Install
+RBNW Wallet" card shows on the login page and dashboard (dismiss = hidden
+for 7 days), and in Profile; on iPhone it opens Safari's "Add to Home
+Screen" steps. Requires https. When you change `offline.html` or the
+precache list, bump `VERSION` in `sw.js`. `.htaccess` serves the manifest
+with the right type and makes browsers re-check `sw.js`.
+
 ## Biometric login (fingerprint / Face ID)
 
 Uses WebAuthn passkeys with the phone's built-in fingerprint / face

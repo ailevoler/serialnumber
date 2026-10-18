@@ -17,6 +17,7 @@ $state  = $user['kyc_status'] === 'verified' ? 'verified'
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="<?= asset_url('assets/css/style.css') ?>">
+<?php include __DIR__ . '/includes/pwa-head.php'; ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 .kyc-body { padding: 16px 16px calc(120px + env(safe-area-inset-bottom)); }

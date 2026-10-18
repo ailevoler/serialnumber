@@ -14,6 +14,7 @@ $activeNav = 'profile';
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="<?= asset_url('assets/css/style.css') ?>">
+<?php include __DIR__ . '/includes/pwa-head.php'; ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -57,6 +58,11 @@ $activeNav = 'profile';
         <div class="tx-info"><div class="tx-title">Transaction History</div></div>
         <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
       </a>
+      <a href="#" class="tx-row hidden" id="installRow" style="text-decoration:none;color:inherit;">
+        <div class="tx-icon tx-in"><i class="fa-solid fa-mobile-screen-button"></i></div>
+        <div class="tx-info"><div class="tx-title">Install RBNW Wallet app</div><div class="tx-time">Add to your home screen</div></div>
+        <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
+      </a>
       <a href="#" class="tx-row" style="text-decoration:none;color:inherit;" onclick="return false;">
         <div class="tx-icon tx-in"><i class="fa-solid fa-headset"></i></div>
         <div class="tx-info"><div class="tx-title">Help &amp; Support</div></div>
@@ -74,6 +80,13 @@ $activeNav = 'profile';
 
 <script src="<?= asset_url('assets/js/app.js') ?>"></script>
 <script>
+// Show "Install app" while it can still be installed on this phone
+const installRow = document.getElementById('installRow');
+const syncInstall = () => installRow.classList.toggle('hidden', !RBNW.pwa.canInstall());
+installRow.onclick = (e) => { e.preventDefault(); RBNW.pwa.install(); };
+syncInstall();
+document.addEventListener('rbnw:installable', syncInstall);
+
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await RBNW.api('auth.php?action=logout', 'POST', {});
   window.location.href = 'login.php';

@@ -178,6 +178,103 @@ const RBNW = (() => {
     },
   };
 
+  // ---------- PWA: service worker + "Install app" prompt ----------
+  const pwa = (() => {
+    let deferred = null;
+    const DISMISS_KEY = 'rbnw_pwa_dismissed_at';
+    const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isIOSSafari = () => isIOS() && /safari/i.test(navigator.userAgent) && !/crios|fxios|edgios|gsa\//i.test(navigator.userAgent);
+    const recentlyDismissed = () => {
+      try { return Date.now() - Number(localStorage.getItem(DISMISS_KEY) || 0) < 7 * 864e5; } catch (_) { return false; }
+    };
+
+    // Service worker lives next to the manifest (app root), so it controls every page
+    const manifest = document.querySelector('link[rel="manifest"]');
+    if ('serviceWorker' in navigator && manifest) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register(new URL('sw.js', manifest.href).href).catch(() => {});
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();               // show our own button instead of the browser's mini-bar
+      deferred = e;
+      document.dispatchEvent(new CustomEvent('rbnw:installable'));
+    });
+    window.addEventListener('appinstalled', () => {
+      deferred = null;
+      document.getElementById('pwaBanner')?.remove();
+      toast('RBNW Wallet installed! Open it from your home screen.', 'success');
+    });
+
+    const canInstall = () => !standalone() && (!!deferred || isIOSSafari());
+
+    async function install() {
+      if (standalone()) { toast('RBNW Wallet is already installed.', 'info'); return; }
+      if (deferred) {
+        deferred.prompt();
+        const { outcome } = await deferred.userChoice;
+        deferred = null;
+        if (outcome !== 'accepted') dismiss();
+        return;
+      }
+      if (isIOS()) { iosSheet(); return; }
+      toast('To install: open your browser menu and choose "Install app" or "Add to Home screen".', 'info');
+    }
+
+    function dismiss() {
+      try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch (_) {}
+      document.getElementById('pwaBanner')?.remove();
+    }
+
+    function iosSheet() {
+      document.getElementById('pwaIos')?.remove();
+      const el = document.createElement('div');
+      el.id = 'pwaIos';
+      el.innerHTML = `
+        <div class="pwa-ios-backdrop"></div>
+        <div class="pwa-ios-sheet" role="dialog" aria-modal="true" aria-label="Install RBNW Wallet">
+          <div class="grab"></div>
+          <h3>Install RBNW Wallet</h3>
+          <p>Add the app to your Home Screen in 3 taps:</p>
+          <ol>
+            <li><span class="n">1</span> Tap <b>Share</b> <i class="fa-solid fa-arrow-up-from-bracket"></i> at the bottom of Safari</li>
+            <li><span class="n">2</span> Scroll and tap <b>Add to Home Screen</b> <i class="fa-regular fa-square-plus"></i></li>
+            <li><span class="n">3</span> Tap <b>Add</b> — RBNW Wallet appears on your Home Screen</li>
+          </ol>
+          <button class="btn btn-primary" type="button">Got it</button>
+        </div>`;
+      document.body.appendChild(el);
+      const close = () => el.remove();
+      el.querySelector('.pwa-ios-backdrop').onclick = close;
+      el.querySelector('button').onclick = close;
+    }
+
+    // Floating card offering the install; pages opt in (dashboard, login).
+    function mountBanner(opts = {}) {
+      const show = () => {
+        if (!canInstall() || recentlyDismissed() || document.getElementById('pwaBanner')) return;
+        const icon = opts.icon || new URL('assets/img/icons/icon-192.png', manifest.href).href;
+        const b = document.createElement('div');
+        b.id = 'pwaBanner';
+        b.className = 'pwa-banner' + (opts.aboveNav ? ' above-nav' : '');
+        b.innerHTML = `
+          <img src="${icon}" alt="">
+          <div class="txt"><strong>Install RBNW Wallet</strong><span>Open it from your home screen, like an app</span></div>
+          <button class="pwa-install" type="button">Install</button>
+          <button class="pwa-close" type="button" aria-label="Not now"><i class="fa-solid fa-xmark"></i></button>`;
+        document.body.appendChild(b);
+        b.querySelector('.pwa-install').onclick = install;
+        b.querySelector('.pwa-close').onclick = dismiss;
+      };
+      show();
+      document.addEventListener('rbnw:installable', show);
+    }
+
+    return { install, mountBanner, canInstall, standalone };
+  })();
+
   function goBack(fallbackUrl) {
     if (document.referrer && document.referrer.includes(location.host)) {
       history.back();
@@ -188,6 +285,6 @@ const RBNW = (() => {
 
   return {
     api, peso, toast, digitsOnly, formatMobile, escapeHtml, alertHtml, goBack,
-    localMobile, prettyMobile, bindMobileInput, mobileFromField, mountPinInput, biometrics,
+    localMobile, prettyMobile, bindMobileInput, mobileFromField, mountPinInput, biometrics, pwa,
   };
 })();

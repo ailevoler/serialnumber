@@ -1165,3 +1165,34 @@ input, select, textarea { font-family: inherit; }
 .sheet .goal-stats div { background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: var(--text-muted); }
 .sheet .goal-stats strong { display: block; font-size: 15px; color: var(--text-dark); }
 .btn-danger-text { background: none; border: none; color: var(--danger); font-weight: 600; font-size: 13.5px; padding: 8px; }
+
+/* ---------------------------------------------------------
+   PWA install banner + iOS instructions
+   --------------------------------------------------------- */
+.pwa-banner {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom));
+  width: calc(100% - 24px); max-width: calc(var(--max-w) - 24px); z-index: 60;
+  display: flex; align-items: center; gap: 12px; padding: 12px 10px 12px 12px;
+  background: #fff; border-radius: 18px; box-shadow: 0 12px 32px rgba(10, 30, 60, .22), 0 0 0 1px rgba(13,27,51,.05);
+  animation: pwaIn .35s cubic-bezier(.2,.9,.3,1.1);
+}
+.pwa-banner.above-nav { bottom: calc(96px + env(safe-area-inset-bottom)); }
+.pwa-banner img { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; box-shadow: 0 0 0 1px var(--border); }
+.pwa-banner .txt { flex: 1; min-width: 0; }
+.pwa-banner .txt strong { display: block; font-size: 14px; }
+.pwa-banner .txt span { display: block; font-size: 12px; color: var(--text-muted); }
+.pwa-banner .pwa-install { border: none; border-radius: 999px; padding: 9px 16px; font-weight: 700; font-size: 13px; color: #fff; background: var(--rbnw-gradient); }
+.pwa-banner .pwa-close { border: none; background: none; color: var(--text-faint); width: 30px; height: 30px; font-size: 15px; }
+@keyframes pwaIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.pwa-ios-backdrop { position: fixed; inset: 0; background: rgba(8, 20, 40, .45); z-index: 90; }
+.pwa-ios-sheet {
+  position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: var(--max-w); z-index: 91;
+  background: #fff; border-radius: 24px 24px 0 0; padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+}
+.pwa-ios-sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--border-strong); margin: 0 auto 14px; }
+.pwa-ios-sheet h3 { margin: 0 0 4px; font-size: 18px; }
+.pwa-ios-sheet p { margin: 0 0 14px; color: var(--text-muted); font-size: 13.5px; }
+.pwa-ios-sheet ol { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.pwa-ios-sheet li { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.pwa-ios-sheet li i { color: var(--rbnw-blue); }
+.pwa-ios-sheet .n { width: 26px; height: 26px; border-radius: 50%; background: var(--rbnw-blue-50); color: var(--rbnw-blue); font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }

@@ -17,7 +17,7 @@ $qrData = base64_encode($qrPayload);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
-<meta name="theme-color" content="#000000">
+<?php $pwaThemeColor = '#000000'; include __DIR__ . '/includes/pwa-head.php'; ?>
 <title>Scan QR — <?= APP_NAME ?></title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>

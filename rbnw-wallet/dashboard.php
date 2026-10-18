@@ -91,27 +91,32 @@ $activeNav = 'home';
       <?php render_service_tiles(['send', 'cashin', 'bills', 'loans', 'save', 'request', 'bank', 'more']); ?>
     </div>
 
-    <div class="promo-banner" style="margin-top:18px;background:linear-gradient(135deg, var(--rbnw-blue) 0%, var(--rbnw-blue-light) 100%);">
-      <div class="txt">
-        <strong>Request Money in a Few Taps</strong>
-        <span>Generate a QR code and get paid instantly. <a href="request-money.php" style="color:#fff;text-decoration:underline;">Try it now</a></span>
+    <?php
+    $banners = [
+      ['banner-cash-in.svg', 'Cash In anytime', 'Add money to your wallet from any QR Ph app.', 'top-up.php', 'Cash In now'],
+      ['banner-request.svg', 'Request money in a few taps', 'Share a QR code and get paid instantly.', 'request-money.php', 'Try it now'],
+      ['banner-secure.svg', 'Your money, always secure', 'MPIN-protected and backed by RBNW.', 'security.php', 'Learn more'],
+    ];
+    ?>
+    <section class="banner-slider" aria-roledescription="carousel" aria-label="Promotions">
+      <div class="banner-track" id="bannerTrack">
+        <?php foreach ($banners as $i => [$img, $title, $text, $href, $cta]): ?>
+          <a class="banner-slide" href="<?= $href ?>" aria-label="<?= htmlspecialchars($title) ?>" aria-roledescription="slide">
+            <div class="banner-copy">
+              <strong><?= htmlspecialchars($title) ?></strong>
+              <span><?= htmlspecialchars($text) ?></span>
+              <em class="banner-cta"><?= htmlspecialchars($cta) ?> <i class="fa-solid fa-arrow-right"></i></em>
+            </div>
+            <img class="banner-art" src="<?= asset_url('assets/img/banners/' . $img) ?>" alt="" <?= $i ? 'loading="lazy"' : '' ?>>
+          </a>
+        <?php endforeach; ?>
       </div>
-      <div class="shield-combo">
-        <i class="fa-solid fa-qrcode shield-base" style="font-size:38px;"></i>
+      <div class="banner-dots" id="bannerDots">
+        <?php foreach ($banners as $i => $_): ?>
+          <button type="button" aria-label="Show slide <?= $i + 1 ?>" class="<?= $i === 0 ? 'active' : '' ?>"></button>
+        <?php endforeach; ?>
       </div>
-    </div>
-
-    <div class="promo-banner" style="margin-top:10px;">
-      <div class="txt">
-        <strong>Your Money. Always Secure.</strong>
-        <span>Fast. Simple. Reliable. <a href="security.php" style="color:#fff;text-decoration:underline;">Learn More</a></span>
-      </div>
-      <div class="shield-combo">
-        <i class="fa-solid fa-shield-halved shield-base"></i>
-        <span class="shield-r">R</span>
-        <span class="shield-lock"><i class="fa-solid fa-lock"></i></span>
-      </div>
-    </div>
+    </section>
 
     <div class="section-head">
       <h3>Recent Transactions</h3>
@@ -155,6 +160,33 @@ $activeNav = 'home';
 document.getElementById('menuBtn').addEventListener('click', () => {
   RBNW.toast('Menu coming soon — use the bottom nav or Profile for now.', 'info');
 });
+</script>
+<script>
+(() => {
+  const track = document.getElementById('bannerTrack');
+  if (!track) return;
+  const slides = track.children;
+  const dots = document.querySelectorAll('#bannerDots button');
+  let index = 0, timer = null;
+
+  const go = (i) => {
+    index = (i + slides.length) % slides.length;
+    track.scrollTo({ left: slides[index].offsetLeft - track.offsetLeft, behavior: 'smooth' });
+  };
+  const start = () => { stop(); timer = setInterval(() => go(index + 1), 5000); };
+  const stop = () => clearInterval(timer);
+
+  track.addEventListener('scroll', () => {
+    const i = Math.round(track.scrollLeft / track.clientWidth);
+    if (i !== index) index = i;
+    dots.forEach((d, n) => d.classList.toggle('active', n === i));
+  }, { passive: true });
+  dots.forEach((d, n) => d.addEventListener('click', () => { go(n); start(); }));
+  ['pointerdown', 'touchstart'].forEach(ev => track.addEventListener(ev, stop, { passive: true }));
+  ['pointerup', 'touchend'].forEach(ev => track.addEventListener(ev, start, { passive: true }));
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) start();
+})();
 </script>
 </body>
 </html>

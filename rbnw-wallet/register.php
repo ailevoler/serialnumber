@@ -7,7 +7,7 @@ require_guest();
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0a3570">
+<meta name="theme-color" content="#ffffff">
 <title>Sign Up — <?= APP_NAME ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,16 +19,19 @@ require_guest();
 <div class="app-shell">
   <div class="auth-screen">
 
-    <header class="auth-hero compact">
-      <div class="hero-nav">
-        <a href="login.php" class="hero-back" aria-label="Back to log in"><i class="fa-solid fa-arrow-left"></i></a>
-        <span class="hero-mini-logo"><img src="<?= asset_url('assets/img/rbnw-logo.png') ?>" alt="RBNW Wallet"></span>
-      </div>
-      <h1 class="hero-title">Create your account</h1>
-      <p class="hero-sub">It only takes a minute. Your wallet is ready right after.</p>
-    </header>
+    <div class="auth-top">
+      <a href="login.php" class="auth-back" aria-label="Back to log in"><i class="fa-solid fa-arrow-left"></i></a>
+    </div>
+    <div class="auth-logo small">
+      <img src="<?= asset_url('assets/img/rbnw-logo.png') ?>" alt="RBNW Wallet">
+    </div>
 
     <main class="auth-card">
+      <div class="auth-heading">
+        <h2>Create your account</h2>
+        <p class="subtitle">It only takes a minute. Your wallet is ready right after.</p>
+      </div>
+
       <div id="regAlert" aria-live="polite"></div>
 
       <form id="registerForm" novalidate>

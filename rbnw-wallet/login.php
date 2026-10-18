@@ -7,7 +7,7 @@ require_guest();
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0a3570">
+<meta name="theme-color" content="#ffffff">
 <title>Log In — <?= APP_NAME ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,17 +19,15 @@ require_guest();
 <div class="app-shell">
   <div class="auth-screen">
 
-    <header class="auth-hero">
-      <div class="logo-badge">
-        <img src="<?= asset_url('assets/img/rbnw-logo.png') ?>" alt="RBNW Wallet">
-      </div>
-      <h1 class="hero-title">RBNW Wallet</h1>
-      <p class="hero-sub">Secure &middot; Simple &middot; Yours.</p>
-    </header>
+    <div class="auth-logo">
+      <img src="<?= asset_url('assets/img/rbnw-logo.png') ?>" alt="RBNW Wallet">
+    </div>
 
     <main class="auth-card">
-      <h2>Welcome back!</h2>
-      <p class="subtitle">Log in with your registered mobile number and 6-digit MPIN.</p>
+      <div class="auth-heading">
+        <h2>Welcome back!</h2>
+        <p class="subtitle">Log in with your mobile number and 6-digit MPIN.</p>
+      </div>
 
       <div id="loginAlert" aria-live="polite"></div>
 
@@ -65,7 +63,7 @@ require_guest();
           <a href="forgot-mpin.php">Forgot MPIN?</a>
         </div>
 
-        <button type="submit" class="btn btn-blue" id="loginBtn">
+        <button type="submit" class="btn btn-primary" id="loginBtn">
           <span id="loginBtnText">Log In</span>
         </button>
       </form>

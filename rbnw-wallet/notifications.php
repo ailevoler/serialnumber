@@ -40,16 +40,23 @@ async function loadNotifications() {
     return;
   }
 
-  card.innerHTML = res.items.map(n => `
-    <div class="tx-row">
+  // Where tapping a notification takes you
+  const LINKS = { money_request: 'request-money.php', request_paid: 'request-money.php', request_declined: 'request-money.php', loan: 'loans.php' };
+  const esc = RBNW.escapeHtml;
+  card.innerHTML = res.items.map(n => {
+    const href = LINKS[n.type];
+    const tag = href ? `a href="${href}"` : 'div';
+    return `
+    <${tag} class="tx-row" style="color:inherit">
       <div class="tx-icon tx-in"><i class="fa-solid fa-bell"></i></div>
       <div class="tx-info">
-        <div class="tx-title">${n.title}${n.is_read ? '' : ' <span style="color:var(--danger);">●</span>'}</div>
-        <div class="tx-time">${n.message}</div>
-        <div class="tx-time" style="margin-top:2px;">${n.time_ago}</div>
+        <div class="tx-title">${esc(n.title)}${n.is_read ? '' : ' <span style="color:var(--danger);">●</span>'}</div>
+        <div class="tx-time">${esc(n.message)}</div>
+        <div class="tx-time" style="margin-top:2px;">${esc(n.time_ago)}</div>
       </div>
-    </div>
-  `).join('');
+      ${href ? '<i class="fa-solid fa-chevron-right" style="color:var(--text-faint);font-size:12px"></i>' : ''}
+    </${href ? 'a' : 'div'}>`;
+  }).join('');
 
   RBNW.api('notifications.php?action=mark_read', 'POST', {});
 }

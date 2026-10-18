@@ -245,6 +245,10 @@ function pay_money_request(string $referenceNo, int $payerId, string $mpin): arr
             $pdo->rollBack();
             return ['ok' => false, 'message' => 'You cannot pay your own request.'];
         }
+        if ($req['requestee_id'] && (int)$req['requestee_id'] !== $payerId) {
+            $pdo->rollBack();
+            return ['ok' => false, 'message' => 'This request was sent to another RBNW Wallet user.'];
+        }
         if ($req['due_date'] && strtotime($req['due_date']) < strtotime('today')) {
             $pdo->prepare("UPDATE rbnw_money_requests SET status = 'expired' WHERE id = ?")->execute([$req['id']]);
             $pdo->commit();

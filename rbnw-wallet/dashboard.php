@@ -88,30 +88,7 @@ $activeNav = 'home';
       <a href="services.php">See All</a>
     </div>
     <div class="services-grid">
-      <a class="service-item" href="send-money.php">
-        <div class="icon-tile"><i class="fa-solid fa-paper-plane"></i></div><span>Send Money</span>
-      </a>
-      <a class="service-item" href="top-up.php">
-        <div class="icon-tile"><i class="fa-solid fa-wallet"></i></div><span>Top Up</span>
-      </a>
-      <a class="service-item" href="pay-bills.php">
-        <div class="icon-tile"><i class="fa-solid fa-file-invoice-dollar"></i></div><span>Pay Bills</span>
-      </a>
-      <a class="service-item" href="loans.php">
-        <div class="icon-tile"><i class="fa-solid fa-sack-dollar"></i></div><span>Loans</span>
-      </a>
-      <a class="service-item" href="save-money.php">
-        <div class="icon-tile"><i class="fa-solid fa-piggy-bank"></i></div><span>Save Money</span>
-      </a>
-      <a class="service-item" href="request-money.php">
-        <div class="icon-tile"><i class="fa-solid fa-hand-holding-dollar"></i></div><span>Request Money</span>
-      </a>
-      <a class="service-item" href="bank-wallet.php">
-        <div class="icon-tile"><i class="fa-solid fa-building-columns"></i></div><span>Bank Wallet</span>
-      </a>
-      <a class="service-item" href="services.php">
-        <div class="icon-tile"><i class="fa-solid fa-ellipsis"></i></div><span>More</span>
-      </a>
+      <?php render_service_tiles(['send', 'cashin', 'bills', 'loans', 'save', 'request', 'bank', 'more']); ?>
     </div>
 
     <div class="promo-banner" style="margin-top:18px;background:linear-gradient(135deg, var(--rbnw-blue) 0%, var(--rbnw-blue-light) 100%);">

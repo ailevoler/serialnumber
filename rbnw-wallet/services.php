@@ -3,20 +3,6 @@ require_once __DIR__ . '/includes/functions.php';
 require_login();
 $activeNav = 'home';
 
-$services = [
-  ['send-money.php', 'fa-paper-plane', 'Send Money'],
-  ['top-up.php', 'fa-wallet', 'Top Up'],
-  ['pay-bills.php', 'fa-file-invoice-dollar', 'Pay Bills'],
-  ['loans.php', 'fa-sack-dollar', 'Loans'],
-  ['save-money.php', 'fa-piggy-bank', 'Save Money'],
-  ['request-money.php', 'fa-hand-holding-dollar', 'Request Money'],
-  ['bank-wallet.php', 'fa-building-columns', 'Bank Wallet'],
-  ['donations.php', 'fa-hand-holding-heart', 'Donations'],
-  ['cash-out.php', 'fa-arrow-down', 'Cash Out'],
-  ['scan-qr.php', 'fa-qrcode', 'Scan QR'],
-  ['transactions.php', 'fa-clock-rotate-left', 'Transactions'],
-  ['notifications.php', 'fa-bell', 'Notifications'],
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,11 +24,7 @@ $services = [
   </div>
   <div class="app-main" style="padding-top:16px;">
     <div class="services-grid">
-      <?php foreach ($services as [$href, $icon, $label]): ?>
-        <a class="service-item" href="<?= $href ?>">
-          <div class="icon-tile"><i class="fa-solid <?= $icon ?>"></i></div><span><?= $label ?></span>
-        </a>
-      <?php endforeach; ?>
+      <?php render_service_tiles(['send', 'cashin', 'bills', 'loans', 'save', 'request', 'bank', 'donate', 'cashout', 'scan', 'history', 'notif']); ?>
     </div>
   </div>
   <?php include __DIR__ . '/includes/bottom-nav.php'; ?>

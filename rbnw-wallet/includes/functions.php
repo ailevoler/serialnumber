@@ -327,3 +327,37 @@ function tx_display_meta(string $type): array
         default => ['sign' => '+', 'class' => 'tx-in'],
     };
 }
+
+/**
+ * Single source for the service tiles on the dashboard and All Services.
+ * key => [href, Font Awesome icon, label, tone (colour class)]
+ */
+function services_catalog(): array
+{
+    return [
+        'send'     => ['send-money.php',    'fa-paper-plane',          'Send Money',    'tone-blue'],
+        'cashin'   => ['top-up.php',        'fa-wallet',               'Cash In',       'tone-green'],
+        'bills'    => ['pay-bills.php',     'fa-file-invoice',         'Pay Bills',     'tone-orange'],
+        'loans'    => ['loans.php',         'fa-hand-holding-dollar',  'Loans',         'tone-violet'],
+        'save'     => ['save-money.php',    'fa-piggy-bank',           'Save Money',    'tone-pink'],
+        'request'  => ['request-money.php', 'fa-money-bill-transfer',  'Request Money', 'tone-teal'],
+        'bank'     => ['bank-wallet.php',   'fa-building-columns',     'Bank Wallet',   'tone-indigo'],
+        'donate'   => ['donations.php',     'fa-heart',                'Donations',     'tone-red'],
+        'cashout'  => ['cash-out.php',      'fa-money-bill-wave',      'Cash Out',      'tone-amber'],
+        'scan'     => ['scan-qr.php',       'fa-qrcode',               'Scan QR',       'tone-slate'],
+        'history'  => ['transactions.php',  'fa-receipt',              'Transactions',  'tone-cyan'],
+        'notif'    => ['notifications.php', 'fa-bell',                 'Notifications', 'tone-gold'],
+        'more'     => ['services.php',      'fa-grip',                 'More',          'tone-gray'],
+    ];
+}
+
+function render_service_tiles(array $keys): void
+{
+    $all = services_catalog();
+    foreach ($keys as $key) {
+        [$href, $icon, $label, $tone] = $all[$key];
+        echo '<a class="service-item ' . $tone . '" href="' . htmlspecialchars($href) . '">'
+           . '<div class="icon-tile"><i class="fa-solid ' . $icon . '"></i></div>'
+           . '<span>' . htmlspecialchars($label) . '</span></a>' . "\n";
+    }
+}

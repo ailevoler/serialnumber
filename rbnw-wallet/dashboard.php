@@ -92,41 +92,22 @@ $activeNav = 'home';
     </div>
 
     <?php
-    // Slides: [slug, eyebrow, headline accent, headline, text, link, CTA].
-    // Drop a photo at assets/img/banners/<slug>.jpg|.png|.webp (a transparent
-    // PNG cut-out of a person looks best) and it replaces the illustration.
+    // Full designed banners: [file slug in assets/img/banners/, alt text, link]
     $banners = [
-      ['banner-cash-in', 'RBNW Wallet', 'Cash In', 'Anytime', 'Add money from any QR Ph app in seconds.', 'top-up.php', 'Cash In Now'],
-      ['banner-request', 'Get paid faster', 'Request', 'Money', 'Share a QR code and get paid instantly.', 'request-money.php', 'Try It Now'],
-      ['banner-secure', 'Bank-grade security', 'Always', 'Secure', 'MPIN-protected and backed by RBNW.', 'security.php', 'Learn More'],
+      ['banner-wallet',    'RBNW Wallet — Your Bank. In Your Hands.',              'services.php'],
+      ['banner-qrph',      'Pay easy with QR Ph — One QR. All banks. All e-wallets.', 'scan-qr.php'],
+      ['banner-merchants', 'Pay easy with QR Ph at thousands of merchants.',        'scan-qr.php'],
     ];
-    $bannerImage = function (string $slug): array {
-        foreach (['png', 'webp', 'jpg', 'jpeg'] as $ext) {
-            if (is_file(__DIR__ . "/assets/img/banners/{$slug}.{$ext}")) {
-                return [asset_url("assets/img/banners/{$slug}.{$ext}"), true];
-            }
-        }
-        return [asset_url("assets/img/banners/{$slug}.svg"), false];
-    };
     ?>
     <section class="banner-slider" aria-roledescription="carousel" aria-label="Promotions">
       <div class="banner-track" id="bannerTrack">
-        <?php foreach ($banners as $i => [$slug, $eyebrow, $accent, $headline, $text, $href, $cta]): ?>
-          <?php [$img, $isPhoto] = $bannerImage($slug); ?>
-          <a class="banner-slide" href="<?= $href ?>" aria-label="<?= htmlspecialchars("$accent $headline") ?>" aria-roledescription="slide">
-            <div class="banner-photo <?= $isPhoto ? 'is-photo' : 'is-art' ?>">
-              <img src="<?= $img ?>" alt="" <?= $i ? 'loading="lazy"' : '' ?>>
-            </div>
-            <span class="banner-deco tri-1"></span>
-            <span class="banner-deco tri-2"></span>
-            <span class="banner-deco plus-1">+</span>
-            <span class="banner-deco plus-2">+</span>
-            <div class="banner-copy">
-              <small><?= htmlspecialchars($eyebrow) ?></small>
-              <strong><span><?= htmlspecialchars($accent) ?></span><?= htmlspecialchars($headline) ?></strong>
-              <p><?= htmlspecialchars($text) ?></p>
-              <em class="banner-cta"><?= htmlspecialchars($cta) ?></em>
-            </div>
+        <?php foreach ($banners as $i => [$slug, $alt, $href]): ?>
+          <a class="banner-slide" href="<?= $href ?>" aria-roledescription="slide">
+            <img src="<?= asset_url("assets/img/banners/{$slug}-800.webp") ?>"
+                 srcset="<?= asset_url("assets/img/banners/{$slug}-800.webp") ?> 800w, <?= asset_url("assets/img/banners/{$slug}-1600.webp") ?> 1600w"
+                 sizes="(max-width: 460px) 100vw, 430px"
+                 width="800" height="300" alt="<?= htmlspecialchars($alt) ?>"
+                 <?= $i ? 'loading="lazy"' : 'fetchpriority="high"' ?>>
           </a>
         <?php endforeach; ?>
       </div>

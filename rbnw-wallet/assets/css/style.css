@@ -745,121 +745,19 @@ input, select, textarea { font-family: inherit; }
 .banner-track::-webkit-scrollbar { display: none; }
 
 .banner-slide {
-  position: relative;
   flex: 0 0 100%;
   scroll-snap-align: start;
-  height: 168px;
+  display: block;
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(115deg, #06224a 0%, #0a3570 45%, #0f4c92 100%);
-  color: #fff;
   overflow: hidden;
-  isolation: isolate;
+  background: var(--rbnw-blue-50);
 }
-
-/* Right-hand photo panel, cut on a diagonal like a print banner */
-.banner-photo {
-  position: absolute;
-  top: 0; right: 0; bottom: 0;
-  width: 52%;
-  clip-path: polygon(22% 0, 100% 0, 100% 100%, 0 100%);
-  background:
-    linear-gradient(160deg, rgba(26, 99, 184, 0.9) 0%, rgba(15, 76, 146, 0.55) 60%, rgba(63, 163, 68, 0.55) 120%),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 18px),
-    #0f4c92;
-  z-index: 0;
-}
-.banner-photo::before {
-  /* bright edge on the diagonal */
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0; left: 0;
-  width: 26%;
-  background: linear-gradient(90deg, #22b8e8, rgba(34, 184, 232, 0));
-  clip-path: polygon(84% 0, 100% 0, 16% 100%, 0 100%);
-  opacity: .9;
-  z-index: 2;
-}
-.banner-photo img {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  height: 100%;
+.banner-slide img {
+  display: block;
   width: 100%;
+  height: auto;
+  aspect-ratio: 800 / 300;
   object-fit: cover;
-  object-position: center top;
-}
-.banner-photo.is-photo img { object-fit: cover; }
-/* transparent PNG cut-outs: keep the whole person, anchored bottom-right */
-.banner-photo.is-photo img[src*=".png"] { object-fit: contain; object-position: right bottom; }
-.banner-photo.is-art img { object-fit: contain; object-position: 70% bottom; width: 112%; right: -8%; }
-
-.banner-deco { position: absolute; z-index: 1; pointer-events: none; }
-.banner-deco.tri-1 {
-  top: -14px; left: 44%;
-  width: 0; height: 0;
-  border-left: 22px solid transparent; border-right: 22px solid transparent;
-  border-top: 34px solid #22b8e8;
-  transform: rotate(-18deg);
-  opacity: .9;
-}
-.banner-deco.tri-2 {
-  bottom: -10px; left: 38%;
-  width: 0; height: 0;
-  border-left: 30px solid transparent; border-right: 30px solid transparent;
-  border-bottom: 44px solid rgba(255, 255, 255, 0.08);
-  transform: rotate(14deg);
-}
-.banner-deco.plus-1, .banner-deco.plus-2 { color: #fff; font-weight: 300; line-height: 1; z-index: 3; }
-.banner-deco.plus-1 { top: 14px; right: 14px; font-size: 22px; }
-.banner-deco.plus-2 { bottom: 18px; left: 47%; font-size: 16px; opacity: .8; }
-
-.banner-copy {
-  position: relative;
-  z-index: 2;
-  width: 58%;
-  height: 100%;
-  padding: 16px 0 16px 18px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.banner-copy small {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: #9fd4ff;
-  margin-bottom: 4px;
-}
-.banner-copy strong {
-  display: flex;
-  flex-direction: column;
-  font-size: 25px;
-  font-weight: 800;
-  line-height: 1.02;
-  letter-spacing: -0.3px;
-  text-transform: uppercase;
-}
-.banner-copy strong span { color: #8fe0ff; font-size: 17px; letter-spacing: 0.4px; margin-bottom: 2px; }
-.banner-copy p {
-  margin: 7px 0 0;
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.8);
-}
-.banner-cta {
-  align-self: flex-start;
-  margin-top: 10px;
-  padding: 6px 12px;
-  border-radius: 4px;
-  background: #fff;
-  color: var(--rbnw-blue-dark);
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
 }
 
 .banner-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }

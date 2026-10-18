@@ -1,18 +1,11 @@
-# Dashboard banner photos
+# Dashboard banners
 
-Each slide shows a photo when one of these files exists, otherwise the
-`.svg` illustration with the same name:
+The dashboard slider shows the banners listed in `$banners` in
+`dashboard.php`. Each banner needs two sizes, both WebP:
 
-| Slide          | Photo file name                         |
-|----------------|-----------------------------------------|
-| Cash In        | `banner-cash-in.png` / `.webp` / `.jpg` |
-| Request Money  | `banner-request.png` / `.webp` / `.jpg` |
-| Secure         | `banner-secure.png` / `.webp` / `.jpg`  |
+- `<slug>-800.webp`  (800 px wide, for phones)
+- `<slug>-1600.webp` (1600 px wide, for sharp high-DPI screens)
 
-Tips
-- Best result: a **transparent PNG cut-out** of a person (waist up), about
-  600 x 600 px. Remove the background with remove.bg or Canva.
-- A normal `.jpg` photo also works; it fills the diagonal panel (cropped).
-- Use photos you have the rights to (your own shoot, or a licence that
-  allows commercial use, e.g. Unsplash / Pexels; check Freepik terms).
-- Keep each file under ~200 KB so the dashboard loads fast on mobile.
+Keep the 8:3 shape of the current banners (e.g. 2000 x 750 source) so
+nothing gets cropped. To add one: export the two sizes, drop them here,
+and add a `[slug, alt text, link]` row to `$banners`.

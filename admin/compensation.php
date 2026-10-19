@@ -36,6 +36,7 @@ if (is_post()) {
     save_setting('passup_positions', implode(',', $positions) ?: '1');
     save_setting('passup_mode', in_array(input('passup_mode'), ['fixed', 'percent', 'package'], true) ? input('passup_mode') : 'fixed');
     save_setting('passup_kept_bonus', isset($_POST['passup_kept_bonus']) ? '1' : '0');
+    save_setting('passup_top_keeps', isset($_POST['passup_top_keeps']) ? '1' : '0');
     save_setting('passup_bonus', $numv('passup_bonus'));
     save_setting('passup_sponsor_keeps_direct', isset($_POST['passup_sponsor_keeps_direct']) ? '1' : '0');
 
@@ -180,6 +181,11 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
         <input type="checkbox" name="passup_kept_bonus" value="1" <?= setting('passup_kept_bonus', '0') === '1' ? 'checked' : '' ?>>
         <span class="toggle-ui"></span>
         <span><strong>Sponsor earns the coded bonus on recruits that are not passed up</strong><small>e.g. 2-Up: invites #1 and #2 pass up to your upline; from invite #3 onward the coded bonus is yours.</small></span>
+      </label>
+      <label class="toggle-card mt-1">
+        <input type="checkbox" name="passup_top_keeps" value="1" <?= setting('passup_top_keeps', '1') === '1' ? 'checked' : '' ?>>
+        <span class="toggle-ui"></span>
+        <span><strong>Top of line earns its own pass-ups</strong><small>For a sponsor with no upline (e.g. the root account): on = it earns the Coded Bonus of its own invites #1 and #2; off = nobody earns it (the company keeps it).</small></span>
       </label>
       <p class="help mb-0 mt-1">A passed-up recruit is coded to the upline who received it, so that upline also receives the recruit's own pass-ups.</p>
     </div>

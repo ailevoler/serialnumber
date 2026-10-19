@@ -219,6 +219,7 @@ function register_member(array $d): int
         $passupTo = $sponsorId;
         $passedUp = false;
         $topOfLine = false;
+        $passupCompany = false;
         $positions = array_map('intval', setting_list('passup_positions'));
         if (plan_on('passup') && in_array($directCount, $positions, true)) {
             $receiverId = (int)($sponsor['passup_upline_id'] ?: $sponsor['sponsor_id']);
@@ -226,9 +227,10 @@ function register_member(array $d): int
                 $passupTo = $receiverId;
                 $passedUp = true;
             } else {
-                // The sponsor is the top of the line (e.g. the root account): nobody above to pass to,
-                // so the top keeps the pass-up and earns its Coded Bonus.
-                $topOfLine = true;
+                // The sponsor is the top of the line (e.g. the root account): nobody above to pass to.
+                // When enabled the top keeps the pass-up and earns its Coded Bonus; otherwise the company keeps it.
+                $topOfLine = setting('passup_top_keeps', '1') === '1';
+                $passupCompany = !$topOfLine;
             }
         }
         q('UPDATE users SET passup_upline_id = ? WHERE id = ?', [$passupTo, $newId]);
@@ -264,7 +266,7 @@ function register_member(array $d): int
 
             // ---- 4. Coded Bonus (Pass-Up): passed-up recruits pay the coded upline;
             //      kept recruits (e.g. invite #3 onward in a 2-Up) pay the sponsor when enabled.
-            if (plan_on('passup') && ($passedUp || $topOfLine || setting('passup_kept_bonus', '0') === '1')) {
+            if (plan_on('passup') && !$passupCompany && ($passedUp || $topOfLine || setting('passup_kept_bonus', '0') === '1')) {
                 $val = (float)setting('passup_bonus', 0);
                 $amt = match (setting('passup_mode', 'fixed')) {
                     'percent' => $price * $val / 100,

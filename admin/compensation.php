@@ -165,7 +165,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
     <div class="card-body">
       <div class="form-grid">
         <div class="form-group"><label>Recruit number(s) passed up</label><input class="input" name="passup_positions" value="<?= e(setting('passup_positions', '1')) ?>" placeholder="1 or 1,2">
-          <div class="help">1 = every member's 1st recruit goes up · 1,2 = 2-Up</div></div>
+          <div class="help">Which invites go up, separated by commas. <strong>1,2</strong> = each member's 1st and 2nd invite pass up to the upline; from the 3rd invite the sponsor earns the Coded Bonus (2-Up). <strong>1</strong> = only the 1st invite passes up (1-Up).</div></div>
         <div class="form-group"><label>Computation</label>
           <select class="input" name="passup_mode">
             <option value="fixed" <?= $sel('passup_mode', 'fixed') ?>>Fixed amount</option>

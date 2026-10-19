@@ -567,7 +567,7 @@ UPDATE settings SET svalue = CASE skey
   WHEN 'direct_mode' THEN 'fixed'
   WHEN 'direct_outright' THEN '1'
   WHEN 'passup_enabled' THEN '1'
-  WHEN 'passup_positions' THEN '1,2'
+  WHEN 'passup_positions' THEN '1'
   WHEN 'passup_mode' THEN 'package'
   WHEN 'passup_kept_bonus' THEN '1'
   WHEN 'passup_sponsor_keeps_direct' THEN '1'

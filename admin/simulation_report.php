@@ -161,7 +161,7 @@ page_header('Simulation Report #' . $run['id'], $me, 'Actuarial projection: ' . 
       <div>
         <div class="sim-kv"><span>Passed up to the coded upline</span><b><?= num($cd['passed_up']) ?> · <?= money($cd['passed_up_amount']) ?></b></div>
         <div class="sim-kv"><span>Top of line (sponsor has no upline, keeps the pass-up)</span><b><?= num($cd['top'] ?? 0) ?> · <?= money($cd['top_amount'] ?? 0) ?></b></div>
-        <div class="sim-kv"><span>Kept by the sponsor (invite #3 onward)</span><b><?= num($cd['kept']) ?> · <?= money($cd['kept_amount']) ?></b></div>
+        <div class="sim-kv"><span>Kept by the sponsor (not passed up)</span><b><?= num($cd['kept']) ?> · <?= money($cd['kept_amount']) ?></b></div>
         <div class="sim-kv"><span><strong>Total Coded Bonus</strong></span><b><?= money($cdTotal) ?> · <?= $share($cdTotal) ?> of revenue</b></div>
         <div class="sim-kv"><span>Average per new member</span><b><?= money($r['members_created'] ? $cdTotal / $r['members_created'] : 0) ?></b></div>
       </div>

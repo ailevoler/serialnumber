@@ -29,6 +29,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/wallet.php';
 require_once __DIR__ . '/compensation.php';
 require_once __DIR__ . '/upgrade.php';
+require_once __DIR__ . '/exgen.php';
 require_once __DIR__ . '/paymongo.php';
 require_once __DIR__ . '/erp.php';
 require_once __DIR__ . '/chat.php';

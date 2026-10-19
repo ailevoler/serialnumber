@@ -77,7 +77,7 @@ page_header('Admin Dashboard', $me, 'Company-wide overview');
 </div>
 
 <div class="card">
-  <div class="card-header"><h3><?= icon('chart') ?> Commissions by Type (6 Ways to Earn)</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('admin/earnings.php')) ?>">Details</a></div></div>
+  <div class="card-header"><h3><?= icon('chart') ?> Commissions by Type</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('admin/earnings.php')) ?>">Details</a></div></div>
   <div class="card-body"><div class="earn-grid">
     <?php foreach ($summary as $k => $s): ?>
       <div class="earn-item"><div class="earn-ic"><?= icon($s['icon']) ?></div><span><?= e($s['label']) ?></span><strong><?= money($s['total']) ?></strong><span class="small"><?= num($s['count']) ?> record(s)</span></div>

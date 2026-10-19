@@ -65,6 +65,9 @@ if (is_post()) {
     foreach (['upgrade_enabled', 'upgrade_allow_skip', 'upgrade_add_pv', 'upgrade_wallet'] as $k) {
         save_setting($k, isset($_POST[$k]) ? '1' : '0');
     }
+    save_setting('exgen_min_directs', (string)max(1, input_int('exgen_min_directs', 8)));
+    save_setting('exgen_window_months', (string)max(0, input_int('exgen_window_months', 2)));
+    save_setting('exgen_mode', input('exgen_mode') === 'per_direct' ? 'per_direct' : 'complete');
     save_setting('upgrade_bonus', input('upgrade_bonus') === 'none' ? 'none' : 'difference');
 
     // Per-package direct bonus and binary PV
@@ -72,12 +75,13 @@ if (is_post()) {
         if (!is_array($row)) {
             continue;
         }
-        q('UPDATE packages SET price = ?, pv = ?, direct_bonus = ?, coded_bonus = ?, discount_percent = ? WHERE id = ?', [
+        q('UPDATE packages SET price = ?, pv = ?, direct_bonus = ?, coded_bonus = ?, discount_percent = ?, exgen_bonus = ? WHERE id = ?', [
             max(0, round((float)($row['price'] ?? 0), 2)),
             max(0, round((float)($row['pv'] ?? 0), 2)),
             max(0, round((float)($row['direct_bonus'] ?? 0), 2)),
             max(0, round((float)($row['coded_bonus'] ?? 0), 2)),
             min(99, max(0, round((float)($row['discount_percent'] ?? 0), 2))),
+            max(0, round((float)($row['exgen_bonus'] ?? 0), 2)),
             (int)$pid,
         ]);
     }
@@ -213,7 +217,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
   <?php if ($zeroWarn): ?><div class="card-body" style="padding-bottom:0"><div class="alert alert-warning mb-0">These are set to 0, so nothing will be paid for them: <?= implode(' · ', $zeroWarn) ?>. Check the values below.</div></div><?php endif; ?>
   <div class="card-body p-0 table-wrap">
     <table class="table stack">
-      <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV / Pair value</th><th>Direct Referral (<?= e($cur) ?>)</th><th>Coded Bonus (<?= e($cur) ?>)</th><th>Product Discount (%)</th></tr></thead>
+      <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV / Pair value</th><th>Direct Referral (<?= e($cur) ?>)</th><th>Coded Bonus (<?= e($cur) ?>)</th><th>Product Discount (%)</th><th>EXGEN per Direct (<?= e($cur) ?>)</th></tr></thead>
       <tbody>
       <?php foreach ($packages as $pk): ?>
         <tr>
@@ -223,6 +227,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
           <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][direct_bonus]" value="<?= e($pk['direct_bonus']) ?>"></td>
           <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][coded_bonus]" value="<?= e($pk['coded_bonus']) ?>"></td>
           <td><input class="input" type="number" step="0.01" min="0" max="99" name="pkg[<?= (int)$pk['id'] ?>][discount_percent]" value="<?= e($pk['discount_percent']) ?>"></td>
+          <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][exgen_bonus]" value="<?= e($pk['exgen_bonus'] ?? 0) ?>"></td>
         </tr>
       <?php endforeach; ?>
       </tbody>
@@ -317,6 +322,24 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
       <p class="mb-1 small">The difference from SRP is recorded as the member's discount / retail profit (not credited to the wallet).</p>
       <a class="btn btn-light btn-sm" href="<?= e(url('admin/products.php')) ?>"><?= icon('box', 14) ?> Set SRP per product</a>
     </div>
+  </div>
+</div>
+
+<div class="card" id="exgen">
+  <div class="card-header"><h3><?= icon('award') ?> EXGEN Bonus (Balik Puhunan)</h3></div>
+  <div class="card-body">
+    <div class="form-grid">
+      <div class="form-group"><label>Minimum directs</label><input class="input" type="number" min="1" name="exgen_min_directs" value="<?= e(setting('exgen_min_directs', 8)) ?>">
+        <div class="help">Target = EXGEN per direct × this number (Silver 250 × 8 = 2,000).</div></div>
+      <div class="form-group"><label>Time limit (months)</label><input class="input" type="number" min="0" name="exgen_window_months" value="<?= e(setting('exgen_window_months', 2)) ?>">
+        <div class="help">Not reached in time → progress resets and a new period starts. 0 = no limit.</div></div>
+      <div class="form-group full"><label>Payout</label>
+        <select class="input" name="exgen_mode">
+          <option value="complete" <?= $sel('exgen_mode', 'complete') ?>>When completed — pay the full target once the minimum directs and the target are reached</option>
+          <option value="per_direct" <?= $sel('exgen_mode', 'per_direct') ?>>Per direct — credit each direct's value as it comes in, up to the target</option>
+        </select></div>
+    </div>
+    <p class="help mb-0">Each paid direct counts the member's own package value, but never more than the direct's package value (a Diamond with a Silver direct counts 250). Set the value per package in the Packages table above. Switch the bonus on/off under Ways to Earn.</p>
   </div>
 </div>
 

@@ -288,6 +288,11 @@ function register_member(array $d): int
             }
         }
 
+        // ---- 7. EXGEN Bonus (balik puhunan) for the sponsor
+        if ($paid) {
+            exgen_check($sponsorId, $newId);
+        }
+
         // ---- 5. Binary points & pairing
         add_binary_points($newId, $paid ? (float)$code['pv'] : 0.0);
 

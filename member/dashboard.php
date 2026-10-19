@@ -51,8 +51,15 @@ page_header('Dashboard', $me, 'Overview of your business');
   <?= stat_card('Pending Payouts', money($pendingPayout), 'cash', 'gold', $unusedCodes . ' unused code(s)') ?>
 </div>
 
+<?php if (plan_on('exgen')): $exg = exgen_progress((int)$me['id']); if ($exg['target'] > 0): ?>
 <div class="card">
-  <div class="card-header"><h3><?= icon('chart') ?> 6 Ways to Earn</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('member/earnings.php')) ?>">View history</a></div></div>
+  <div class="card-header"><h3><?= icon('award') ?> EXGEN Bonus (Balik Puhunan)</h3></div>
+  <div class="card-body"><?= exgen_widget($exg) ?></div>
+</div>
+<?php endif; endif; ?>
+
+<div class="card">
+  <div class="card-header"><h3><?= icon('chart') ?> Ways to Earn</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('member/earnings.php')) ?>">View history</a></div></div>
   <div class="card-body">
     <div class="earn-grid">
       <?php foreach ($summary as $k => $s): ?>

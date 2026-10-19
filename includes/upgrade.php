@@ -157,6 +157,14 @@ function upgrade_member(int $userId, int $toPackageId, string $method, array $o 
             }
         }
 
+        // ---- EXGEN Bonus: the member's own target rises; the sponsor's direct may now count more
+        if (!$free) {
+            exgen_check($userId, $userId);
+            if ($m['sponsor_id']) {
+                exgen_check((int)$m['sponsor_id'], $userId);
+            }
+        }
+
         // ---- PV difference to the binary
         $pv = !$free && setting('upgrade_add_pv', '1') === '1' ? $qt['pv'] : 0.0;
         if ($pv > 0) {

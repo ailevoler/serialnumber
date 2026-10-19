@@ -290,6 +290,7 @@ function earning_types(): array
         'passup'   => ['label' => 'Coded Bonus (Pass-Up)',     'icon' => 'arrow-up',  'hint' => 'Australian Pass-Up'],
         'pairing'  => ['label' => 'Pairing / Matching Bonus',  'icon' => 'git-merge', 'hint' => setting('pairing_to_product_wallet', '0') === '1' ? 'Binary · Product Wallet' : 'Binary'],
         'unilevel' => ['label' => 'Unilevel Bonus',            'icon' => 'repeat',    'hint' => 'Repeat purchase'],
+        'exgen'    => ['label' => 'EXGEN Bonus',               'icon' => 'award',     'hint' => 'Balik puhunan · ' . (int)setting('exgen_min_directs', 8) . ' directs'],
     ];
 }
 
@@ -319,6 +320,7 @@ function icon(string $name, int $size = 18): string
         'repeat'    => '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
         'copy'      => '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
         'bell'      => '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
+        'award'     => '<circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/>',
         'alert'     => '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/>',
         'send'      => '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>',
         'download'  => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',

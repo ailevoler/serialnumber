@@ -290,6 +290,15 @@ a.node:hover { border-color: var(--green); color: var(--text); }
 .bar-col b { font-size: 11px; color: var(--green-900); white-space: nowrap; }
 .progress { height: 8px; background: #eef2ef; border-radius: 10px; overflow: hidden; }
 .progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--gold)); }
+.exgen-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.exgen-amt { font-family: var(--font-head); font-size: 22px; color: var(--green-900); margin-left: 4px; }
+.exgen-pct { font-weight: 700; color: var(--gold-600); }
+.exgen-bar { height: 14px; }
+.exgen-note { margin: 10px 0 0; font-size: 13.5px; }
+.exgen-list { margin-top: 12px; font-size: 13px; }
+.exgen-list summary { cursor: pointer; color: var(--green-700); font-weight: 600; }
+.exgen-list ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.exgen-list li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--border); }
 .divider { height: 1px; background: var(--border); margin: 16px 0; }
 .summary-box { background: var(--green-50); border: 1px solid var(--green-100); border-radius: 12px; padding: 14px 16px; }
 .summary-box .row { display: flex; justify-content: space-between; padding: 4px 0; }

@@ -638,3 +638,22 @@ INSERT IGNORE INTO settings (skey, svalue) VALUES
 
 -- Coded Bonus 2-Up + top-of-line setting (v11)
 INSERT IGNORE INTO settings (skey, svalue) VALUES ('passup_top_keeps', '0');
+
+-- ---------------------------------------------------------------
+-- EXGEN Bonus (v13)
+-- ---------------------------------------------------------------
+
+ALTER TABLE earnings MODIFY type ENUM('discount','direct','indirect','passup','pairing','unilevel','exgen') NOT NULL;
+ALTER TABLE packages ADD COLUMN exgen_bonus DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER discount_percent;
+
+UPDATE packages SET exgen_bonus = 250  WHERE name = 'Silver';
+UPDATE packages SET exgen_bonus = 1000 WHERE name = 'Gold';
+UPDATE packages SET exgen_bonus = 1750 WHERE name = 'Platinum';
+UPDATE packages SET exgen_bonus = 3000 WHERE name = 'Diamond';
+
+INSERT IGNORE INTO gl_accounts (code, name, type, is_system, description) VALUES
+ ('5050', 'Commission - EXGEN Bonus', 'expense', 1, 'Balik Puhunan bonus after 8 directs');
+
+INSERT IGNORE INTO settings (skey, svalue) VALUES
+ ('exgen_enabled', '1'), ('exgen_min_directs', '8'), ('exgen_mode', 'complete'), ('acct_comm_exgen', '5050');
+INSERT IGNORE INTO settings (skey, svalue) VALUES ('exgen_window_months', '2');

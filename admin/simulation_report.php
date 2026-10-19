@@ -101,7 +101,8 @@ page_header('Simulation Report #' . $run['id'], $me, 'Actuarial projection: ' . 
         <tbody>
         <?php foreach ($r['by_type'] as $k => $t): if ($k === 'discount') continue; ?>
           <tr>
-            <td><?= e($t['label']) ?><?= $k === 'pairing' ? '<br><small class="text-muted">' . num($t['pairs']) . ' pair(s)</small>' : '' ?></td>
+            <td><?= e($t['label']) ?><?= $k === 'pairing' ? '<br><small class="text-muted">' . num($t['pairs']) . ' pair(s)</small>' : '' ?>
+              <?php if ($k === 'passup' && !empty($r['coded'])): ?><br><small class="text-muted">Passed up (invite #<?= e($r['coded']['positions']) ?>): <?= num($r['coded']['passed_up']) ?> · <?= money($r['coded']['passed_up_amount']) ?><br>Kept by sponsor: <?= num($r['coded']['kept']) ?> · <?= money($r['coded']['kept_amount']) ?></small><?php endif; ?></td>
             <td><?= num($t['count']) ?></td>
             <td><?php foreach ($t['paid_to'] as $to => $amt) echo paid_to_badge($to) . ' '; ?><?= !$t['paid_to'] ? '<span class="text-muted">—</span>' : '' ?></td>
             <td class="text-right"><?= money($t['amount']) ?></td>

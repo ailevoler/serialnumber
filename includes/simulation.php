@@ -320,6 +320,11 @@ function sim_compute_results(int $runId, array $p, array $b, int $startTs, int $
         $paidTo[$r['paid_to']] = (float)$r['amt'];
     }
 
+    // Coded Bonus split: passed up (paid to someone other than the sponsor) vs kept by the sponsor
+    $coded = q_row("SELECT SUM(e.user_id <> s.sponsor_id) up_n, COALESCE(SUM(IF(e.user_id <> s.sponsor_id, e.amount, 0)),0) up_amt,
+                           SUM(e.user_id = s.sponsor_id) kept_n, COALESCE(SUM(IF(e.user_id = s.sponsor_id, e.amount, 0)),0) kept_amt
+                    FROM earnings e JOIN users s ON s.id = e.source_user_id WHERE e.id > ? AND e.type = 'passup'", [$b['earnings']]);
+
     // Flushed pairing (daily cap reached)
     $flushedEvents = 0;
     $flushedValue = 0.0;
@@ -420,6 +425,8 @@ function sim_compute_results(int $runId, array $p, array $b, int $startTs, int $
         'orders' => ['count' => (int)$orders['n'], 'units' => $units, 'total' => $prodRevenue, 'srp' => (float)$orders['srp'], 'discount' => (float)$orders['discount']],
         'by_type' => $byType,
         'paid_to' => $paidTo,
+        'coded' => ['passed_up' => (int)$coded['up_n'], 'passed_up_amount' => (float)$coded['up_amt'], 'kept' => (int)$coded['kept_n'], 'kept_amount' => (float)$coded['kept_amt'],
+                    'positions' => setting('passup_positions', ''), 'kept_bonus' => setting('passup_kept_bonus', '0') === '1'],
         'pairs_paid' => $byType['pairing']['pairs'],
         'flushed' => ['events' => $flushedEvents, 'value' => round($flushedValue, 2)],
         'revenue' => ['packages' => $pkgRevenue - (float)$upg['amount'], 'upgrades' => (float)$upg['amount'], 'products' => $prodRevenue, 'total' => $revenue],

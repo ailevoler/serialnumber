@@ -70,6 +70,7 @@ if (is_post()) {
     save_setting('exgen_min_directs', (string)max(1, input_int('exgen_min_directs', 8)));
     save_setting('exgen_window_months', (string)max(0, input_int('exgen_window_months', 2)));
     save_setting('exgen_mode', input('exgen_mode') === 'per_direct' ? 'per_direct' : 'complete');
+    save_setting('exgen_count_rule', input('exgen_count_rule') === 'capped' ? 'capped' : 'same');
     save_setting('upgrade_bonus', input('upgrade_bonus') === 'none' ? 'none' : 'difference');
 
     // Per-package direct bonus and binary PV
@@ -347,13 +348,18 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
         <div class="help">Target = EXGEN per direct × this number (Silver 250 × 8 = 2,000).</div></div>
       <div class="form-group"><label>Time limit (months)</label><input class="input" type="number" min="0" name="exgen_window_months" value="<?= e(setting('exgen_window_months', 2)) ?>">
         <div class="help">Not reached in time → progress resets and a new period starts. 0 = no limit.</div></div>
+      <div class="form-group full"><label>Which directs count</label>
+        <select class="input" name="exgen_count_rule">
+          <option value="same" <?= $sel('exgen_count_rule', 'same') ?>>Same package only — a Silver counts Silver directs, a Gold counts Gold directs, …</option>
+          <option value="capped" <?= $sel('exgen_count_rule', 'capped') ?>>Any package — each direct counts the member's value, capped at the direct's package value</option>
+        </select></div>
       <div class="form-group full"><label>Payout</label>
         <select class="input" name="exgen_mode">
           <option value="complete" <?= $sel('exgen_mode', 'complete') ?>>When completed — pay the full target once the minimum directs and the target are reached</option>
           <option value="per_direct" <?= $sel('exgen_mode', 'per_direct') ?>>Per direct — credit each direct's value as it comes in, up to the target</option>
         </select></div>
     </div>
-    <p class="help mb-0">Each paid direct counts the member's own package value, but never more than the direct's package value (a Diamond with a Silver direct counts 250). Set the value per package in the Packages table above. Switch the bonus on/off under Ways to Earn.</p>
+    <p class="help mb-0">Set the value per package in the Packages table above. Switch the bonus on/off under Ways to Earn.</p>
   </div>
 </div>
 

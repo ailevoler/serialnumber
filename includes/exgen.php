@@ -4,8 +4,9 @@ declare(strict_types=1);
 /*
  * EXGEN Bonus (Balik Puhunan).
  *  - Each package has an EXGEN value per direct (Silver 250, Gold 1,000, Platinum 1,750, Diamond 3,000).
- *  - Every paid direct counts the EXGEN value of the member's own package, but never more than the
- *    value of the direct's package (a Diamond with a Silver direct counts 250).
+ *  - Rule "same" (default): only paid directs on the SAME package as the member count (a Silver counts
+ *    Silver directs only, a Diamond counts Diamond directs only), each at the package's EXGEN value.
+ *    Rule "capped": every paid direct counts the member's value, capped at the direct's package value.
  *  - Target = own value x minimum directs (8): Silver 2,000, Gold 8,000, Platinum 14,000, Diamond 24,000.
  *  - Mode "complete": paid once the member has at least the minimum directs AND the counted value reaches
  *    the target. Mode "per_direct": credited as each direct comes in, up to the target.
@@ -41,21 +42,25 @@ function exgen_progress(int $userId): array
     $min = max(1, (int)setting('exgen_min_directs', 8));
     $rate = (float)($m['rate'] ?? 0);
     [$from, $to] = $m ? exgen_window($m) : [null, null];
-    $directs = q_all("SELECT d.id, d.username, d.created_at, p.name package_name, COALESCE(p.exgen_bonus, 0) value
+    $directs = q_all("SELECT d.id, d.username, d.created_at, d.package_id, p.name package_name, COALESCE(p.exgen_bonus, 0) value
                       FROM users d JOIN packages p ON p.id = d.package_id
                       WHERE d.sponsor_id = ? AND d.role = 'member' AND d.created_at >= ?" . ($to ? ' AND d.created_at < ?' : '') . "
                         AND EXISTS (SELECT 1 FROM codes c WHERE c.used_by = d.id AND c.code_type = 'paid')
                       ORDER BY d.id", array_merge([$userId, (string)$from], $to ? [$to] : []));
+    $same = setting('exgen_count_rule', 'same') !== 'capped';
     $total = 0.0;
+    $count = 0;
     foreach ($directs as &$d) {
-        $d['counted'] = min($rate, (float)$d['value']);
+        $d['counted'] = $same
+            ? ((int)$d['package_id'] === (int)($m['package_id'] ?? 0) ? $rate : 0.0)
+            : min($rate, (float)$d['value']);
         $total += $d['counted'];
+        $count += $d['counted'] > 0 ? 1 : 0;
     }
     unset($d);
     $target = round($rate * $min, 2);
     $paid = (float)q_val("SELECT COALESCE(SUM(amount), 0) FROM earnings WHERE user_id = ? AND type = 'exgen'", [$userId]);
     $paidWindow = (float)q_val("SELECT COALESCE(SUM(amount), 0) FROM earnings WHERE user_id = ? AND type = 'exgen' AND created_at >= ?", [$userId, (string)$from]);
-    $count = count($directs);
     $qualified = $rate > 0 && $count >= $min && $total >= $target;
     return [
         'package' => $m['package_name'] ?? null, 'rate' => $rate, 'target' => $target, 'min' => $min,
@@ -112,7 +117,7 @@ function exgen_widget(array $pg, bool $admin = false): string
     if ($done) {
         $h .= '<p class="exgen-note text-green"><strong>Completed</strong> – ' . money($pg['paid']) . ' credited to ' . ($admin ? 'the' : 'your') . ' E-Wallet.</p>';
     } else {
-        $h .= '<p class="exgen-note">' . num($pg['count']) . ' of ' . num($pg['min']) . ' directs · ' . money($pg['rate']) . ' per ' . e($pg['package']) . ' direct';
+        $h .= '<p class="exgen-note">' . num($pg['count']) . ' of ' . num($pg['min']) . ' ' . e($pg['package']) . ' directs · ' . money($pg['rate']) . ' each';
         if ($pg['window_end']) {
             $h .= ' · until <strong>' . e(fdate($pg['window_end'])) . '</strong> (' . num($pg['days_left']) . ' day(s) left)';
         }
@@ -121,13 +126,16 @@ function exgen_widget(array $pg, bool $admin = false): string
             $h .= '<p class="exgen-note text-muted">Already received: ' . money($pg['paid']) . '. Only the difference is paid after an upgrade.</p>';
         }
         if ($pg['window_end']) {
-            $h .= '<p class="exgen-note text-muted small">Reach ' . money($pg['target']) . ' with at least ' . num($pg['min']) . ' directs before the deadline, or the progress resets.</p>';
+            $h .= '<p class="exgen-note text-muted small">' . (setting('exgen_count_rule', 'same') !== 'capped'
+                ? 'Only ' . e($pg['package']) . ' directs count. Get ' . num($pg['min']) . ' before the deadline, or the progress resets.'
+                : 'Reach ' . money($pg['target']) . ' with at least ' . num($pg['min']) . ' directs before the deadline, or the progress resets.') . '</p>';
         }
     }
     if ($pg['directs']) {
-        $h .= '<details class="exgen-list"><summary>Directs counted (' . count($pg['directs']) . ')</summary><ul>';
+        $h .= '<details class="exgen-list"><summary>Directs in this period (' . count($pg['directs']) . ')</summary><ul>';
         foreach ($pg['directs'] as $d) {
-            $h .= '<li><span>@' . e($d['username']) . ' · ' . e($d['package_name']) . '</span><b>' . money($d['counted']) . '</b></li>';
+            $h .= '<li><span>@' . e($d['username']) . ' · ' . e($d['package_name']) . '</span>'
+                . ($d['counted'] > 0 ? '<b>' . money($d['counted']) . '</b>' : '<span class="text-muted">not counted (other package)</span>') . '</li>';
         }
         $h .= '</ul></details>';
     }

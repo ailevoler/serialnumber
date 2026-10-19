@@ -671,3 +671,4 @@ UPDATE packages SET indirect_bonus = 120 WHERE name = 'Diamond';
 
 INSERT INTO settings (skey, svalue) VALUES ('indirect_mode', 'package') ON DUPLICATE KEY UPDATE svalue = 'package';
 INSERT IGNORE INTO settings (skey, svalue) VALUES ('indirect_package_levels', '5'), ('indirect_basis', 'source');
+INSERT IGNORE INTO settings (skey, svalue) VALUES ('exgen_count_rule', 'same');

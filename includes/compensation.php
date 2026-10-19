@@ -6,7 +6,7 @@ declare(strict_types=1);
  *
  *  1. Discount          - members buy at member price; SRP minus member price is their retail profit.
  *  2. Direct Referral   - fixed bonus (per package) to the sponsor when a new member activates.
- *  3. Indirect Referral - fixed amounts per sponsor level above the direct sponsor.
+ *  3. Indirect Referral - per level above the direct sponsor: fixed, % of price, or per package.
  *  4. Pass Up Bonus     - Australian pass-up: a sponsor's Nth recruit(s) are passed up; the
  *                         member they are passed up to earns the pass-up bonus.
  *  5. Pairing Bonus     - binary: every pair of PV (left + right) pays a bonus, with a daily cap.
@@ -49,6 +49,40 @@ function earning_destination(string $type, bool $toWallet = true): string
         return 'product';
     }
     return 'ewallet';
+}
+
+/**
+ * Indirect levels to walk: the configured amounts/percents, or (per-package mode) one entry per level.
+ */
+function indirect_plan(): array
+{
+    if (setting('indirect_mode', 'fixed') === 'package') {
+        return array_fill(0, max(0, (int)setting('indirect_package_levels', 5)), 0.0);
+    }
+    return array_map('floatval', setting_list('indirect_levels'));
+}
+
+/** Per-level amount in per-package mode, from the joining member's package, the receiver's, or the lower of both. */
+function indirect_package_amount(?int $sourcePackageId, int $receiverId): float
+{
+    $rate = fn(?int $pkgId) => $pkgId ? (float)q_val('SELECT indirect_bonus FROM packages WHERE id = ?', [$pkgId]) : 0.0;
+    $basis = setting('indirect_basis', 'source');
+    $src = $rate($sourcePackageId);
+    if ($basis === 'source') {
+        return $src;
+    }
+    $recv = $rate((int)q_val('SELECT package_id FROM users WHERE id = ?', [$receiverId]));
+    return $basis === 'receiver' ? $recv : min($src, $recv);
+}
+
+/** Indirect amount for one level: fixed, % of the package price, or per package. */
+function indirect_amount(float $val, float $price, ?int $sourcePackageId, int $receiverId): float
+{
+    return match (setting('indirect_mode', 'fixed')) {
+        'percent' => $price * $val / 100,
+        'package' => indirect_package_amount($sourcePackageId, $receiverId),
+        default   => $val,
+    };
 }
 
 /** Is an income type (direct, indirect, passup, pairing, unilevel, discount) switched on? */
@@ -246,9 +280,8 @@ function register_member(array $d): int
 
             // ---- 3. Indirect Referral (levels above the sponsor)
             if (plan_on('indirect')) {
-                $isPct = setting('indirect_mode', 'fixed') === 'percent';
                 $up = (int)$sponsor['sponsor_id'];
-                foreach (array_map('floatval', setting_list('indirect_levels')) as $i => $val) {
+                foreach (indirect_plan() as $i => $val) {
                     if (!$up) {
                         break;
                     }
@@ -257,7 +290,7 @@ function register_member(array $d): int
                         break;
                     }
                     if ($row['status'] === 'active') {
-                        credit_earning((int)$row['id'], 'indirect', $isPct ? $price * $val / 100 : $val, $newId,
+                        credit_earning((int)$row['id'], 'indirect', indirect_amount($val, $price, (int)$code['package_id'], (int)$row['id']), $newId,
                             'Indirect referral L' . ($i + 1) . " from {$newName}", null, $i + 1);
                     }
                     $up = (int)$row['sponsor_id'];

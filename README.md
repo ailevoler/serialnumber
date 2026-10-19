@@ -110,6 +110,12 @@ para mai-post ang benta.
 - Kapag ₱0 ang Coded Bonus ng isang package o hindi active ang tatanggap, hindi ito binabayaran at may tala sa activity log ("Coded bonus NOT paid…"), at may babala sa Compensation Plan.
 - Sa Simulation, pwedeng palitan ang pass-up positions at "kept bonus" para sa isang run, at may hiwalay na Pass-Up section ang report.
 
+## Indirect Bonus per Package
+
+- Halaga bawat level (5 levels sa itaas ng sponsor): **Silver ₱10, Gold ₱40, Platinum ₱70, Diamond ₱120** (Compensation Plan → Packages, "Indirect per Level").
+- Default: ang halaga ay batay sa package ng **bagong member** na pumasok (hal. Diamond na pumasok = ₱120 bawat level). Pwedeng palitan sa "Amount based on": package ng tatanggap na upline, o ang mas mababa sa dalawa.
+- Kapag nag-upgrade ang member, ang difference bawat level ang ibinibigay (hal. Silver → Gold = ₱30 bawat level).
+
 ## EXGEN Bonus (Balik Puhunan)
 
 - Halaga bawat direct ayon sa package ng member: **Silver ₱250, Gold ₱1,000, Platinum ₱1,750, Diamond ₱3,000** (Admin → Compensation Plan → Packages, "EXGEN per Direct").
@@ -162,7 +168,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan) at `database/upgrade_v9.sql` (Simulation & Reset) at `database/upgrade_v10.sql` (Package Upgrade) at `database/upgrade_v11.sql` (Coded Bonus 2-Up) at `database/upgrade_v12.sql` (Top sumusunod sa 2-Up) at `database/upgrade_v13.sql` (EXGEN Bonus).
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan) at `database/upgrade_v9.sql` (Simulation & Reset) at `database/upgrade_v10.sql` (Package Upgrade) at `database/upgrade_v11.sql` (Coded Bonus 2-Up) at `database/upgrade_v12.sql` (Top sumusunod sa 2-Up) at `database/upgrade_v13.sql` (EXGEN Bonus) at `database/upgrade_v14.sql` (Indirect per package).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.

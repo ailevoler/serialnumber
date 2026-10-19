@@ -145,13 +145,19 @@ function upgrade_member(int $userId, int $toPackageId, string $method, array $o 
                     $pay($codedTo, 'passup', $amt, "Coded bonus upgrade: {$name} ({$label})");
                 }
             }
-            if (plan_on('indirect') && setting('indirect_mode', 'fixed') === 'percent') {
+            $indMode = setting('indirect_mode', 'fixed');
+            if (plan_on('indirect') && in_array($indMode, ['percent', 'package'], true)) {
+                // percent: % of the price difference; per package: new package's amount less the old one's
+                $fromPkg = $qt['orig_free'] ? null : ($qt['from']['id'] ?? null);
                 $up = (int)q_val('SELECT sponsor_id FROM users WHERE id = ?', [(int)$m['sponsor_id']]);
-                foreach (array_map('floatval', setting_list('indirect_levels')) as $i => $pct) {
+                foreach (indirect_plan() as $i => $pct) {
                     if (!$up) {
                         break;
                     }
-                    $pay($up, 'indirect', $qt['amount'] * $pct / 100, 'Indirect upgrade bonus L' . ($i + 1) . " from {$name} ({$label})", $i + 1);
+                    $amt = $indMode === 'percent'
+                        ? $qt['amount'] * $pct / 100
+                        : indirect_package_amount((int)$to['id'], $up) - indirect_package_amount($fromPkg ? (int)$fromPkg : null, $up);
+                    $pay($up, 'indirect', $amt, 'Indirect upgrade bonus L' . ($i + 1) . " from {$name} ({$label})", $i + 1);
                     $up = (int)q_val('SELECT sponsor_id FROM users WHERE id = ?', [$up]);
                 }
             }

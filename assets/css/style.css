@@ -290,6 +290,7 @@ a.node:hover { border-color: var(--green); color: var(--text); }
 .bar-col b { font-size: 11px; color: var(--green-900); white-space: nowrap; }
 .progress { height: 8px; background: #eef2ef; border-radius: 10px; overflow: hidden; }
 .progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--gold)); }
+.pkg-table input.input { min-width: 104px; }
 .exgen-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .exgen-amt { font-family: var(--font-head); font-size: 22px; color: var(--green-900); margin-left: 4px; }
 .exgen-pct { font-weight: 700; color: var(--gold-600); }

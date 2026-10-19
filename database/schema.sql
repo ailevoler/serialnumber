@@ -657,3 +657,17 @@ INSERT IGNORE INTO gl_accounts (code, name, type, is_system, description) VALUES
 INSERT IGNORE INTO settings (skey, svalue) VALUES
  ('exgen_enabled', '1'), ('exgen_min_directs', '8'), ('exgen_mode', 'complete'), ('acct_comm_exgen', '5050');
 INSERT IGNORE INTO settings (skey, svalue) VALUES ('exgen_window_months', '2');
+
+-- ---------------------------------------------------------------
+-- Indirect Bonus per package (v14)
+-- ---------------------------------------------------------------
+
+ALTER TABLE packages ADD COLUMN indirect_bonus DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER exgen_bonus;
+
+UPDATE packages SET indirect_bonus = 10  WHERE name = 'Silver';
+UPDATE packages SET indirect_bonus = 40  WHERE name = 'Gold';
+UPDATE packages SET indirect_bonus = 70  WHERE name = 'Platinum';
+UPDATE packages SET indirect_bonus = 120 WHERE name = 'Diamond';
+
+INSERT INTO settings (skey, svalue) VALUES ('indirect_mode', 'package') ON DUPLICATE KEY UPDATE svalue = 'package';
+INSERT IGNORE INTO settings (skey, svalue) VALUES ('indirect_package_levels', '5'), ('indirect_basis', 'source');

@@ -18,7 +18,7 @@ function levels_from_post(string $key): string
 
 if (is_post()) {
     csrf_check();
-    foreach (['discount', 'direct', 'indirect', 'passup', 'pairing', 'unilevel'] as $t) {
+    foreach (array_keys(earning_types()) as $t) {
         save_setting($t . '_enabled', isset($_POST[$t . '_enabled']) ? '1' : '0');
     }
     $mode = fn($k) => input($k) === 'percent' ? 'percent' : 'fixed';
@@ -28,7 +28,9 @@ if (is_post()) {
     save_setting('direct_percent', $numv('direct_percent'));
     save_setting('direct_outright', isset($_POST['direct_outright']) ? '1' : '0');
 
-    save_setting('indirect_mode', $mode('indirect_mode'));
+    save_setting('indirect_mode', in_array(input('indirect_mode'), ['fixed', 'percent', 'package'], true) ? input('indirect_mode') : 'fixed');
+    save_setting('indirect_package_levels', (string)max(0, min(50, input_int('indirect_package_levels', 5))));
+    save_setting('indirect_basis', in_array(input('indirect_basis'), ['source', 'receiver', 'lower'], true) ? input('indirect_basis') : 'source');
     save_setting('indirect_levels', levels_from_post('indirect_levels'));
 
     $positions = array_unique(array_filter(array_map('intval', explode(',', input('passup_positions'))), fn($n) => $n > 0));
@@ -75,13 +77,14 @@ if (is_post()) {
         if (!is_array($row)) {
             continue;
         }
-        q('UPDATE packages SET price = ?, pv = ?, direct_bonus = ?, coded_bonus = ?, discount_percent = ?, exgen_bonus = ? WHERE id = ?', [
+        q('UPDATE packages SET price = ?, pv = ?, direct_bonus = ?, coded_bonus = ?, discount_percent = ?, exgen_bonus = ?, indirect_bonus = ? WHERE id = ?', [
             max(0, round((float)($row['price'] ?? 0), 2)),
             max(0, round((float)($row['pv'] ?? 0), 2)),
             max(0, round((float)($row['direct_bonus'] ?? 0), 2)),
             max(0, round((float)($row['coded_bonus'] ?? 0), 2)),
             min(99, max(0, round((float)($row['discount_percent'] ?? 0), 2))),
             max(0, round((float)($row['exgen_bonus'] ?? 0), 2)),
+            max(0, round((float)($row['indirect_bonus'] ?? 0), 2)),
             (int)$pid,
         ]);
     }
@@ -216,8 +219,8 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
   ?>
   <?php if ($zeroWarn): ?><div class="card-body" style="padding-bottom:0"><div class="alert alert-warning mb-0">These are set to 0, so nothing will be paid for them: <?= implode(' · ', $zeroWarn) ?>. Check the values below.</div></div><?php endif; ?>
   <div class="card-body p-0 table-wrap">
-    <table class="table stack">
-      <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV / Pair value</th><th>Direct Referral (<?= e($cur) ?>)</th><th>Coded Bonus (<?= e($cur) ?>)</th><th>Product Discount (%)</th><th>EXGEN per Direct (<?= e($cur) ?>)</th></tr></thead>
+    <table class="table stack pkg-table">
+      <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV / Pair value</th><th>Direct Referral (<?= e($cur) ?>)</th><th>Coded Bonus (<?= e($cur) ?>)</th><th>Product Discount (%)</th><th>EXGEN per Direct (<?= e($cur) ?>)</th><th>Indirect per Level (<?= e($cur) ?>)</th></tr></thead>
       <tbody>
       <?php foreach ($packages as $pk): ?>
         <tr>
@@ -228,6 +231,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
           <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][coded_bonus]" value="<?= e($pk['coded_bonus']) ?>"></td>
           <td><input class="input" type="number" step="0.01" min="0" max="99" name="pkg[<?= (int)$pk['id'] ?>][discount_percent]" value="<?= e($pk['discount_percent']) ?>"></td>
           <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][exgen_bonus]" value="<?= e($pk['exgen_bonus'] ?? 0) ?>"></td>
+          <td><input class="input" type="number" step="0.01" min="0" name="pkg[<?= (int)$pk['id'] ?>][indirect_bonus]" value="<?= e($pk['indirect_bonus'] ?? 0) ?>"></td>
         </tr>
       <?php endforeach; ?>
       </tbody>
@@ -244,7 +248,17 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
         <select class="input" name="indirect_mode" data-suffix-target="indirect_levels" data-currency="<?= e($cur) ?>">
           <option value="fixed" <?= $sel('indirect_mode', 'fixed') ?>>Fixed amount per level (<?= e($cur) ?>)</option>
           <option value="percent" <?= $sel('indirect_mode', 'percent') ?>>Percent of package price per level (%)</option>
+          <option value="package" <?= $sel('indirect_mode', 'package') ?>>Per package — amount per level from the Packages table</option>
         </select></div>
+      <div class="form-grid" data-indirect-package>
+        <div class="form-group"><label>Levels (per package mode)</label><input class="input" type="number" min="0" max="50" name="indirect_package_levels" value="<?= e(setting('indirect_package_levels', 5)) ?>"></div>
+        <div class="form-group"><label>Amount based on</label>
+          <select class="input" name="indirect_basis">
+            <option value="source" <?= $sel('indirect_basis', 'source') ?>>New member's package</option>
+            <option value="receiver" <?= $sel('indirect_basis', 'receiver') ?>>Receiving upline's package</option>
+            <option value="lower" <?= $sel('indirect_basis', 'lower') ?>>Lower of the two</option>
+          </select></div>
+      </div>
       <p class="help">Level 1 = the sponsor's sponsor, Level 2 = the next upline, and so on.</p>
       <?php level_editor('indirect_levels', setting_list('indirect_levels'), setting('indirect_mode') === 'percent' ? '%' : $cur); ?>
     </div>
@@ -371,4 +385,18 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
 
 <div class="sticky-save"><button class="btn btn-primary" type="submit"><?= icon('settings', 16) ?> Save Compensation Plan</button></div>
 </form>
+<script>
+(function () {
+  var mode = document.querySelector('select[name=indirect_mode]');
+  var pkg = document.querySelector('[data-indirect-package]');
+  var levels = document.querySelector('[data-levels][data-name="indirect_levels"]');
+  var sync = function () {
+    var isPkg = mode.value === 'package';
+    pkg.style.display = isPkg ? '' : 'none';
+    levels.style.display = isPkg ? 'none' : '';
+  };
+  mode.addEventListener('change', sync);
+  sync();
+})();
+</script>
 <?php page_footer();

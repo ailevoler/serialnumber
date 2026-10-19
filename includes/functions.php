@@ -290,7 +290,7 @@ function earning_types(): array
         'passup'   => ['label' => 'Coded Bonus (Pass-Up)',     'icon' => 'arrow-up',  'hint' => 'Australian Pass-Up'],
         'pairing'  => ['label' => 'Pairing / Matching Bonus',  'icon' => 'git-merge', 'hint' => setting('pairing_to_product_wallet', '0') === '1' ? 'Binary · Product Wallet' : 'Binary'],
         'unilevel' => ['label' => 'Unilevel Bonus',            'icon' => 'repeat',    'hint' => 'Repeat purchase'],
-        'exgen'    => ['label' => 'EXGEN Bonus',               'icon' => 'award',     'hint' => 'Balik puhunan · ' . (int)setting('exgen_min_directs', 8) . ' directs'],
+        'exgen'    => ['label' => 'XGEN Bonus',               'icon' => 'award',     'hint' => 'Balik puhunan · ' . (int)setting('exgen_min_directs', 8) . ' directs'],
     ];
 }
 

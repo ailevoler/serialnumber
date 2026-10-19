@@ -221,7 +221,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
   <?php if ($zeroWarn): ?><div class="card-body" style="padding-bottom:0"><div class="alert alert-warning mb-0">These are set to 0, so nothing will be paid for them: <?= implode(' · ', $zeroWarn) ?>. Check the values below.</div></div><?php endif; ?>
   <div class="card-body p-0 table-wrap">
     <table class="table stack pkg-table">
-      <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV / Pair value</th><th>Direct Referral (<?= e($cur) ?>)</th><th>Coded Bonus (<?= e($cur) ?>)</th><th>Product Discount (%)</th><th>EXGEN per Direct (<?= e($cur) ?>)</th><th>Indirect per Level (<?= e($cur) ?>)</th></tr></thead>
+      <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV / Pair value</th><th>Direct Referral (<?= e($cur) ?>)</th><th>Coded Bonus (<?= e($cur) ?>)</th><th>Product Discount (%)</th><th>XGEN per Direct (<?= e($cur) ?>)</th><th>Indirect per Level (<?= e($cur) ?>)</th></tr></thead>
       <tbody>
       <?php foreach ($packages as $pk): ?>
         <tr>
@@ -341,11 +341,11 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
 </div>
 
 <div class="card" id="exgen">
-  <div class="card-header"><h3><?= icon('award') ?> EXGEN Bonus (Balik Puhunan)</h3></div>
+  <div class="card-header"><h3><?= icon('award') ?> XGEN Bonus (Balik Puhunan)</h3></div>
   <div class="card-body">
     <div class="form-grid">
       <div class="form-group"><label>Minimum directs</label><input class="input" type="number" min="1" name="exgen_min_directs" value="<?= e(setting('exgen_min_directs', 8)) ?>">
-        <div class="help">Target = EXGEN per direct × this number (Silver 250 × 8 = 2,000).</div></div>
+        <div class="help">Target = XGEN per direct × this number (Silver 250 × 8 = 2,000).</div></div>
       <div class="form-group"><label>Time limit (months)</label><input class="input" type="number" min="0" name="exgen_window_months" value="<?= e(setting('exgen_window_months', 2)) ?>">
         <div class="help">Not reached in time → progress resets and a new period starts. 0 = no limit.</div></div>
       <div class="form-group full"><label>Which directs count</label>

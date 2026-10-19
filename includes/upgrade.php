@@ -163,7 +163,7 @@ function upgrade_member(int $userId, int $toPackageId, string $method, array $o 
             }
         }
 
-        // ---- EXGEN Bonus: the member's own target rises; the sponsor's direct may now count more
+        // ---- XGEN Bonus: the member's own target rises; the sponsor's direct may now count more
         if (!$free) {
             exgen_check($userId, $userId);
             if ($m['sponsor_id']) {

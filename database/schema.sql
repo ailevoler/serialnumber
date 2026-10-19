@@ -640,7 +640,7 @@ INSERT IGNORE INTO settings (skey, svalue) VALUES
 INSERT IGNORE INTO settings (skey, svalue) VALUES ('passup_top_keeps', '0');
 
 -- ---------------------------------------------------------------
--- EXGEN Bonus (v13)
+-- XGEN Bonus (v13)
 -- ---------------------------------------------------------------
 
 ALTER TABLE earnings MODIFY type ENUM('discount','direct','indirect','passup','pairing','unilevel','exgen') NOT NULL;
@@ -652,7 +652,7 @@ UPDATE packages SET exgen_bonus = 1750 WHERE name = 'Platinum';
 UPDATE packages SET exgen_bonus = 3000 WHERE name = 'Diamond';
 
 INSERT IGNORE INTO gl_accounts (code, name, type, is_system, description) VALUES
- ('5050', 'Commission - EXGEN Bonus', 'expense', 1, 'Balik Puhunan bonus after 8 directs');
+ ('5050', 'Commission - XGEN Bonus', 'expense', 1, 'Balik Puhunan bonus after 8 directs');
 
 INSERT IGNORE INTO settings (skey, svalue) VALUES
  ('exgen_enabled', '1'), ('exgen_min_directs', '8'), ('exgen_mode', 'complete'), ('acct_comm_exgen', '5050');

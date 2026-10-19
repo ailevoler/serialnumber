@@ -321,7 +321,7 @@ function register_member(array $d): int
             }
         }
 
-        // ---- 7. EXGEN Bonus (balik puhunan) for the sponsor
+        // ---- 7. XGEN Bonus (balik puhunan) for the sponsor
         if ($paid) {
             exgen_check($sponsorId, $newId);
         }

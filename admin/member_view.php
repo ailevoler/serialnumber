@@ -152,7 +152,7 @@ page_header('Member: @' . $m['username'], $me, full_name($m));
   <div>
     <?php if (plan_on('exgen')): $exg = exgen_progress($id); if ($exg['target'] > 0): ?>
     <div class="card">
-      <div class="card-header"><h3><?= icon('award') ?> EXGEN Bonus</h3></div>
+      <div class="card-header"><h3><?= icon('award') ?> XGEN Bonus</h3></div>
       <div class="card-body"><?= exgen_widget($exg, true) ?></div>
     </div>
     <?php endif; endif; ?>

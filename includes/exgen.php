@@ -2,10 +2,10 @@
 declare(strict_types=1);
 
 /*
- * EXGEN Bonus (Balik Puhunan).
- *  - Each package has an EXGEN value per direct (Silver 250, Gold 1,000, Platinum 1,750, Diamond 3,000).
+ * XGEN Bonus (Balik Puhunan).
+ *  - Each package has an XGEN value per direct (Silver 250, Gold 1,000, Platinum 1,750, Diamond 3,000).
  *  - Rule "same" (default): only paid directs on the SAME package as the member count (a Silver counts
- *    Silver directs only, a Diamond counts Diamond directs only), each at the package's EXGEN value.
+ *    Silver directs only, a Diamond counts Diamond directs only), each at the package's XGEN value.
  *    Rule "capped": every paid direct counts the member's value, capped at the direct's package value.
  *  - Target = own value x minimum directs (8): Silver 2,000, Gold 8,000, Platinum 14,000, Diamond 24,000.
  *  - Mode "complete": paid once the member has at least the minimum directs AND the counted value reaches
@@ -16,7 +16,7 @@ declare(strict_types=1);
  *    starts at activation (or at the latest package upgrade).
  */
 
-/** Current EXGEN window for a member: [start, end|null] as 'Y-m-d H:i:s' (DB clock, so simulations work). */
+/** Current XGEN window for a member: [start, end|null] as 'Y-m-d H:i:s' (DB clock, so simulations work). */
 function exgen_window(array $m): array
 {
     $anchor = (string)(q_val('SELECT MAX(created_at) FROM package_upgrades WHERE user_id = ?', [(int)$m['id']]) ?: $m['created_at']);
@@ -71,7 +71,7 @@ function exgen_progress(int $userId): array
     ];
 }
 
-/** Credit any EXGEN Bonus now due to $userId. Returns the amount credited. */
+/** Credit any XGEN Bonus now due to $userId. Returns the amount credited. */
 function exgen_check(int $userId, ?int $sourceId = null): float
 {
     if (!plan_on('exgen') || !$userId) {
@@ -97,8 +97,8 @@ function exgen_check(int $userId, ?int $sourceId = null): float
             return 0.0;
         }
         $desc = $pg['qualified']
-            ? "EXGEN Bonus (balik puhunan): {$pg['package']} " . money($pg['target']) . " – {$pg['count']} direct(s)"
-            : "EXGEN Bonus: {$pg['package']} " . money($pg['progress']) . ' of ' . money($pg['target']);
+            ? "XGEN Bonus (balik puhunan): {$pg['package']} " . money($pg['target']) . " – {$pg['count']} direct(s)"
+            : "XGEN Bonus: {$pg['package']} " . money($pg['progress']) . ' of ' . money($pg['target']);
         credit_earning($userId, 'exgen', $due, $sourceId, $desc);
         return $due;
     });

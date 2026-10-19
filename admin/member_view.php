@@ -72,8 +72,9 @@ $upgrades = q_all('SELECT u.*, f.name from_name, t.name to_name FROM package_upg
 
 page_header('Member: @' . $m['username'], $me, full_name($m));
 ?>
-<div class="stats">
-  <?= stat_card('E-Wallet', money($m['wallet_balance']), 'wallet', 'dark', 'Product Wallet: ' . money($m['product_wallet'])) ?>
+<div class="stats stats-5">
+  <?= stat_card('E-Wallet', money($m['wallet_balance']), 'wallet', 'dark', 'Withdrawable') ?>
+  <?= stat_card('Product Wallet', money($m['product_wallet']), 'box', '', 'For products only') ?>
   <?= stat_card('Total Earnings', money($m['total_earnings']), 'trending', 'gold') ?>
   <?= stat_card('Directs', num($m['direct_count']), 'user-plus') ?>
   <?= stat_card('Left / Right', num($m['left_count']) . ' / ' . num($m['right_count']), 'git-merge', 'gold', num($m['left_points']) . ' / ' . num($m['right_points']) . ' PV') ?>

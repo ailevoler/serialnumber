@@ -41,8 +41,11 @@ page_header('Dashboard', $me, 'Overview of your business');
   </div>
 </section>
 
-<div class="stats">
-  <?= stat_card('Wallet Balance', money($me['wallet_balance']), 'wallet', 'dark', ((float)$me['product_wallet'] > 0 || setting('pairing_to_product_wallet', '0') === '1') ? 'Product Wallet: ' . money($me['product_wallet']) : 'Available for payout') ?>
+<div class="stats stats-5">
+  <?= stat_card('E-Wallet', money($me['wallet_balance']), 'wallet', 'dark', 'Available for payout') ?>
+  <?php if ((float)$me['product_wallet'] > 0 || setting('pairing_to_product_wallet', '0') === '1'): ?>
+  <?= stat_card('Product Wallet', money($me['product_wallet']), 'box', '', 'For products only') ?>
+  <?php endif; ?>
   <?= stat_card('Total Earnings', money($me['total_earnings']), 'trending', 'gold', 'Today: ' . money($todayIncome)) ?>
   <?= stat_card('Direct Referrals', num($me['direct_count']), 'user-plus', '', 'Personally sponsored') ?>
   <?= stat_card('Pending Payouts', money($pendingPayout), 'cash', 'gold', $unusedCodes . ' unused code(s)') ?>

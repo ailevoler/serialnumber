@@ -126,8 +126,8 @@ page_header('Simulation & Reset', $me, 'Stress-test the compensation plan, reset
           </div>
           <div class="section-title">Pass-Up (Coded Bonus)</div>
           <div class="form-grid">
-            <div class="form-group"><label>Invites passed up</label><input class="input" name="passup_positions" value="<?= e($form['passup_positions']) ?>" placeholder="1,2"><div class="help"><strong>1</strong> = invite #1 passes up to the upline; from #2 the sponsor earns (1-Up). <strong>1,2</strong> = #1 and #2 pass up (2-Up). Current plan: <?= e(implode(',', setting_list('passup_positions')) ?: 'none') ?>. This run only.</div></div>
-            <div class="form-group"><label>&nbsp;</label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="passup_kept" value="1" <?= !empty($form['passup_kept']) ? 'checked' : '' ?>> Invites that are not passed up also pay a Coded Bonus to the sponsor</label>
+            <div class="form-group"><label>Invites passed up</label><input class="input" name="passup_positions" value="<?= e($form['passup_positions']) ?>" placeholder="1,2"><div class="help"><strong>1,2</strong> = invite #1 and #2 pass up to the upline; from #3 the sponsor earns (2-Up). <strong>1</strong> = only #1 (1-Up). Current plan: <?= e(implode(',', setting_list('passup_positions')) ?: 'none') ?>. This run only.</div></div>
+            <div class="form-group"><label>&nbsp;</label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="passup_kept" value="1" <?= !empty($form['passup_kept']) ? 'checked' : '' ?>> Kept invites (#3 onward) also pay a Coded Bonus to the sponsor</label>
               <div class="help">Current plan: <?= setting('passup_kept_bonus', '0') === '1' ? 'on' : 'off' ?>. The top of the line always earns its own pass-ups.</div></div>
           </div>
           <div class="section-title">Package Mix (% of new members)</div>

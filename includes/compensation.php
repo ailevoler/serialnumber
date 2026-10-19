@@ -263,7 +263,7 @@ function register_member(array $d): int
             }
 
             // ---- 4. Coded Bonus (Pass-Up): passed-up recruits pay the coded upline;
-            //      kept recruits (e.g. invite #2 onward in a 1-Up) pay the sponsor when enabled.
+            //      kept recruits (e.g. invite #3 onward in a 2-Up) pay the sponsor when enabled.
             if (plan_on('passup') && ($passedUp || $topOfLine || setting('passup_kept_bonus', '0') === '1')) {
                 $val = (float)setting('passup_bonus', 0);
                 $amt = match (setting('passup_mode', 'fixed')) {

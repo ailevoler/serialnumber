@@ -165,7 +165,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
     <div class="card-body">
       <div class="form-grid">
         <div class="form-group"><label>Recruit number(s) passed up</label><input class="input" name="passup_positions" value="<?= e(setting('passup_positions', '1')) ?>" placeholder="1 or 1,2">
-          <div class="help">Which invites go up, separated by commas. <strong>1</strong> = each member's 1st invite passes up to the upline; from the 2nd invite the sponsor earns the Coded Bonus (1-Up). <strong>1,2</strong> = the 1st and 2nd invite pass up (2-Up).</div></div>
+          <div class="help">Which invites go up, separated by commas. <strong>1,2</strong> = each member's 1st and 2nd invite pass up to the upline; from the 3rd invite the sponsor earns the Coded Bonus (2-Up). <strong>1</strong> = only the 1st invite passes up (1-Up).</div></div>
         <div class="form-group"><label>Computation</label>
           <select class="input" name="passup_mode">
             <option value="fixed" <?= $sel('passup_mode', 'fixed') ?>>Fixed amount</option>
@@ -179,7 +179,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
       <label class="toggle-card mt-1">
         <input type="checkbox" name="passup_kept_bonus" value="1" <?= setting('passup_kept_bonus', '0') === '1' ? 'checked' : '' ?>>
         <span class="toggle-ui"></span>
-        <span><strong>Sponsor earns the coded bonus on recruits that are not passed up</strong><small>e.g. 1-Up: invite #1 passes up to your upline; from invite #2 onward the coded bonus is yours.</small></span>
+        <span><strong>Sponsor earns the coded bonus on recruits that are not passed up</strong><small>e.g. 2-Up: invites #1 and #2 pass up to your upline; from invite #3 onward the coded bonus is yours.</small></span>
       </label>
       <p class="help mb-0 mt-1">A passed-up recruit is coded to the upline who received it, so that upline also receives the recruit's own pass-ups.</p>
     </div>

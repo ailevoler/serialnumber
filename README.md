@@ -13,7 +13,7 @@ Lahat ay nababago sa **Admin → Compensation Plan**. Default values (galing sa 
 |---|--------|-----------|
 | 1 | **Direct Selling Discount** | Presyo = SRP less discount ng member: Silver 25%, Gold 30%, Platinum 35%, Diamond 40%; stockist tiers (ina-assign sa member): Mobile Stockist 43%, City Hub 47%, Mega Depot 52%. Hal. Nutriva 6-in-1 Coffee SRP ₱300 → Silver ₱225; Magnesium Spray SRP ₱900 → Silver ₱675 |
 | 2 | **Direct Referral Bonus (Outright)** | Silver ₱140, Gold ₱550, Platinum ₱1,000, Diamond ₱1,700 — nasa Referral card lang; hindi wallet, hindi withdrawable, hindi kasama sa Total Earnings |
-| 3 | **Coded Bonus (Pass-Up, 1-Up)** | Silver ₱500, Gold ₱2,000, Platinum ₱3,500, Diamond ₱6,000. Invite #1 mo → pasa sa coded upline mo; invite #2 pataas → sa iyo; ang invite #1 ng mga invite #2+ mo → pasa sa iyo |
+| 3 | **Coded Bonus (Pass-Up, 2-Up)** | Silver ₱500, Gold ₱2,000, Platinum ₱3,500, Diamond ₱6,000. Invite #1 at #2 mo → pasa sa coded upline mo; invite #3 pataas → sa iyo; ang invite #1 at #2 ng mga invite #3+ mo → pasa sa iyo |
 | 4 | **Pairing / Matching Bonus (Product Wallet)** | Silver↔Silver ₱100, Gold↔Gold ₱400, Platinum↔Platinum ₱700, Diamond↔Diamond ₱1,200; maximum 7 pairs a day; pumapasok sa Product Wallet |
 | 5 | **Unilevel** | ₱5 bawat bote / pouch, 10 levels |
 | + | **Indirect Bonus** | Hanggang 5 levels (nababago / puwedeng i-off) |
@@ -104,9 +104,9 @@ para mai-post ang benta.
 
 ## Pass-Up (Coded Bonus) — paano gumagana
 
-- 1-Up: ang invite #1 ng bawat member (Admin → Compensation Plan → Coded Bonus, "1") ay naipapasa sa upline kung saan naka-code ang sponsor; doon napupunta ang Coded Bonus. Ang sponsor ay may Direct Referral pa rin.
+- Ang invite #1 at #2 (Admin → Compensation Plan → Coded Bonus) ay naipapasa sa upline kung saan naka-code ang sponsor; doon napupunta ang Coded Bonus. Ang sponsor ay may Direct Referral pa rin.
 - **Top of line:** kapag walang upline ang sponsor (hal. ang root account), siya ang kumikita ng pass-up niya.
-- Ang invite #2 pataas ay naiiwan sa sponsor; may Coded Bonus ito kapag naka-on ang "kept bonus".
+- Ang invite #3 pataas ay naiiwan sa sponsor; may Coded Bonus ito kapag naka-on ang "kept bonus".
 - Kapag ₱0 ang Coded Bonus ng isang package o hindi active ang tatanggap, hindi ito binabayaran at may tala sa activity log ("Coded bonus NOT paid…"), at may babala sa Compensation Plan.
 - Sa Simulation, pwedeng palitan ang pass-up positions at "kept bonus" para sa isang run, at may hiwalay na Pass-Up section ang report.
 
@@ -151,7 +151,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan) at `database/upgrade_v9.sql` (Simulation & Reset) at `database/upgrade_v10.sql` (Package Upgrade) at `database/upgrade_v11.sql` (Coded Bonus 1-Up).
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan) at `database/upgrade_v9.sql` (Simulation & Reset) at `database/upgrade_v10.sql` (Package Upgrade).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.

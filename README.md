@@ -102,6 +102,14 @@ Financial Statements (Income Statement, Balance Sheet, Trial Balance, may print 
 Kapag na-generate ng admin ang codes na nabayaran na nang cash/bank/GCash, piliin ang *Payment received (ERP)* sa Code Generator
 para mai-post ang benta.
 
+## Pass-Up (Coded Bonus) — paano gumagana
+
+- Ang invite #1 at #2 (Admin → Compensation Plan → Coded Bonus) ay naipapasa sa upline kung saan naka-code ang sponsor; doon napupunta ang Coded Bonus. Ang sponsor ay may Direct Referral pa rin.
+- **Top of line:** kapag walang upline ang sponsor (hal. ang root account), siya ang kumikita ng pass-up niya.
+- Ang invite #3 pataas ay naiiwan sa sponsor; may Coded Bonus ito kapag naka-on ang "kept bonus".
+- Kapag ₱0 ang Coded Bonus ng isang package o hindi active ang tatanggap, hindi ito binabayaran at may tala sa activity log ("Coded bonus NOT paid…"), at may babala sa Compensation Plan.
+- Sa Simulation, pwedeng palitan ang pass-up positions at "kept bonus" para sa isang run, at may hiwalay na Pass-Up section ang report.
+
 ## Package Upgrade (Member → Upgrade Package · Admin → Package Upgrades)
 
 - Ang member ay makaka-upgrade (hal. Silver → Gold → Platinum → Diamond) at **difference lang ng presyo** ang babayaran.

@@ -218,12 +218,17 @@ function register_member(array $d): int
         // ---- 4. Pass Up (Australian): decided first because it can affect the sponsor's direct bonus
         $passupTo = $sponsorId;
         $passedUp = false;
+        $topOfLine = false;
         $positions = array_map('intval', setting_list('passup_positions'));
         if (plan_on('passup') && in_array($directCount, $positions, true)) {
             $receiverId = (int)($sponsor['passup_upline_id'] ?: $sponsor['sponsor_id']);
             if ($receiverId) {
                 $passupTo = $receiverId;
                 $passedUp = true;
+            } else {
+                // The sponsor is the top of the line (e.g. the root account): nobody above to pass to,
+                // so the top keeps the pass-up and earns its Coded Bonus.
+                $topOfLine = true;
             }
         }
         q('UPDATE users SET passup_upline_id = ? WHERE id = ?', [$passupTo, $newId]);
@@ -259,7 +264,7 @@ function register_member(array $d): int
 
             // ---- 4. Coded Bonus (Pass-Up): passed-up recruits pay the coded upline;
             //      kept recruits (e.g. invite #3 onward in a 2-Up) pay the sponsor when enabled.
-            if (plan_on('passup') && ($passedUp || setting('passup_kept_bonus', '0') === '1')) {
+            if (plan_on('passup') && ($passedUp || $topOfLine || setting('passup_kept_bonus', '0') === '1')) {
                 $val = (float)setting('passup_bonus', 0);
                 $amt = match (setting('passup_mode', 'fixed')) {
                     'percent' => $price * $val / 100,
@@ -267,10 +272,16 @@ function register_member(array $d): int
                     default   => $val,
                 };
                 $receiver = q_row('SELECT status FROM users WHERE id = ?', [$passupTo]);
-                if ($receiver && $receiver['status'] === 'active') {
-                    credit_earning($passupTo, 'passup', $amt, $newId, $passedUp
-                        ? "Coded bonus (pass-up): {$newName} – invite #{$directCount} of {$sponsor['username']}"
-                        : "Coded bonus: {$newName} – your invite #{$directCount} ({$code['package_name']})");
+                if (round($amt, 2) <= 0) {
+                    log_activity($passupTo, "Coded bonus NOT paid for {$newName}: the {$code['package_name']} package has a ₱0 Coded Bonus (Admin → Compensation Plan)");
+                } elseif (!$receiver || $receiver['status'] !== 'active') {
+                    log_activity($passupTo, "Coded bonus NOT paid for {$newName}: receiver account is not active");
+                } else {
+                    credit_earning($passupTo, 'passup', $amt, $newId, match (true) {
+                        $passedUp  => "Coded bonus (pass-up): {$newName} – invite #{$directCount} of {$sponsor['username']}",
+                        $topOfLine => "Coded bonus (pass-up, top of line): {$newName} – your invite #{$directCount} ({$code['package_name']})",
+                        default    => "Coded bonus: {$newName} – your invite #{$directCount} ({$code['package_name']})",
+                    });
                 }
             }
         }

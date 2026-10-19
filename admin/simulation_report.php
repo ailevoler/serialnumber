@@ -102,7 +102,7 @@ page_header('Simulation Report #' . $run['id'], $me, 'Actuarial projection: ' . 
         <?php foreach ($r['by_type'] as $k => $t): if ($k === 'discount') continue; ?>
           <tr>
             <td><?= e($t['label']) ?><?= $k === 'pairing' ? '<br><small class="text-muted">' . num($t['pairs']) . ' pair(s)</small>' : '' ?>
-              <?php if ($k === 'passup' && !empty($r['coded'])): ?><br><small class="text-muted">Passed up (invite #<?= e($r['coded']['positions']) ?>): <?= num($r['coded']['passed_up']) ?> · <?= money($r['coded']['passed_up_amount']) ?><br>Kept by sponsor: <?= num($r['coded']['kept']) ?> · <?= money($r['coded']['kept_amount']) ?></small><?php endif; ?></td>
+              <?php if ($k === 'passup' && !empty($r['coded'])): ?><br><small class="text-muted">Passed up (invite #<?= e($r['coded']['positions']) ?>): <?= num($r['coded']['passed_up']) ?> · <?= money($r['coded']['passed_up_amount']) ?><?= !empty($r['coded']['top']) ? '<br>Top of line: ' . num($r['coded']['top']) . ' · ' . money($r['coded']['top_amount']) : '' ?><br>Kept by sponsor: <?= num($r['coded']['kept']) ?> · <?= money($r['coded']['kept_amount']) ?></small><?php endif; ?></td>
             <td><?= num($t['count']) ?></td>
             <td><?php foreach ($t['paid_to'] as $to => $amt) echo paid_to_badge($to) . ' '; ?><?= !$t['paid_to'] ? '<span class="text-muted">—</span>' : '' ?></td>
             <td class="text-right"><?= money($t['amount']) ?></td>
@@ -152,6 +152,33 @@ page_header('Simulation Report #' . $run['id'], $me, 'Actuarial projection: ' . 
   </div>
 </div>
 
+<?php if (!empty($r['coded'])): $cd = $r['coded']; $cdTotal = $cd['passed_up_amount'] + ($cd['top_amount'] ?? 0) + $cd['kept_amount']; ?>
+<div class="card">
+  <div class="card-header"><h3><?= icon('arrow-up') ?> Pass-Up / Coded Bonus</h3><div class="actions small text-muted">Invites passed up: #<?= e($cd['positions'] ?: '—') ?> · kept invites pay: <?= $cd['kept_bonus'] ? 'yes' : 'no' ?></div></div>
+  <div class="card-body">
+    <?php if (!empty($cd['missed'])): ?><div class="alert alert-warning"><?= num($cd['missed']) ?> Coded Bonus(es) were NOT paid because a package has a ₱0 Coded Bonus or the receiver is inactive. Check Admin → Compensation Plan.</div><?php endif; ?>
+    <div class="grid grid-2">
+      <div>
+        <div class="sim-kv"><span>Passed up to the coded upline</span><b><?= num($cd['passed_up']) ?> · <?= money($cd['passed_up_amount']) ?></b></div>
+        <div class="sim-kv"><span>Top of line (sponsor has no upline, keeps the pass-up)</span><b><?= num($cd['top'] ?? 0) ?> · <?= money($cd['top_amount'] ?? 0) ?></b></div>
+        <div class="sim-kv"><span>Kept by the sponsor (invite #3 onward)</span><b><?= num($cd['kept']) ?> · <?= money($cd['kept_amount']) ?></b></div>
+        <div class="sim-kv"><span><strong>Total Coded Bonus</strong></span><b><?= money($cdTotal) ?> · <?= $share($cdTotal) ?> of revenue</b></div>
+        <div class="sim-kv"><span>Average per new member</span><b><?= money($r['members_created'] ? $cdTotal / $r['members_created'] : 0) ?></b></div>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Top Coded Bonus earners</th><th class="text-right">Count</th><th class="text-right">Amount</th></tr></thead>
+          <tbody>
+          <?php foreach ($cd['receivers'] ?? [] as $cr): ?><tr><td>@<?= e($cr['username']) ?></td><td class="text-right"><?= num($cr['n']) ?></td><td class="text-right"><?= money($cr['total']) ?></td></tr><?php endforeach; ?>
+          <?php if (empty($cd['receivers'])) echo empty_row(3, 'No Coded Bonus paid.'); ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="card">
   <div class="card-header"><h3><?= icon('chart') ?> Revenue vs Commissions over Time</h3><div class="actions small"><span class="legend-dot"></span> Revenue <span class="legend-dot gold"></span> Commissions</div></div>
   <div class="card-body">
@@ -194,6 +221,7 @@ page_header('Simulation Report #' . $run['id'], $me, 'Actuarial projection: ' . 
       <div class="sim-kv"><span>Period</span><b><?= num($p['days']) ?> day(s): <?= e(fdate($r['start_date'])) ?> – <?= e(fdate($r['end_date'])) ?></b></div>
       <div class="sim-kv"><span>Package mix</span><b><?= e(implode(', ', array_map(fn($id, $v) => ($pkgNames[$id] ?? '#' . $id) . ' ' . num($v, 1) . '%', array_keys($p['mix']), $p['mix']))) ?></b></div>
       <div class="sim-kv"><span>Repeat units per member</span><b><?= num($p['repeat_units']) ?></b></div>
+      <div class="sim-kv"><span>Pass-Up</span><b>invites #<?= e($p['passup_positions'] ?? setting('passup_positions')) ?> · kept invites pay: <?= !empty($p['passup_kept']) ? 'yes' : 'no' ?></b></div>
       <div class="sim-kv"><span>Members who upgrade (one level)</span><b><?= num($p['upgrade_percent'] ?? 0, 1) ?>%<?= !empty($r['upgrades']['count']) ? ' · ' . num($r['upgrades']['count']) . ' upgrade(s), bonuses ' . money($r['upgrades']['bonuses']) : '' ?></b></div>
       <div class="sim-kv"><span>COGS · package cost · opex</span><b><?= num($p['cogs_percent'], 1) ?>% · <?= num($p['package_cost_percent'], 1) ?>% · <?= num($p['opex_percent'], 1) ?>%</b></div>
       <div class="sim-kv"><span>Run by</span><b>@<?= e($run['admin'] ?? '—') ?> · <?= e(fdatetime($run['created_at'])) ?></b></div>

@@ -69,6 +69,7 @@ function sim_defaults(): array
         'members' => 100, 'levels' => 5, 'invites' => 0, 'placement' => 'auto', 'left_percent' => 50,
         'pair_cap' => (int)setting('pair_daily_cap', 0), 'days' => 30, 'repeat_units' => 2, 'upgrade_percent' => 0,
         'cogs_percent' => 35, 'package_cost_percent' => 35, 'opex_percent' => 10,
+        'passup_positions' => implode(',', setting_list('passup_positions')), 'passup_kept' => setting('passup_kept_bonus', '0') === '1' ? 1 : 0,
         'top' => (string)$top, 'seed' => '', 'mix' => $mix,
     ];
 }
@@ -89,6 +90,8 @@ function sim_params(array $in): array
         'days'         => $clamp($in['days'] ?? null, 1, 365, $d['days']),
         'repeat_units' => $clamp($in['repeat_units'] ?? null, 0, 100, $d['repeat_units']),
         'upgrade_percent' => $pct($in['upgrade_percent'] ?? null, 0.0),
+        'passup_positions' => implode(',', array_unique(array_filter(array_map('intval', explode(',', (string)($in['passup_positions'] ?? $d['passup_positions']))), fn($n) => $n > 0 && $n <= 50))),
+        'passup_kept'  => isset($in['passup_positions']) ? (empty($in['passup_kept']) ? 0 : 1) : $d['passup_kept'],
         'cogs_percent' => $pct($in['cogs_percent'] ?? null, $d['cogs_percent']),
         'package_cost_percent' => $pct($in['package_cost_percent'] ?? null, $d['package_cost_percent']),
         'opex_percent' => $pct($in['opex_percent'] ?? null, $d['opex_percent']),
@@ -195,6 +198,8 @@ function run_simulation(array $p, int $adminId, ?string $backupFile = null): int
     mt_srand($p['seed'] !== '' ? (int)$p['seed'] : $runId * 7919);
     $GLOBALS['setting_overrides'] = [
         'pair_daily_cap' => (string)$p['pair_cap'],
+        'passup_positions' => $p['passup_positions'],
+        'passup_kept_bonus' => (string)$p['passup_kept'],
         'order_payment_methods' => implode(',', array_unique(array_merge(setting_list('order_payment_methods'), ['cash']))),
     ];
     $hash = password_hash('Sim' . bin2hex(random_bytes(6)) . '9', PASSWORD_DEFAULT);
@@ -320,10 +325,16 @@ function sim_compute_results(int $runId, array $p, array $b, int $startTs, int $
         $paidTo[$r['paid_to']] = (float)$r['amt'];
     }
 
-    // Coded Bonus split: passed up (paid to someone other than the sponsor) vs kept by the sponsor
+    // Coded Bonus split: passed up (paid above the sponsor), top of line (sponsor has no upline), kept by the sponsor
     $coded = q_row("SELECT SUM(e.user_id <> s.sponsor_id) up_n, COALESCE(SUM(IF(e.user_id <> s.sponsor_id, e.amount, 0)),0) up_amt,
-                           SUM(e.user_id = s.sponsor_id) kept_n, COALESCE(SUM(IF(e.user_id = s.sponsor_id, e.amount, 0)),0) kept_amt
+                           SUM(e.user_id = s.sponsor_id AND e.description LIKE '%top of line%') top_n,
+                           COALESCE(SUM(IF(e.user_id = s.sponsor_id AND e.description LIKE '%top of line%', e.amount, 0)),0) top_amt,
+                           SUM(e.user_id = s.sponsor_id AND e.description NOT LIKE '%top of line%') kept_n,
+                           COALESCE(SUM(IF(e.user_id = s.sponsor_id AND e.description NOT LIKE '%top of line%', e.amount, 0)),0) kept_amt
                     FROM earnings e JOIN users s ON s.id = e.source_user_id WHERE e.id > ? AND e.type = 'passup'", [$b['earnings']]);
+    $codedTop = q_all("SELECT u.username, COUNT(*) n, SUM(e.amount) total FROM earnings e JOIN users u ON u.id = e.user_id
+                       WHERE e.id > ? AND e.type = 'passup' GROUP BY e.user_id ORDER BY total DESC LIMIT 5", [$b['earnings']]);
+    $codedMissed = (int)q_val("SELECT COUNT(*) FROM activity_logs WHERE id > ? AND action LIKE 'Coded bonus NOT paid%'", [$b['activity_logs']]);
 
     // Flushed pairing (daily cap reached)
     $flushedEvents = 0;
@@ -426,7 +437,8 @@ function sim_compute_results(int $runId, array $p, array $b, int $startTs, int $
         'by_type' => $byType,
         'paid_to' => $paidTo,
         'coded' => ['passed_up' => (int)$coded['up_n'], 'passed_up_amount' => (float)$coded['up_amt'], 'kept' => (int)$coded['kept_n'], 'kept_amount' => (float)$coded['kept_amt'],
-                    'positions' => setting('passup_positions', ''), 'kept_bonus' => setting('passup_kept_bonus', '0') === '1'],
+                    'top' => (int)$coded['top_n'], 'top_amount' => (float)$coded['top_amt'], 'missed' => $codedMissed, 'receivers' => $codedTop,
+                    'positions' => $p['passup_positions'], 'kept_bonus' => (bool)$p['passup_kept'], 'mode' => setting('passup_mode', 'fixed')],
         'pairs_paid' => $byType['pairing']['pairs'],
         'flushed' => ['events' => $flushedEvents, 'value' => round($flushedValue, 2)],
         'revenue' => ['packages' => $pkgRevenue - (float)$upg['amount'], 'upgrades' => (float)$upg['amount'], 'products' => $prodRevenue, 'total' => $revenue],

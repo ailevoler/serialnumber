@@ -124,6 +124,12 @@ page_header('Simulation & Reset', $me, 'Stress-test the compensation plan, reset
               </select></div>
             <div class="form-group" data-ratio><label>% placed on the LEFT leg</label><input class="input" type="number" name="left_percent" min="0" max="100" value="<?= (int)$form['left_percent'] ?>"><div class="help">50 = even legs; 80 = strong left, weak right (fewer pairs).</div></div>
           </div>
+          <div class="section-title">Pass-Up (Coded Bonus)</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Invites passed up</label><input class="input" name="passup_positions" value="<?= e($form['passup_positions']) ?>" placeholder="1,2"><div class="help">Current plan: <?= e(implode(',', setting_list('passup_positions')) ?: 'none') ?> (2-Up = 1,2). Used for this run only.</div></div>
+            <div class="form-group"><label>&nbsp;</label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="passup_kept" value="1" <?= !empty($form['passup_kept']) ? 'checked' : '' ?>> Kept invites (#3 onward) also pay a Coded Bonus to the sponsor</label>
+              <div class="help">Current plan: <?= setting('passup_kept_bonus', '0') === '1' ? 'on' : 'off' ?>. The top of the line always earns its own pass-ups.</div></div>
+          </div>
           <div class="section-title">Package Mix (% of new members)</div>
           <div class="form-grid">
             <?php foreach ($packages as $pk): ?>

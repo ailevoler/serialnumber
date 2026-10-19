@@ -4,4 +4,4 @@
 --   invites #1 and #2; 0 = nobody earns it (the company keeps it).
 --   Applies to new registrations only; bonuses already paid are not changed.
 UPDATE settings SET svalue = '1,2' WHERE skey = 'passup_positions';
-INSERT IGNORE INTO settings (skey, svalue) VALUES ('passup_top_keeps', '1');
+INSERT IGNORE INTO settings (skey, svalue) VALUES ('passup_top_keeps', '0');

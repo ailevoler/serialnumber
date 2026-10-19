@@ -229,7 +229,7 @@ function register_member(array $d): int
             } else {
                 // The sponsor is the top of the line (e.g. the root account): nobody above to pass to.
                 // When enabled the top keeps the pass-up and earns its Coded Bonus; otherwise the company keeps it.
-                $topOfLine = setting('passup_top_keeps', '1') === '1';
+                $topOfLine = setting('passup_top_keeps', '0') === '1';
                 $passupCompany = !$topOfLine;
             }
         }

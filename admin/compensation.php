@@ -183,7 +183,7 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
         <span><strong>Sponsor earns the coded bonus on recruits that are not passed up</strong><small>e.g. 2-Up: invites #1 and #2 pass up to your upline; from invite #3 onward the coded bonus is yours.</small></span>
       </label>
       <label class="toggle-card mt-1">
-        <input type="checkbox" name="passup_top_keeps" value="1" <?= setting('passup_top_keeps', '1') === '1' ? 'checked' : '' ?>>
+        <input type="checkbox" name="passup_top_keeps" value="1" <?= setting('passup_top_keeps', '0') === '1' ? 'checked' : '' ?>>
         <span class="toggle-ui"></span>
         <span><strong>Top of line earns its own pass-ups</strong><small>For a sponsor with no upline (e.g. the root account): on = it earns the Coded Bonus of its own invites #1 and #2; off = nobody earns it (the company keeps it).</small></span>
       </label>

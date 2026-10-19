@@ -105,7 +105,7 @@ para mai-post ang benta.
 ## Pass-Up (Coded Bonus) — paano gumagana
 
 - Ang invite #1 at #2 (Admin → Compensation Plan → Coded Bonus) ay naipapasa sa upline kung saan naka-code ang sponsor; doon napupunta ang Coded Bonus. Ang sponsor ay may Direct Referral pa rin.
-- **Top of line:** kapag walang upline ang sponsor (hal. ang root account), siya ang kumikita ng pass-up ng sarili niyang #1 at #2 kung naka-on ang "Top of line earns its own pass-ups"; kung naka-off, walang kikita (sa kumpanya na).
+- **Top of line:** kapag walang upline ang sponsor (hal. ang root account), siya ang kumikita ng pass-up ng sarili niyang #1 at #2 kung naka-on ang "Top of line earns its own pass-ups"; naka-OFF ito by default, kaya ang Top ay sumusunod din sa 2-Up (walang Coded Bonus ang sarili niyang #1 at #2; mula #3 at mula sa #1/#2 ng mga invite niya kumikita siya).
 - Ang invite #3 pataas ay naiiwan sa sponsor; may Coded Bonus ito kapag naka-on ang "kept bonus".
 - Kapag ₱0 ang Coded Bonus ng isang package o hindi active ang tatanggap, hindi ito binabayaran at may tala sa activity log ("Coded bonus NOT paid…"), at may babala sa Compensation Plan.
 - Sa Simulation, pwedeng palitan ang pass-up positions at "kept bonus" para sa isang run, at may hiwalay na Pass-Up section ang report.
@@ -151,7 +151,7 @@ login throttling, role-based access, output escaping, row locking sa wallet/code
    mysql -u root -p -e "CREATE DATABASE xgenlife CHARACTER SET utf8mb4"
    mysql -u root -p xgenlife < database/schema.sql
    ```
-   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan) at `database/upgrade_v9.sql` (Simulation & Reset) at `database/upgrade_v10.sql` (Package Upgrade) at `database/upgrade_v11.sql` (Coded Bonus 2-Up).
+   Kung naka-install na ang lumang bersyon, patakbuhin nang sunod-sunod ang `database/upgrade_v2.sql`, `database/upgrade_v3.sql`, `database/upgrade_v4.sql` (QR Ph bilang PayMongo method), `database/upgrade_v5.sql` (Coming Soon page) at `database/upgrade_v6.sql` (Website CMS) at `database/upgrade_v7.sql` (Product Wallet at Outright Direct Referral) at `database/upgrade_v8.sql` (XGEN official compensation plan) at `database/upgrade_v9.sql` (Simulation & Reset) at `database/upgrade_v10.sql` (Package Upgrade) at `database/upgrade_v11.sql` (Coded Bonus 2-Up) at `database/upgrade_v12.sql` (Top sumusunod sa 2-Up).
 2. Kopyahin ang `config/config.local.sample.php` → `config/config.local.php` at ilagay ang DB credentials.
 3. I-upload ang buong folder sa web root (o sub-folder) ng Apache/LiteSpeed na may PHP 8+ (`pdo_mysql`, `gd`, `mbstring`).
    Siguraduhing writable ang `uploads/`.

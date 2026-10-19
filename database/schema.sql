@@ -637,4 +637,4 @@ INSERT IGNORE INTO settings (skey, svalue) VALUES
  ('upgrade_add_pv', '1'), ('upgrade_wallet', '1');
 
 -- Coded Bonus 2-Up + top-of-line setting (v11)
-INSERT IGNORE INTO settings (skey, svalue) VALUES ('passup_top_keeps', '1');
+INSERT IGNORE INTO settings (skey, svalue) VALUES ('passup_top_keeps', '0');

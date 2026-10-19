@@ -189,6 +189,22 @@ page_header('Compensation Plan', $me, 'Set every bonus, level and commission of 
 <!-- Packages -->
 <div class="card">
   <div class="card-header"><h3><?= icon('package') ?> Packages — Bonuses per Package</h3><div class="actions"><a class="btn btn-light btn-sm" href="<?= e(url('admin/packages.php')) ?>"><?= icon('plus', 14) ?> Add / manage packages</a></div></div>
+  <?php
+  // Catch packages that would silently pay nothing (e.g. values shifted when a package was added).
+  $zeroWarn = [];
+  foreach ($packages as $pk) {
+      if ($pk['status'] !== 'active') {
+          continue;
+      }
+      $miss = [];
+      if (plan_on('direct') && setting('direct_mode', 'fixed') === 'fixed' && (float)$pk['direct_bonus'] <= 0) $miss[] = 'Direct Referral';
+      if (plan_on('passup') && setting('passup_mode', 'fixed') === 'package' && (float)$pk['coded_bonus'] <= 0) $miss[] = 'Coded Bonus';
+      if ((float)$pk['pv'] <= 0) $miss[] = 'PV (no pairing)';
+      if (plan_on('discount') && setting('discount_mode', 'fixed') === 'tier' && (float)$pk['discount_percent'] <= 0) $miss[] = 'Product Discount';
+      if ($miss) $zeroWarn[] = '<strong>' . e($pk['name']) . '</strong>: ' . e(implode(', ', $miss));
+  }
+  ?>
+  <?php if ($zeroWarn): ?><div class="card-body" style="padding-bottom:0"><div class="alert alert-warning mb-0">These are set to 0, so nothing will be paid for them: <?= implode(' · ', $zeroWarn) ?>. Check the values below.</div></div><?php endif; ?>
   <div class="card-body p-0 table-wrap">
     <table class="table stack">
       <thead><tr><th>Package</th><th>Price (<?= e($cur) ?>)</th><th>Binary PV / Pair value</th><th>Direct Referral (<?= e($cur) ?>)</th><th>Coded Bonus (<?= e($cur) ?>)</th><th>Product Discount (%)</th></tr></thead>
